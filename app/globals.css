@@ -3,6 +3,32 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  
+  --bg-color: #FFFFFF;
+  --primary-text: #000000;
+  --secondary-text: #666666;
+  --muted-text: #999999;
+  --accent-color: #0066FF;
+  --accent-hover: #0052CC;
+  --surface: #FFFFFF;
+  --surface-muted: #F5F5F5;
+  --surface-border: #E0E0E0;
+  --card-bg: #FFFFFF;
+  --card-border: #E0E0E0;
+}
+
+[data-theme="dark"] {
+  --bg-color: #000000;
+  --primary-text: #FFFFFF;
+  --secondary-text: #CCCCCC;
+  --muted-text: #888888;
+  --accent-color: #0066FF;
+  --accent-hover: #3385FF;
+  --surface: #1A1A1A;
+  --surface-muted: #2A2A2A;
+  --surface-border: #333333;
+  --card-bg: #1A1A1A;
+  --card-border: #333333;
 }
 
 @theme inline {
@@ -23,4 +49,18 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0;
+  }
 }
