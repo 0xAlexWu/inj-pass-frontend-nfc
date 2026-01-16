@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useWallet } from '@/contexts/WalletContext';
 import { getBalance, getTxHistory } from '@/wallet/chain';
 import { Balance, TransactionHistory, INJECTIVE_TESTNET } from '@/types/chain';
+import { getInjPrice } from '@/services/price';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function DashboardPage() {
   const [transactions, setTransactions] = useState<TransactionHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [injPrice, setInjPrice] = useState<number>(25); // Default fallback price
 
   useEffect(() => {
     if (!isUnlocked || !address) {
@@ -29,10 +31,14 @@ export default function DashboardPage() {
 
     try {
       setLoading(true);
-      // Only load balance, skip transaction history for now (RPC intensive)
-      const balanceData = await getBalance(address, INJECTIVE_TESTNET);
+      // Load balance and price in parallel
+      const [balanceData, priceData] = await Promise.all([
+        getBalance(address, INJECTIVE_TESTNET),
+        getInjPrice(),
+      ]);
       
       setBalance(balanceData);
+      setInjPrice(priceData);
       setTransactions([]); // Empty for now
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -95,7 +101,7 @@ export default function DashboardPage() {
         <div style={styles.balanceAmount}>
           {balance ? parseFloat(balance.formatted).toFixed(4) : '0.0000'} {balance?.symbol || 'INJ'}
         </div>
-        <div style={styles.balanceUsd}>≈ ${balance ? (parseFloat(balance.formatted) * 25).toFixed(2) : '0.00'} USD</div>
+        <div style={styles.balanceUsd}>≈ ${balance ? (parseFloat(balance.formatted) * injPrice).toFixed(2) : '0.00'} USD</div>
         
         <button onClick={handleRefresh} disabled={refreshing} style={styles.refreshBtn}>
           {refreshing ? '⟳ Refreshing...' : '⟳ Refresh'}
