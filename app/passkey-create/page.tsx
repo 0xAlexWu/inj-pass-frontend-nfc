@@ -54,8 +54,13 @@ export default function PasskeyCreatePage() {
 
   return (
     <div style={styles.container}>
-      <button onClick={() => router.back()} style={styles.backBtn}>
-        ← Back
+      <button
+        onClick={() => router.back()}
+        className="p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-gray-400 hover:text-white"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
       </button>
 
       <div style={styles.animatedBg}></div>
@@ -105,12 +110,15 @@ export default function PasskeyCreatePage() {
               {loading ? 'Creating...' : 'Create Cloud-Hosted Pass'}
             </button>
 
+
             <button
               onClick={() => router.push('/welcome')}
               disabled={loading}
-              style={styles.backButton}
+              className="p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-gray-400 hover:text-white"
             >
-              Back
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
             </button>
           </div>
         </div>
