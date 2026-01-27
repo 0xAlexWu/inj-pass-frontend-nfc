@@ -109,8 +109,13 @@ export default function SendPage() {
   return (
     <div style={styles.container}>
       <header style={styles.header}>
-        <button onClick={() => router.back()} style={styles.backBtn}>
-          ← Back
+        <button 
+          onClick={() => router.back()}
+          className="p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-gray-400 hover:text-white"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
         </button>
         <h1 style={styles.title}>Send INJ</h1>
         <div style={{ width: '60px' }} />
