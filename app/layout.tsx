@@ -1,16 +1,42 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { WalletProvider } from "@/contexts/WalletContext";
+import Script from "next/script";
+import { SidebarOverlay, GeometricShapes } from "./components/LayoutClient";
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
 });
 
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-space-grotesk",
+});
+
 export const metadata: Metadata = {
-  title: "Injective Pass - Secure Wallet",
+  title: "INJ Pass - Secure Wallet",
   description: "Passkey-powered wallet for Injective",
+  icons: {
+    icon: [
+      { url: "/lambda.png" },
+      { url: "/lambda.png", sizes: "32x32", type: "image/jpeg" },
+      { url: "/lambda.png", sizes: "16x16", type: "image/jpeg" },
+    ],
+    apple: "/lambda.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1.0,
+  maximumScale: 5.0,
+  userScalable: true,
 };
 
 export default function RootLayout({
@@ -20,7 +46,24 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} antialiased`}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet" />
+        <Script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" strategy="beforeInteractive" />
+      </head>
+      <body className={`${inter.variable} ${spaceGrotesk.variable} antialiased`}>
+        {/* Sidebar Overlay */}
+        <SidebarOverlay />
+        
+        {/* Sidebar Container */}
+        <div className="sidebar-container">
+          {/* Sidebar content will be injected here */}
+        </div>
+
+        {/* Animated Background and Geometric Shapes */}
+        <GeometricShapes />
+
         <WalletProvider>{children}</WalletProvider>
       </body>
     </html>
