@@ -25,58 +25,15 @@ export async function getTxHistory(
       transport: http(chain.rpcUrl),
     });
 
-    const currentBlock = await client.getBlockNumber();
-    const transactions: TransactionHistory[] = [];
-
-    // Reduce blocks to scan from 100 to 20 for better performance
-    const blocksToScan = Math.min(20, Number(currentBlock));
-
-    for (let i = 0; i < blocksToScan && transactions.length < limit; i++) {
-      const blockNumber = currentBlock - BigInt(i);
-      
-      try {
-        const block = await client.getBlock({
-          blockNumber,
-          includeTransactions: true,
-        });
-
-        if (!block.transactions || block.transactions.length === 0) {
-          continue;
-        }
-
-        // Filter transactions involving the address
-        for (const tx of block.transactions) {
-          if (typeof tx === 'string') continue;
-
-          const isFrom = tx.from.toLowerCase() === address.toLowerCase();
-          const isTo = tx.to?.toLowerCase() === address.toLowerCase();
-
-          if (isFrom || isTo) {
-            transactions.push({
-              hash: tx.hash,
-              from: tx.from,
-              to: tx.to || null,
-              value: tx.value.toString(),
-              timestamp: Number(block.timestamp),
-              blockNumber: Number(block.number),
-              status: 'success', // Would need receipt to confirm
-              gasUsed: tx.gas?.toString(),
-              gasPrice: tx.gasPrice?.toString(),
-            });
-
-            if (transactions.length >= limit) {
-              break;
-            }
-          }
-        }
-      } catch (blockError) {
-        // Skip failed block fetches
-        console.warn(`Failed to fetch block ${blockNumber}:`, blockError);
-        continue;
-      }
-    }
-
-    return transactions.slice(0, limit);
+    // OPTIMIZATION: For testnet/development, return empty array to avoid excessive RPC calls
+    // In production, use a block explorer API like Etherscan/Blockscout instead of scanning blocks
+    // Scanning blocks one-by-one is inefficient and causes 20+ RPC requests per page load
+    
+    // TODO: Integrate with Injective Explorer API or indexer service
+    // Example: https://testnet.explorer.injective.network/api/...
+    
+    console.warn('getTxHistory: Block scanning disabled. Use explorer API for transaction history.');
+    return [];
   } catch (error) {
     throw new Error(
       `Failed to get transaction history: ${error instanceof Error ? error.message : 'Unknown error'}`
