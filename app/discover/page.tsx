@@ -127,7 +127,7 @@ export default function DiscoverPage() {
             {/* Account Header with Scan Button */}
             <div className="mb-6">
               <AccountHeader 
-                address={address}
+                address={address || undefined}
                 showScanButton={true}
                 onScanClick={() => {/* TODO: Implement scan functionality */}}
               />
