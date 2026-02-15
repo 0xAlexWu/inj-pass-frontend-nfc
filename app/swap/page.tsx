@@ -44,6 +44,14 @@ export default function SwapPage() {
   const [copied, setCopied] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
+  // Check if amount exceeds balance
+  const isAmountExceedsBalance = () => {
+    if (!fromAmount || fromAmount === '') return false;
+    const amount = parseFloat(fromAmount);
+    const balance = parseFloat(fromToken.balance);
+    return !isNaN(amount) && amount > balance;
+  };
+
   // Token list with real balances
   const [tokens, setTokens] = useState<Token[]>([
     { symbol: 'INJ', name: 'Injective', icon: '/injswap.png', balance: '0.0000' },
@@ -193,6 +201,20 @@ export default function SwapPage() {
 
     if (!fromAmount || !toAmount) {
       setError('Please enter an amount');
+      return;
+    }
+
+    // Validate balance
+    const amount = parseFloat(fromAmount);
+    const balance = parseFloat(fromToken.balance);
+    
+    if (isNaN(amount) || amount <= 0) {
+      setError('Invalid amount');
+      return;
+    }
+
+    if (amount > balance) {
+      setError(`Insufficient balance. You have ${fromToken.balance} ${fromToken.symbol}`);
       return;
     }
 
@@ -521,10 +543,23 @@ export default function SwapPage() {
           /* Manual Swap Mode */
           <div className="space-y-4">
             {/* From Token */}
-            <div className="p-5 rounded-2xl bg-black border border-white/10">
+            <div className={`p-5 rounded-2xl bg-black border ${
+              isAmountExceedsBalance() 
+                ? 'border-red-500/50 shadow-red-500/20 shadow-lg' 
+                : 'border-white/10'
+            }`}>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">From</span>
-                <span className="text-xs text-gray-500">Balance: {fromToken.balance}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">Balance: {fromToken.balance}</span>
+                  <button
+                    onClick={() => setFromAmount(fromToken.balance)}
+                    className="px-2 py-1 text-xs font-bold bg-white/10 hover:bg-white/20 text-white rounded transition-all"
+                    title="Set maximum amount"
+                  >
+                    Max
+                  </button>
+                </div>
               </div>
               
               <div className="flex items-center gap-4">
@@ -576,7 +611,11 @@ export default function SwapPage() {
                   onChange={(e) => setFromAmount(e.target.value)}
                   placeholder="0.0"
                   disabled={loading}
-                  className="flex-1 bg-transparent text-2xl font-bold text-white placeholder-gray-600 focus:outline-none font-mono text-right disabled:opacity-50"
+                  className={`flex-1 bg-transparent text-2xl font-bold placeholder-gray-600 focus:outline-none font-mono text-right disabled:opacity-50 ${
+                    isAmountExceedsBalance() 
+                      ? 'text-red-400 placeholder-red-400/50' 
+                      : 'text-white'
+                  }`}
                   style={{ 
                     WebkitUserSelect: 'text', 
                     userSelect: 'text',
@@ -726,7 +765,7 @@ export default function SwapPage() {
             {/* Swap Button */}
             <button
               onClick={handleSwapClick}
-              disabled={!fromAmount || !toAmount || loading || quoteLoading}
+              disabled={!fromAmount || !toAmount || loading || quoteLoading || isAmountExceedsBalance()}
               className="w-full py-4 rounded-2xl bg-white text-black font-bold hover:bg-gray-100 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
