@@ -16,90 +16,74 @@ export default function WelcomePage() {
   const { unlock } = useWallet();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showImport, setShowImport] = useState(false);
-  const [privateKeyInput, setPrivateKeyInput] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [walletNameInput, setWalletNameInput] = useState('');
   const [walletExists, setWalletExists] = useState(false);
 
   useEffect(() => {
     setWalletExists(hasWallet());
   }, []);
 
-const handleImport = async () => {
+  const handleCreateWallet = async () => {
+    if (!walletNameInput.trim()) {
+      setError('Please enter a wallet name');
+      return;
+    }
+
     setLoading(true);
     setError('');
     
     try {
-      const result = importPrivateKey(privateKeyInput);
+      const result = await createByPasskey(walletNameInput.trim());
       
-      const password = 'temp-password';
-      const entropy = sha256(new TextEncoder().encode(password));
-      const encrypted = await encryptKey(result.privateKey, entropy);
-      
-      saveWallet({
-        address: result.address,
-        encryptedPrivateKey: encrypted,
-        source: 'import',
-        createdAt: Date.now(),
-      });
-
       const { loadWallet } = await import('@/wallet/keystore');
       const keystore = loadWallet();
-      if (keystore) {
-        unlock(result.privateKey, keystore);
-      }
       
-      router.push('/dashboard');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to import wallet');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreateWithPasskey = async () => {
-    setLoading(true);
-    setError('');
-    
-    try {
-      const walletExists = hasWallet();
-
-      if (walletExists) {
-        const { loadWallet } = await import('@/wallet/keystore');
-        const keystore = loadWallet();
-        
-        if (!keystore || !keystore.credentialId) {
-          throw new Error('Invalid wallet data');
-        }
-        
-        const { unlockByPasskey } = await import('@/wallet/key-management/createByPasskey');
-        const { decryptKey } = await import('@/wallet/keystore');
-        
-        const entropy = await unlockByPasskey(keystore.credentialId);
-        const privateKey = await decryptKey(keystore.encryptedPrivateKey, entropy);
-        
-        unlock(privateKey, keystore);
-      } else {
-        const result = await createByPasskey('user@injective-pass');
-        
-        const { loadWallet } = await import('@/wallet/keystore');
-        const keystore = loadWallet();
-        
-        if (!keystore) {
-          throw new Error('Failed to load created wallet');
-        }
-
-        const { unlockByPasskey } = await import('@/wallet/key-management/createByPasskey');
-        const { decryptKey } = await import('@/wallet/keystore');
-        
-        const entropy = await unlockByPasskey(result.credentialId);
-        const privateKey = await decryptKey(keystore.encryptedPrivateKey, entropy);
-        
-        unlock(privateKey, keystore);
+      if (!keystore) {
+        throw new Error('Failed to load created wallet');
       }
+
+      const { unlockByPasskey } = await import('@/wallet/key-management/createByPasskey');
+      const { decryptKey } = await import('@/wallet/keystore');
       
+      const entropy = await unlockByPasskey(result.credentialId);
+      const privateKey = await decryptKey(keystore.encryptedPrivateKey, entropy);
+      
+      unlock(privateKey, keystore);
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create wallet');
+    } finally {
+      setLoading(false);
+      setShowCreateModal(false);
+    }
+  };
+
+  const handleRecoverWallet = async () => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      const { recoverFullWallet } = await import('@/wallet/key-management/recoverByPasskey');
+      const result = await recoverFullWallet();
+      
+      const { loadWallet } = await import('@/wallet/keystore');
+      const keystore = loadWallet();
+      
+      if (!keystore) {
+        throw new Error('Failed to load recovered wallet');
+      }
+
+      const { unlockByPasskey } = await import('@/wallet/key-management/createByPasskey');
+      const { decryptKey } = await import('@/wallet/keystore');
+      
+      const entropy = await unlockByPasskey(result.credentialId);
+      const privateKey = await decryptKey(keystore.encryptedPrivateKey, entropy);
+      
+      unlock(privateKey, keystore);
+      router.push('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to recover wallet');
     } finally {
       setLoading(false);
     }
@@ -157,19 +141,78 @@ const handleImport = async () => {
             </div>
           )}
 
-          <div className="flex justify-center w-full animate-fade-in">
+          <div className="flex flex-col gap-4 w-full max-w-md mx-auto animate-fade-in">
             <button
-              onClick={handleCreateWithPasskey}
+              onClick={() => setShowCreateModal(true)}
               disabled={loading}
               className="flex items-center justify-center gap-2 md:gap-3 bg-white text-black rounded-2xl px-6 md:px-8 py-4 text-sm md:text-base font-bold cursor-pointer transition-all shadow-lg hover:bg-gray-100 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 whitespace-nowrap tracking-wide"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0">
+                <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
-                <polyline points="12 5 19 12 12 19" />
               </svg>
-              <span>{loading ? 'ENTERING...' : 'LAUNCH WEB APP'}</span>
+              <span>CREATE NEW WALLET</span>
+            </button>
+
+            <button
+              onClick={handleRecoverWallet}
+              disabled={loading}
+              className="flex items-center justify-center gap-2 md:gap-3 bg-white/10 backdrop-blur-sm text-white border border-white/20 rounded-2xl px-6 md:px-8 py-4 text-sm md:text-base font-bold cursor-pointer transition-all hover:bg-white/20 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 whitespace-nowrap tracking-wide"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0">
+                <path d="M21 2v6h-6" />
+                <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                <path d="M3 22v-6h6" />
+                <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+              </svg>
+              <span>{loading ? 'RECOVERING...' : 'RECOVER WALLET'}</span>
             </button>
           </div>
+
+          {/* Create Wallet Modal */}
+          {showCreateModal && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl">
+                <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Create Wallet</h2>
+                <p className="text-gray-400 text-sm mb-6">Choose a name for your new wallet</p>
+                
+                <input
+                  type="text"
+                  value={walletNameInput}
+                  onChange={(e) => setWalletNameInput(e.target.value)}
+                  placeholder="e.g., My Main Wallet"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-white/30 transition-colors mb-6"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && walletNameInput.trim()) {
+                      handleCreateWallet();
+                    }
+                  }}
+                />
+                
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowCreateModal(false);
+                      setWalletNameInput('');
+                      setError('');
+                    }}
+                    disabled={loading}
+                    className="flex-1 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 font-semibold hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreateWallet}
+                    disabled={loading || !walletNameInput.trim()}
+                    className="flex-1 bg-white text-black rounded-xl px-4 py-3 font-bold hover:bg-gray-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Creating...' : 'Create'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
