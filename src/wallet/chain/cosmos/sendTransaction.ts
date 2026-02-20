@@ -8,7 +8,7 @@ import {
   PrivateKey,
   TxGrpcApi,
   createTransaction,
-  TxClient,
+  ChainRestAuthApi,
 } from '@injectivelabs/sdk-ts';
 import { getNetworkEndpoints, Network } from '@injectivelabs/networks';
 import type { CosmosChainConfig } from '@/types/chain';
@@ -45,16 +45,10 @@ export async function sendCosmosTransaction(
     // Get network endpoints
     const endpoints = getNetworkEndpoints(Network.Mainnet);
     
-    // Create gRPC clients
-    const txClient = new TxClient({
-      endpoints,
-    });
-
-    const chainGrpcBankApi = new ChainGrpcBankApi(endpoints.grpc);
-
     // Get account details (for sequence number)
-    const accountDetails = await txClient.fetchAccount(injectiveAddress);
-    const { baseAccount } = accountDetails;
+    const chainRestAuthApi = new ChainRestAuthApi(endpoints.rest);
+    const accountDetailsResponse = await chainRestAuthApi.fetchAccount(injectiveAddress);
+    const baseAccount = accountDetailsResponse.account.base_account;
 
     // Convert amount to base denom (multiply by 10^18)
     // INJ has 18 decimals, so we multiply by 1e18
@@ -84,8 +78,8 @@ export async function sendCosmosTransaction(
         gas: '100000',
       },
       pubKey: publicKey.toBase64(),
-      sequence: baseAccount.sequence,
-      accountNumber: baseAccount.accountNumber,
+      sequence: parseInt(baseAccount.sequence, 10),
+      accountNumber: parseInt(baseAccount.account_number, 10),
       chainId: chain.chainId,
     });
 
