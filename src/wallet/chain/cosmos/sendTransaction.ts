@@ -9,7 +9,6 @@ import {
   TxGrpcApi,
   createTransaction,
   TxClient,
-  BigNumberInBase,
 } from '@injectivelabs/sdk-ts';
 import { getNetworkEndpoints, Network } from '@injectivelabs/networks';
 import type { CosmosChainConfig } from '@/types/chain';
@@ -58,7 +57,8 @@ export async function sendCosmosTransaction(
     const { baseAccount } = accountDetails;
 
     // Convert amount to base denom (multiply by 10^18)
-    const amountInWei = new BigNumberInBase(amount).times(1e18).toFixed(0);
+    // INJ has 18 decimals, so we multiply by 1e18
+    const amountInWei = (parseFloat(amount) * 1e18).toFixed(0);
 
     // Create MsgSend
     const msg = MsgSend.fromJSON({
