@@ -14,6 +14,7 @@
     "test-staking": "tsx scripts/test-staking.ts"
   },
   "dependencies": {
+    "@injectivelabs/networks": "^1.18.1",
     "@injectivelabs/sdk-ts": "^1.17.8",
     "@noble/curves": "^2.0.1",
     "@noble/hashes": "^2.0.1",

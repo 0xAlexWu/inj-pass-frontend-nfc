@@ -136,5 +136,38 @@ export const INJECTIVE_TESTNET_CHAIN: Chain = {
   },
 };
 
+// Injective Cosmos Network Configuration
+export interface CosmosChainConfig {
+  chainId: string;
+  chainName: string;
+  rpc: string;
+  rest: string;
+  grpc: string;
+  explorerUrl: string;
+  nativeCurrency: {
+    name: string;
+    symbol: string;
+    decimals: number;
+    denom: string;
+  };
+}
+
+// Injective Cosmos Mainnet (injective-1)
+export const INJECTIVE_COSMOS_MAINNET: CosmosChainConfig = {
+  chainId: 'injective-1',
+  chainName: 'Injective',
+  rpc: 'https://sentry.tm.injective.network:443',
+  rest: 'https://sentry.lcd.injective.network:443',
+  grpc: 'sentry.chain.grpc.injective.network:443',
+  explorerUrl: 'https://explorer.injective.network',
+  nativeCurrency: {
+    name: 'Injective',
+    symbol: 'INJ',
+    decimals: 18,
+    denom: 'inj',
+  },
+};
+
 // Default chain - USE MAINNET
 export const DEFAULT_CHAIN = INJECTIVE_MAINNET;
+export const DEFAULT_COSMOS_CHAIN = INJECTIVE_COSMOS_MAINNET;
