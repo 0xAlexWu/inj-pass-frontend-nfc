@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useWallet } from '@/contexts/WalletContext';
 import { usePin } from '@/contexts/PinContext';
-import { estimateGas, sendTransaction, sendCosmosTransaction, estimateCosmosFee } from '@/wallet/chain';
-import { INJECTIVE_MAINNET, INJECTIVE_COSMOS_MAINNET, GasEstimate } from '@/types/chain';
+import { estimateGas, sendTransaction } from '@/wallet/chain';
+import { INJECTIVE_MAINNET, GasEstimate } from '@/types/chain';
 import { isNFCSupported, readNFCCard } from '@/services/nfc';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import TransactionAuthModal from '@/components/TransactionAuthModal';
@@ -243,49 +243,27 @@ function SendPageContent() {
     setCostFlashing(true);
     
     try {
-      // Check if recipient is Cosmos address
-      if (isCosmosAddress(estimateRecipient)) {
-        console.log('[Send] Using Cosmos network for gas estimation');
-        // For Cosmos, use fixed fee estimation
-        const cosmosFee = await estimateCosmosFee();
-        const estimate: GasEstimate = {
-          gasLimit: BigInt(cosmosFee.gas),
-          maxFeePerGas: BigInt(0),
-          maxPriorityFeePerGas: BigInt(0),
-          totalCost: BigInt(parseFloat(cosmosFee.amount) * 1e18), // Convert to wei
-        };
-        setGasEstimate(estimate);
-        console.log('[Send] Cosmos gas estimate:', cosmosFee);
-      } else {
-        // EVM address - use existing estimation
-        const originalRecipient = estimateRecipient;
-        estimateRecipient = getEvmAddress(estimateRecipient);
-        console.log('[Send] Using EVM network for gas estimation:', { original: originalRecipient, converted: estimateRecipient });
+      // Always estimate via EVM - convert Cosmos address to EVM if needed
+      // On Injective, EVM and Cosmos addresses share the same underlying account
+      const originalRecipient = estimateRecipient;
+      estimateRecipient = getEvmAddress(estimateRecipient);
+      console.log('[Send] Gas estimation via EVM:', { original: originalRecipient, converted: estimateRecipient });
 
-        console.log('[Send] Calling estimateGas with:', { 
-          from: address, 
-          to: estimateRecipient, 
-          amount: estimateAmount,
-          chain: INJECTIVE_MAINNET.name,
-          rpcUrl: INJECTIVE_MAINNET.rpcUrl
-        });
-        
-        const estimate = await estimateGas(
-          address,
-          estimateRecipient,
-          estimateAmount,
-          undefined,
-          INJECTIVE_MAINNET
-        );
-        
-        console.log('[Send] Gas estimate successful:', {
-          gasLimit: estimate.gasLimit.toString(),
-          maxFeePerGas: estimate.maxFeePerGas.toString(),
-          totalCost: estimate.totalCost.toString()
-        });
-        
-        setGasEstimate(estimate);
-      }
+      const estimate = await estimateGas(
+        address,
+        estimateRecipient,
+        estimateAmount,
+        undefined,
+        INJECTIVE_MAINNET
+      );
+      
+      console.log('[Send] Gas estimate successful:', {
+        gasLimit: estimate.gasLimit.toString(),
+        maxFeePerGas: estimate.maxFeePerGas.toString(),
+        totalCost: estimate.totalCost.toString()
+      });
+      
+      setGasEstimate(estimate);
     } catch (err) {
       console.error('[Send] Gas estimation error:', err);
       console.error('[Send] Error details:', {
@@ -348,29 +326,23 @@ function SendPageContent() {
     setTxHash('');
     
     try {
-      let hash: string;
-      
-      // Check if recipient is Cosmos address (inj1...) or EVM address (0x...)
+      // On Injective, EVM and Cosmos addresses share the same underlying account.
+      // Always send via EVM network for reliability.
+      // If recipient is a Cosmos address (inj1...), convert to EVM (0x...) first.
+      let evmRecipient = recipient;
       if (isCosmosAddress(recipient)) {
-        console.log('[Send] Using Cosmos network for transaction');
-        // Send via Cosmos network (injective-1)
-        hash = await sendCosmosTransaction(
-          privateKey,
-          recipient,
-          amount,
-          INJECTIVE_COSMOS_MAINNET
-        );
-      } else {
-        console.log('[Send] Using EVM network for transaction');
-        // Send via EVM network (chain ID 1776)
-        hash = await sendTransaction(
-          privateKey,
-          recipient,
-          amount,
-          undefined,
-          INJECTIVE_MAINNET
-        );
+        evmRecipient = getEthereumAddress(recipient);
+        console.log('[Send] Converted Cosmos address to EVM:', recipient, '->', evmRecipient);
       }
+      
+      console.log('[Send] Sending via EVM network to:', evmRecipient);
+      const hash = await sendTransaction(
+        privateKey,
+        evmRecipient,
+        amount,
+        undefined,
+        INJECTIVE_MAINNET
+      );
       
       setTxHash(hash);
     } catch (err) {
@@ -522,9 +494,7 @@ function SendPageContent() {
             </div>
             <div className="flex justify-between items-center py-2 border-t border-white/5">
               <span className="text-sm text-gray-400">Network</span>
-              <span className="text-sm font-bold text-white">
-                {isCosmosAddress(recipient) ? 'Injective Cosmos (injective-1)' : 'Injective EVM (1776)'}
-              </span>
+              <span className="text-sm font-bold text-white">Injective EVM (1776)</span>
             </div>
             <div className="flex justify-between items-center py-2 border-t border-white/5">
               <span className="text-sm text-gray-400">Timestamp</span>
@@ -717,7 +687,7 @@ function SendPageContent() {
           </div>
 
           {/* Network Indicator */}
-          {recipient && (
+          {recipient && (isEvmAddress(recipient) || isCosmosAddress(recipient)) && (
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
               <div className="flex-shrink-0">
                 <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -726,11 +696,11 @@ function SendPageContent() {
               </div>
               <div className="flex-1">
                 <p className="text-sm font-bold text-blue-400">
-                  {isCosmosAddress(recipient) ? 'Using Cosmos Network' : 'Using EVM Network'}
+                  Injective EVM Network
                 </p>
                 <p className="text-xs text-gray-400">
                   {isCosmosAddress(recipient) 
-                    ? 'Chain ID: injective-1 • Native Cosmos transaction'
+                    ? 'Cosmos address auto-converted to EVM • Same account on Injective'
                     : 'Chain ID: 1776 • EVM-compatible transaction'
                   }
                 </p>
