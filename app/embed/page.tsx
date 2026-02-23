@@ -70,25 +70,52 @@ export default function EmbedPage() {
     setError('');
 
     try {
+      // Debug: Check iframe context
+      console.log('[Embed] === Storage Access Debug ===');
+      console.log('[Embed] Is iframe:', window !== window.parent);
+      console.log('[Embed] Origin:', window.location.origin);
+      console.log('[Embed] Parent origin:', document.referrer);
+
       // Request storage access for cross-origin iframe
-      if (document.hasStorageAccess) {
-        const hasAccess = await document.hasStorageAccess();
-        if (!hasAccess) {
-          try {
+      if (typeof document.requestStorageAccess === 'function') {
+        console.log('[Embed] Storage Access API supported');
+        try {
+          const hasAccess = await document.hasStorageAccess();
+          console.log('[Embed] Current storage access:', hasAccess);
+          
+          if (!hasAccess) {
+            console.log('[Embed] Requesting storage access...');
             await document.requestStorageAccess();
-          } catch (err) {
-            console.warn('Storage access denied, localStorage may not be available:', err);
-            setError('Please allow storage access to use your wallet in embedded mode.');
-            setLoading(false);
-            return;
+            console.log('[Embed] ✅ Storage access granted!');
           }
+        } catch (err) {
+          console.error('[Embed] ❌ Storage access denied:', err);
+          setError('Please allow storage access to use your wallet in embedded mode. Click "Allow" when prompted.');
+          setLoading(false);
+          return;
         }
+      } else {
+        console.warn('[Embed] ⚠️ Storage Access API not supported in this browser');
+      }
+
+      // Debug: Test localStorage access
+      try {
+        const testKey = '__injpass_storage_test__';
+        localStorage.setItem(testKey, 'test');
+        localStorage.removeItem(testKey);
+        console.log('[Embed] ✅ localStorage is accessible');
+      } catch (err) {
+        console.error('[Embed] ❌ localStorage blocked:', err);
+        setError('Storage is blocked. Please enable third-party cookies or use the standalone app.');
+        setLoading(false);
+        return;
       }
 
       const keystore = loadWallet();
+      console.log('[Embed] Wallet loaded:', keystore ? '✅ Found' : '❌ Not found');
       
       if (!keystore) {
-        throw new Error('No wallet found. Please create a wallet first.');
+        throw new Error('No wallet found. Please create a wallet first at ' + window.location.origin);
       }
 
       if (!keystore.credentialId) {
@@ -150,7 +177,16 @@ export default function EmbedPage() {
 
             {error && (
               <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
-                <p className="text-red-300 text-sm">{error}</p>
+                <p className="text-red-300 text-sm mb-2">{error}</p>
+                {error.includes('No wallet found') && (
+                  <a 
+                    href={window.location.origin + '/passkey-create'} 
+                    target="_blank"
+                    className="text-purple-300 text-xs underline hover:text-purple-200"
+                  >
+                    → Create wallet in new tab
+                  </a>
+                )}
               </div>
             )}
 
