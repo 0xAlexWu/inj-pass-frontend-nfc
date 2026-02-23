@@ -70,6 +70,21 @@ export default function EmbedPage() {
     setError('');
 
     try {
+      // Request storage access for cross-origin iframe
+      if (document.hasStorageAccess) {
+        const hasAccess = await document.hasStorageAccess();
+        if (!hasAccess) {
+          try {
+            await document.requestStorageAccess();
+          } catch (err) {
+            console.warn('Storage access denied, localStorage may not be available:', err);
+            setError('Please allow storage access to use your wallet in embedded mode.');
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
       const keystore = loadWallet();
       
       if (!keystore) {
