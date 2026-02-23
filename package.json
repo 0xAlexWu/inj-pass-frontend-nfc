@@ -10,8 +10,7 @@
     "find-router": "tsx scripts/find-router.ts",
     "test-router": "tsx scripts/test-router.ts",
     "find-pairs": "tsx scripts/find-pairs.ts",
-    "test-solidly": "tsx scripts/test-solidly-router.ts",
-    "test-staking": "tsx scripts/test-staking.ts"
+    "test-solidly": "tsx scripts/test-solidly-router.ts"
   },
   "dependencies": {
     "@injectivelabs/sdk-ts": "^1.17.8",

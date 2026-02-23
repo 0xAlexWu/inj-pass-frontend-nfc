@@ -76,48 +76,20 @@ export default function SettingsPage() {
     setPasskeyError('');
     
     try {
-      console.log('[Settings] Starting passkey verification...');
-      console.log('[Settings] Browser:', navigator.userAgent);
-      
       const { unlockByPasskey } = await import('@/wallet/key-management/createByPasskey');
       
       if (!keystore?.credentialId) {
-        console.error('[Settings] No credential ID found in keystore');
-        throw new Error('No passkey found. Please set up your passkey first.');
+        throw new Error('No passkey found');
       }
       
-      console.log('[Settings] Credential ID found, attempting unlock...');
-      
       // Authenticate with passkey
-      const result = await unlockByPasskey(keystore.credentialId);
-      console.log('[Settings] Passkey unlock successful:', !!result);
+      await unlockByPasskey(keystore.credentialId);
       
       // If authentication successful, show private key
       setShowPrivateKey(true);
       setVerifyingPasskey(false);
-      console.log('[Settings] Private key display enabled');
     } catch (error) {
-      console.error('[Settings] Passkey verification failed:', error);
-      
-      // Provide more helpful error messages
-      let errorMessage = 'Failed to verify passkey';
-      
-      if (error instanceof Error) {
-        errorMessage = error.message;
-        
-        // Detect specific browser/platform issues
-        if (error.message.includes('NotAllowedError')) {
-          errorMessage = 'Passkey authentication was cancelled or not allowed. Please try again.';
-        } else if (error.message.includes('NotSupportedError')) {
-          errorMessage = 'Passkey is not supported on this device/browser.';
-        } else if (error.message.includes('SecurityError')) {
-          errorMessage = 'Security error. Please ensure you are on a secure connection (HTTPS).';
-        } else if (error.message.includes('InvalidStateError')) {
-          errorMessage = 'Passkey state is invalid. Try refreshing the page.';
-        }
-      }
-      
-      setPasskeyError(errorMessage);
+      setPasskeyError(error instanceof Error ? error.message : 'Failed to verify passkey');
       setVerifyingPasskey(false);
     }
   };

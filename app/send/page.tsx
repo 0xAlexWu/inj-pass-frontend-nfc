@@ -18,7 +18,7 @@ interface AddressBookEntry {
 function SendPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isUnlocked, privateKey, address, isCheckingSession } = useWallet();
+  const { isUnlocked, privateKey, isCheckingSession } = useWallet();
   const { isPinLocked, autoLockMinutes } = usePin();
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
@@ -304,61 +304,29 @@ function SendPageContent() {
   }, []);
 
   const handleEstimate = useCallback(async (useDefaults = false) => {
-    console.log('[Send] handleEstimate called:', { useDefaults, recipient, amount, address, hasPrivateKey: !!privateKey });
-    
     // Use default values if requested or use actual values
     let estimateRecipient = useDefaults ? '0x0000000000000000000000000000000000000000' : recipient;
     const estimateAmount = useDefaults ? '0.001' : amount;
     
-    if (!estimateRecipient || !estimateAmount || !address) {
-      console.log('[Send] Skipping estimate - missing required fields:', { 
-        hasRecipient: !!estimateRecipient, 
-        hasAmount: !!estimateAmount, 
-        hasAddress: !!address 
-      });
-      return;
-    }
+    if (!estimateRecipient || !estimateAmount || !privateKey) return;
 
     // Convert cosmos address to EVM for estimation
-    const originalRecipient = estimateRecipient;
     estimateRecipient = getEvmAddress(estimateRecipient);
-    console.log('[Send] Address conversion:', { original: originalRecipient, converted: estimateRecipient });
 
     setEstimating(true);
     setError('');
     setCostFlashing(true);
     
     try {
-      console.log('[Send] Calling estimateGas with:', { 
-        from: address, 
-        to: estimateRecipient, 
-        amount: estimateAmount,
-        chain: INJECTIVE_MAINNET.name,
-        rpcUrl: INJECTIVE_MAINNET.rpcUrl
-      });
-      
       const estimate = await estimateGas(
-        address, // Use actual user address
+        '', // from address not needed for estimate
         estimateRecipient,
         estimateAmount,
         undefined,
         INJECTIVE_MAINNET
       );
-      
-      console.log('[Send] Gas estimate successful:', {
-        gasLimit: estimate.gasLimit.toString(),
-        maxFeePerGas: estimate.maxFeePerGas.toString(),
-        totalCost: estimate.totalCost.toString()
-      });
-      
       setGasEstimate(estimate);
     } catch (err) {
-      console.error('[Send] Gas estimation error:', err);
-      console.error('[Send] Error details:', {
-        message: err instanceof Error ? err.message : 'Unknown error',
-        stack: err instanceof Error ? err.stack : undefined
-      });
-      
       // Only show error if not using defaults
       if (!useDefaults) {
         setError(err instanceof Error ? err.message : 'Failed to estimate gas');
@@ -367,33 +335,33 @@ function SendPageContent() {
       setEstimating(false);
       setTimeout(() => setCostFlashing(false), 300);
     }
-  }, [recipient, amount, address, privateKey, getEvmAddress]);
+  }, [recipient, amount, privateKey, getEvmAddress]);
 
   // Initial gas estimate on page load with default values
   useEffect(() => {
-    if (address && !recipient && !amount) {
+    if (privateKey && !recipient && !amount) {
       handleEstimate(true);
     }
-  }, [address, recipient, amount, handleEstimate]);
+  }, [privateKey, recipient, amount, handleEstimate]);
 
   // Auto-estimate gas when recipient and amount are filled
   useEffect(() => {
-    if (recipient && amount && address) {
+    if (recipient && amount && privateKey) {
       handleEstimate(false);
     }
-  }, [recipient, amount, address, handleEstimate]);
+  }, [recipient, amount, privateKey, handleEstimate]);
 
   // Auto-refresh every 3 seconds
   useEffect(() => {
     const shouldEstimate = (recipient && amount) || (!recipient && !amount);
-    if (!address || !shouldEstimate) return;
+    if (!privateKey || !shouldEstimate) return;
 
     const interval = setInterval(() => {
       handleEstimate(!recipient || !amount);
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [recipient, amount, address, handleEstimate]);
+  }, [recipient, amount, privateKey, handleEstimate]);
 
   const handleSendClick = () => {
     // Check if authentication is needed

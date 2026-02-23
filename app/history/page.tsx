@@ -4,10 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useWallet } from '@/contexts/WalletContext';
 import { useState, useEffect } from 'react';
 import { getTxHistory } from '@/wallet/chain';
-import { getCosmosTxHistory } from '@/wallet/chain/cosmos';
 import { INJECTIVE_MAINNET } from '@/types/chain';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import { getInjectiveAddress } from '@injectivelabs/sdk-ts';
 
 type TransactionType = 'send' | 'receive' | 'swap';
 type TransactionStatus = 'completed' | 'pending' | 'failed';
@@ -42,55 +40,25 @@ export default function HistoryPage() {
     const fetchTransactions = async () => {
       try {
         setIsLoading(true);
+        const txHistory = await getTxHistory(address, 50);
         
-        // Fetch both EVM and Cosmos transactions in parallel
-        const [evmTxHistory, cosmosTxHistory] = await Promise.all([
-          getTxHistory(address, 50).catch((err) => {
-            console.error('Failed to fetch EVM transactions:', err);
-            return [];
-          }),
-          (async () => {
-            try {
-              // Convert EVM address to Cosmos address for querying
-              const cosmosAddress = getInjectiveAddress(address);
-              return await getCosmosTxHistory(cosmosAddress, 50);
-            } catch (err) {
-              console.error('Failed to fetch Cosmos transactions:', err);
-              return [];
-            }
-          })(),
-        ]);
-        
-        // Router address for detecting swap transactions
-        const ROUTER_ADDRESS = '0xC7247df0e97353D676d78f1cc55D3CE39eE32bE1'.toLowerCase();
-        
-        // Transform EVM transactions to our UI format
-        const evmTransactions: Transaction[] = evmTxHistory.map((tx) => {
-          // Check if this is a swap transaction (sent to Router contract)
-          const isSwapTx = tx.to?.toLowerCase() === ROUTER_ADDRESS;
-          
-          // Determine transaction type
+        // Transform blockchain transactions to our UI format
+        const formattedTransactions: Transaction[] = txHistory.map((tx) => {
+          // Determine transaction type based on address
           const isSent = tx.from.toLowerCase() === address.toLowerCase();
-          let type: TransactionType;
-          if (isSwapTx) {
-            type = 'swap';
-          } else {
-            type = isSent ? 'send' : 'receive';
-          }
+          const type: TransactionType = isSent ? 'send' : 'receive';
           
           // Convert value from wei to INJ (with 3 decimal places)
           const amount = (Number(tx.value) / (10 ** 18)).toFixed(3);
 
           // Format address for display (shortened)
-          const targetAddress = type === 'send' || type === 'swap' 
-            ? (tx.to || 'Contract Creation') 
-            : tx.from;
+          const targetAddress = type === 'send' ? (tx.to || 'Contract Creation') : tx.from;
           const displayAddress = targetAddress.startsWith('0x') && targetAddress.length > 10
             ? `${targetAddress.slice(0, 6)}...${targetAddress.slice(-4)}`
             : targetAddress;
 
           return {
-            id: `evm-${tx.hash}`,
+            id: tx.hash,
             type,
             amount,
             token: 'INJ',
@@ -98,53 +66,11 @@ export default function HistoryPage() {
             timestamp: new Date(tx.timestamp * 1000),
             status: tx.status === 'success' ? 'completed' : tx.status === 'failed' ? 'failed' : 'pending',
             txHash: tx.hash,
-            chainType: 'EVM',
+            chainType: 'EVM', // Blockscout API returns EVM transactions
           };
         });
 
-        // Transform Cosmos transactions to our UI format
-        const cosmosTransactions: Transaction[] = cosmosTxHistory.map((tx) => {
-          // Check if this is a swap transaction
-          const isSwapTx = (tx as any).isSwap === true;
-          
-          // Determine transaction type based on address
-          const cosmosAddress = getInjectiveAddress(address);
-          const isSent = tx.from.toLowerCase() === cosmosAddress.toLowerCase();
-          let type: TransactionType;
-          if (isSwapTx) {
-            type = 'swap';
-          } else {
-            type = isSent ? 'send' : 'receive';
-          }
-          
-          // Convert value from wei to INJ (with 3 decimal places)
-          const amount = (Number(tx.value) / (10 ** 18)).toFixed(3);
-
-          // Format address for display (shortened)
-          const targetAddress = type === 'send' || type === 'swap' ? (tx.to || '') : tx.from;
-          const displayAddress = targetAddress.startsWith('inj') && targetAddress.length > 10
-            ? `${targetAddress.slice(0, 8)}...${targetAddress.slice(-6)}`
-            : targetAddress;
-
-          return {
-            id: `cosmos-${tx.hash}`,
-            type,
-            amount,
-            token: 'INJ',
-            address: displayAddress,
-            timestamp: new Date(tx.timestamp * 1000),
-            status: tx.status === 'success' ? 'completed' : tx.status === 'failed' ? 'failed' : 'pending',
-            txHash: tx.hash,
-            chainType: 'Cosmos',
-          };
-        });
-
-        // Combine and sort by timestamp (newest first)
-        const allTransactions = [...evmTransactions, ...cosmosTransactions].sort(
-          (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
-        );
-
-        setTransactions(allTransactions);
+        setTransactions(formattedTransactions);
       } catch (error) {
         console.error('Failed to fetch transaction history:', error);
         setTransactions([]);
@@ -320,14 +246,8 @@ export default function HistoryPage() {
                   className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer group"
                   onClick={() => {
                     if (tx.txHash) {
-                      // Open transaction in explorer based on chain type
-                      if (tx.chainType === 'EVM') {
-                        // EVM transactions use Blockscout
-                        window.open(`${INJECTIVE_MAINNET.explorerUrl}/tx/${tx.txHash}`, '_blank');
-                      } else {
-                        // Cosmos transactions use Injective Explorer
-                        window.open(`https://explorer.injective.network/transaction/${tx.txHash}`, '_blank');
-                      }
+                      // Open transaction in explorer - Mainnet Blockscout
+                      window.open(`${INJECTIVE_MAINNET.explorerUrl}/tx/${tx.txHash}`, '_blank');
                     }
                   }}
                 >
