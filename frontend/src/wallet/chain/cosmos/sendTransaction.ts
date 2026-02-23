@@ -69,10 +69,8 @@ export async function sendCosmosTransaction(
 
     txRaw.signatures = [signature];
 
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore – TxClient type definition omits the endpoint arg in this SDK version
-    const txClient = new TxClient(COSMOS_LCD);
-    const response = await txClient.broadcast(txRaw);
+    const txClient = new (TxClient as any)(COSMOS_LCD);
+    const response = await txClient.broadcast(txRaw) as { code: number; txHash: string; rawLog?: string; message?: string };
 
     if (response.code !== 0) {
       throw new Error(`Transaction failed: ${response.rawLog || response.message || 'Unknown error'}`);
