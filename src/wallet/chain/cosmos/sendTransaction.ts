@@ -37,7 +37,7 @@ export async function sendCosmosTransaction(
       .join('');
 
     const privateKeyInstance = PrivateKey.fromHex(privateKeyHex);
-    const injectiveAddress = privateKeyInstance.toBech32('inj');
+    const injectiveAddress = privateKeyInstance.toBech32();
 
     const chainRestAuthApi = new ChainRestAuthApi(COSMOS_LCD);
 
