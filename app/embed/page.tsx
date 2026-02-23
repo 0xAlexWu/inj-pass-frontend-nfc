@@ -1,11 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { unlockByPasskey } from '@/wallet/key-management/createByPasskey';
-import { loadWallet } from '@/wallet/keystore/storage';
-import { decryptKey } from '@/wallet/keystore';
-import { sign } from '@noble/secp256k1';
-import { sha256 } from '@noble/hashes/sha2.js';
+import { triggerWalletConnect, triggerPasskeySign, isValidOrigin } from '@/lib/auth-bridge';
 
 interface SignRequest {
   id: string;
@@ -15,20 +11,24 @@ interface SignRequest {
 export default function EmbedPage() {
   const [connected, setConnected] = useState(false);
   const [address, setAddress] = useState<string>('');
-  const [privateKey, setPrivateKey] = useState<Uint8Array | null>(null);
+  const [walletName, setWalletName] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     // Listen for sign requests from parent window
     const handleMessage = async (event: MessageEvent) => {
-      // Security: Verify origin (in production, use whitelist)
-      // For now, accept all origins during development
+      // ✅ 安全验证：检查消息来源
+      // 在生产环境应该使用严格的白名单
+      if (!isValidOrigin(event.origin)) {
+        console.warn('Rejected message from unauthorized origin:', event.origin);
+        return;
+      }
       
       const { type, data } = event.data;
 
       if (type === 'INJPASS_SIGN_REQUEST') {
-        if (!privateKey) {
+        if (!connected) {
           event.source?.postMessage({
             type: 'INJPASS_SIGN_RESPONSE',
             requestId: data.id,
@@ -38,14 +38,14 @@ export default function EmbedPage() {
         }
 
         try {
-          // Sign the message
-          const messageHash = sha256(new TextEncoder().encode(data.message));
-          const signature = await sign(messageHash, privateKey);
+          // ✅ 使用弹窗授权进行签名（避免 iframe 的 WebAuthn 限制）
+          const { signature, address: signerAddress } = await triggerPasskeySign(data.message);
           
           event.source?.postMessage({
             type: 'INJPASS_SIGN_RESPONSE',
             requestId: data.id,
             signature: Array.from(signature),
+            address: signerAddress,
           }, { targetOrigin: event.origin });
         } catch (err) {
           event.source?.postMessage({
@@ -63,78 +63,25 @@ export default function EmbedPage() {
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [privateKey]);
+  }, [connected]);
 
   const handleConnect = async () => {
     setLoading(true);
     setError('');
 
     try {
-      // Debug: Check iframe context
-      console.log('[Embed] === Storage Access Debug ===');
-      console.log('[Embed] Is iframe:', window !== window.parent);
-      console.log('[Embed] Origin:', window.location.origin);
-      console.log('[Embed] Parent origin:', document.referrer);
-
-      // Request storage access for cross-origin iframe
-      if (typeof document.requestStorageAccess === 'function') {
-        console.log('[Embed] Storage Access API supported');
-        try {
-          const hasAccess = await document.hasStorageAccess();
-          console.log('[Embed] Current storage access:', hasAccess);
-          
-          if (!hasAccess) {
-            console.log('[Embed] Requesting storage access...');
-            await document.requestStorageAccess();
-            console.log('[Embed] ✅ Storage access granted!');
-          }
-        } catch (err) {
-          console.error('[Embed] ❌ Storage access denied:', err);
-          setError('Please allow storage access to use your wallet in embedded mode. Click "Allow" when prompted.');
-          setLoading(false);
-          return;
-        }
-      } else {
-        console.warn('[Embed] ⚠️ Storage Access API not supported in this browser');
-      }
-
-      // Debug: Test localStorage access
-      try {
-        const testKey = '__injpass_storage_test__';
-        localStorage.setItem(testKey, 'test');
-        localStorage.removeItem(testKey);
-        console.log('[Embed] ✅ localStorage is accessible');
-      } catch (err) {
-        console.error('[Embed] ❌ localStorage blocked:', err);
-        setError('Storage is blocked. Please enable third-party cookies or use the standalone app.');
-        setLoading(false);
-        return;
-      }
-
-      const keystore = loadWallet();
-      console.log('[Embed] Wallet loaded:', keystore ? '✅ Found' : '❌ Not found');
+      // ✅ 使用弹窗授权进行连接（避免 iframe 的 Storage 和 WebAuthn 限制）
+      const { address: walletAddress, walletName: name } = await triggerWalletConnect();
       
-      if (!keystore) {
-        throw new Error('No wallet found. Please create a wallet first at ' + window.location.origin);
-      }
-
-      if (!keystore.credentialId) {
-        throw new Error('Invalid wallet: missing credential ID');
-      }
-
-      // Unlock with Passkey
-      const entropy = await unlockByPasskey(keystore.credentialId);
-      const decryptedPrivateKey = await decryptKey(keystore.encryptedPrivateKey, entropy);
-      
-      setPrivateKey(decryptedPrivateKey);
-      setAddress(keystore.address);
+      setAddress(walletAddress);
+      setWalletName(name);
       setConnected(true);
 
       // Notify parent window
       window.parent.postMessage({
         type: 'INJPASS_CONNECTED',
-        address: keystore.address,
-        walletName: keystore.walletName,
+        address: walletAddress,
+        walletName: name,
       }, '*');
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Connection failed';
@@ -150,8 +97,8 @@ export default function EmbedPage() {
   };
 
   const handleDisconnect = () => {
-    setPrivateKey(null);
     setAddress('');
+    setWalletName('');
     setConnected(false);
 
     window.parent.postMessage({
@@ -177,16 +124,7 @@ export default function EmbedPage() {
 
             {error && (
               <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">
-                <p className="text-red-300 text-sm mb-2">{error}</p>
-                {error.includes('No wallet found') && (
-                  <a 
-                    href={window.location.origin + '/passkey-create'} 
-                    target="_blank"
-                    className="text-purple-300 text-xs underline hover:text-purple-200"
-                  >
-                    → Create wallet in new tab
-                  </a>
-                )}
+                <p className="text-red-300 text-sm">{error}</p>
               </div>
             )}
 
