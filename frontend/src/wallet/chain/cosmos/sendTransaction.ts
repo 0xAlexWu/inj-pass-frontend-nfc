@@ -8,9 +8,13 @@ import {
   createTransaction,
   MsgSend,
   TxClient,
-  DEFAULT_STD_FEE,
   BaseAccount,
 } from '@injectivelabs/sdk-ts';
+
+const DEFAULT_FEE = {
+  amount: [{ denom: 'inj', amount: '5000000000000000' }],
+  gas: '200000',
+};
 import { Network, getNetworkEndpoints } from '@injectivelabs/networks';
 import { PrivateKey } from '@injectivelabs/sdk-ts/dist/core/accounts/PrivateKey';
 
@@ -62,7 +66,7 @@ export async function sendCosmosTransaction(
     const { signBytes, txRaw } = createTransaction({
       message: msg,
       memo: '',
-      fee: DEFAULT_STD_FEE,
+      fee: DEFAULT_FEE,
       pubKey: privateKeyInstance.toPublicKey().toBase64(),
       sequence: baseAccount.sequence,
       accountNumber: baseAccount.accountNumber,
