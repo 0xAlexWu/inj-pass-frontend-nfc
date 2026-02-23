@@ -31,6 +31,124 @@ function AuthPageContent() {
       return;
     }
 
+    let processingStarted = false; // 使用本地变量而不是 state
+
+    // 处理钱包连接
+    const handleWalletConnect = async (request: WalletConnectRequest, targetOrigin: string) => {
+      if (request.requestId !== requestId) {
+        console.warn('Request ID mismatch, ignoring');
+        return;
+      }
+
+      if (processingStarted) {
+        console.warn('Already processing, ignoring duplicate request');
+        return;
+      }
+
+      processingStarted = true;
+      setStatus('processing');
+      setMessage('Please authenticate with your Passkey...');
+
+      try {
+        // 1. 加载钱包
+        const keystore = loadWallet();
+        if (!keystore || !keystore.credentialId) {
+          throw new Error('No wallet found. Please create a wallet first at injpass.com');
+        }
+
+        // 2. 使用 Passkey 解锁（✅ 在顶层窗口可正常工作）
+        setMessage('Verifying your identity...');
+        await unlockByPasskey(keystore.credentialId);
+
+        // 3. 回传连接结果（✅ 指定明确的 targetOrigin）
+        const response: WalletConnectResponse = {
+          type: 'WALLET_CONNECT_RESPONSE',
+          requestId: request.requestId,
+          address: keystore.address,
+          walletName: keystore.walletName || 'INJ Pass Wallet',
+        };
+
+        window.opener?.postMessage(response, targetOrigin);
+
+        setStatus('success');
+        setMessage('Connected successfully!');
+        setTimeout(() => window.close(), 1500);
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Connection failed';
+        setError(errorMsg);
+        setStatus('error');
+
+        const response: WalletConnectResponse = {
+          type: 'WALLET_CONNECT_RESPONSE',
+          requestId: request.requestId,
+          error: errorMsg,
+        };
+
+        window.opener?.postMessage(response, targetOrigin);
+      }
+    };
+
+    // 处理签名请求
+    const handlePasskeySign = async (request: AuthRequest, targetOrigin: string) => {
+      if (request.requestId !== requestId) {
+        console.warn('Request ID mismatch, ignoring');
+        return;
+      }
+
+      if (processingStarted) {
+        console.warn('Already processing, ignoring duplicate request');
+        return;
+      }
+
+      processingStarted = true;
+      setStatus('processing');
+      setMessage('Please authenticate with your Passkey...');
+      
+      try {
+        // 1. 加载钱包
+        const keystore = loadWallet();
+        if (!keystore || !keystore.credentialId) {
+          throw new Error('Wallet not found');
+        }
+
+        // 2. 使用 Passkey 解锁（✅ 在顶层窗口可正常工作）
+        setMessage('Unlocking your wallet...');
+        const entropy = await unlockByPasskey(keystore.credentialId);
+        const privateKey = await decryptKey(keystore.encryptedPrivateKey, entropy);
+
+        // 3. 签名
+        setMessage('Signing message...');
+        const messageHash = sha256(new TextEncoder().encode(request.message));
+        const signature = await sign(messageHash, privateKey);
+
+        // 4. 回传结果（✅ 指定明确的 targetOrigin）
+        const response: AuthResponse = {
+          type: 'PASSKEY_SIGN_RESPONSE',
+          requestId: request.requestId,
+          signature: Array.from(signature),
+          address: keystore.address,
+        };
+
+        window.opener?.postMessage(response, targetOrigin);
+
+        setStatus('success');
+        setMessage('Signed successfully!');
+        setTimeout(() => window.close(), 1500);
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Authentication failed';
+        setError(errorMsg);
+        setStatus('error');
+
+        const response: AuthResponse = {
+          type: 'PASSKEY_SIGN_RESPONSE',
+          requestId: request.requestId,
+          error: errorMsg,
+        };
+
+        window.opener?.postMessage(response, targetOrigin);
+      }
+    };
+
     // ✅ 监听来自 opener 的请求
     const handleMessage = async (event: MessageEvent) => {
       // 基本的 origin 验证（允许 localhost 用于开发）
@@ -47,12 +165,12 @@ function AuthPageContent() {
       const data = event.data;
 
       // 处理钱包连接请求
-      if (data.type === 'WALLET_CONNECT') {
+      if (data.type === 'WALLET_CONNECT' && data.requestId === requestId) {
         await handleWalletConnect(data as WalletConnectRequest, event.origin);
       }
 
       // 处理签名请求
-      if (data.type === 'PASSKEY_SIGN') {
+      if (data.type === 'PASSKEY_SIGN' && data.requestId === requestId) {
         await handlePasskeySign(data as AuthRequest, event.origin);
       }
     };
@@ -66,104 +184,6 @@ function AuthPageContent() {
 
     return () => window.removeEventListener('message', handleMessage);
   }, [requestId, originParam]);
-
-  // 处理钱包连接
-  const handleWalletConnect = async (request: WalletConnectRequest, targetOrigin: string) => {
-    if (request.requestId !== requestId) return;
-
-    setStatus('processing');
-    setMessage('Please authenticate with your Passkey...');
-
-    try {
-      // 1. 加载钱包
-      const keystore = loadWallet();
-      if (!keystore || !keystore.credentialId) {
-        throw new Error('No wallet found. Please create a wallet first at injpass.com');
-      }
-
-      // 2. 使用 Passkey 解锁（✅ 在顶层窗口可正常工作）
-      setMessage('Verifying your identity...');
-      await unlockByPasskey(keystore.credentialId);
-
-      // 3. 回传连接结果（✅ 指定明确的 targetOrigin）
-      const response: WalletConnectResponse = {
-        type: 'WALLET_CONNECT_RESPONSE',
-        requestId: request.requestId,
-        address: keystore.address,
-        walletName: keystore.walletName || 'INJ Pass Wallet',
-      };
-
-      window.opener?.postMessage(response, targetOrigin);
-
-      setStatus('success');
-      setMessage('Connected successfully!');
-      setTimeout(() => window.close(), 1500);
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Connection failed';
-      setError(errorMsg);
-      setStatus('error');
-
-      const response: WalletConnectResponse = {
-        type: 'WALLET_CONNECT_RESPONSE',
-        requestId: request.requestId,
-        error: errorMsg,
-      };
-
-      window.opener?.postMessage(response, targetOrigin);
-    }
-  };
-
-  // 处理签名请求
-  const handlePasskeySign = async (request: AuthRequest, targetOrigin: string) => {
-    if (request.requestId !== requestId) return;
-
-    setStatus('processing');
-    setMessage('Please authenticate with your Passkey...');
-    
-    try {
-      // 1. 加载钱包
-      const keystore = loadWallet();
-      if (!keystore || !keystore.credentialId) {
-        throw new Error('Wallet not found');
-      }
-
-      // 2. 使用 Passkey 解锁（✅ 在顶层窗口可正常工作）
-      setMessage('Unlocking your wallet...');
-      const entropy = await unlockByPasskey(keystore.credentialId);
-      const privateKey = await decryptKey(keystore.encryptedPrivateKey, entropy);
-
-      // 3. 签名
-      setMessage('Signing message...');
-      const messageHash = sha256(new TextEncoder().encode(request.message));
-      const signature = await sign(messageHash, privateKey);
-
-      // 4. 回传结果（✅ 指定明确的 targetOrigin）
-      const response: AuthResponse = {
-        type: 'PASSKEY_SIGN_RESPONSE',
-        requestId: request.requestId,
-        signature: Array.from(signature),
-        address: keystore.address,
-      };
-
-      window.opener?.postMessage(response, targetOrigin);
-
-      setStatus('success');
-      setMessage('Signed successfully!');
-      setTimeout(() => window.close(), 1500);
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Authentication failed';
-      setError(errorMsg);
-      setStatus('error');
-
-      const response: AuthResponse = {
-        type: 'PASSKEY_SIGN_RESPONSE',
-        requestId: request.requestId,
-        error: errorMsg,
-      };
-
-      window.opener?.postMessage(response, targetOrigin);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 flex items-center justify-center p-4">

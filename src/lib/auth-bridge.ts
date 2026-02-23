@@ -29,7 +29,7 @@ export interface AuthRequest {
 }
 
 export interface AuthResponse {
-  type: 'PASSKEY_SIGN_RESPONSE';
+  type: 'PASSKEY_SIGN_RESPONSE' | 'AUTH_WINDOW_READY';
   requestId: string;
   signature?: number[];
   address?: string;
@@ -43,7 +43,7 @@ export interface WalletConnectRequest {
 }
 
 export interface WalletConnectResponse {
-  type: 'WALLET_CONNECT_RESPONSE';
+  type: 'WALLET_CONNECT_RESPONSE' | 'AUTH_WINDOW_READY';
   requestId: string;
   address?: string;
   walletName?: string;
@@ -87,6 +87,14 @@ export function triggerPasskeySign(message: string): Promise<{ signature: Uint8A
       }
 
       const { type, requestId: respId, signature, address, error } = event.data;
+
+      // 处理窗口准备就绪消息
+      if (type === 'AUTH_WINDOW_READY' && respId === requestId) {
+        console.log('✅ Auth window ready, sending sign request');
+        clearInterval(sendInterval); // 停止轮询
+        sendRequest(); // 发送一次请求
+        return;
+      }
 
       if (type === 'PASSKEY_SIGN_RESPONSE' && respId === requestId) {
         // 清理所有资源
@@ -133,9 +141,9 @@ export function triggerPasskeySign(message: string): Promise<{ signature: Uint8A
       reject(new Error('Authentication timeout. Please try again.'));
     }, 60000);
 
-    // 轮询发送请求，确保弹窗加载完成
+    // 轮询发送请求，确保弹窗加载完成（降低频率避免重复触发）
     let attempts = 0;
-    const maxAttempts = 10;
+    const maxAttempts = 5; // 减少到 5 次
     const sendInterval = setInterval(() => {
       if (popup.closed) {
         clearInterval(sendInterval);
@@ -151,7 +159,7 @@ export function triggerPasskeySign(message: string): Promise<{ signature: Uint8A
       if (attempts >= maxAttempts) {
         clearInterval(sendInterval);
       }
-    }, 500);
+    }, 1000); // 增加到 1 秒
   });
 }
 
@@ -190,6 +198,14 @@ export function triggerWalletConnect(): Promise<{ address: string; walletName: s
       }
 
       const { type, requestId: respId, address, walletName, error } = event.data;
+
+      // 处理窗口准备就绪消息
+      if (type === 'AUTH_WINDOW_READY' && respId === requestId) {
+        console.log('✅ Auth window ready, sending connect request');
+        clearInterval(sendInterval); // 停止轮询
+        sendRequest(); // 发送一次请求
+        return;
+      }
 
       if (type === 'WALLET_CONNECT_RESPONSE' && respId === requestId) {
         // 清理所有资源
@@ -235,9 +251,9 @@ export function triggerWalletConnect(): Promise<{ address: string; walletName: s
       reject(new Error('Connection timeout. Please try again.'));
     }, 60000);
 
-    // 轮询发送请求
+    // 轮询发送请求（降低频率避免重复触发）
     let attempts = 0;
-    const maxAttempts = 10;
+    const maxAttempts = 5; // 减少到 5 次
     const sendInterval = setInterval(() => {
       if (popup.closed) {
         clearInterval(sendInterval);
@@ -253,7 +269,7 @@ export function triggerWalletConnect(): Promise<{ address: string; walletName: s
       if (attempts >= maxAttempts) {
         clearInterval(sendInterval);
       }
-    }, 500);
+    }, 1000); // 增加到 1 秒
   });
 }
 
