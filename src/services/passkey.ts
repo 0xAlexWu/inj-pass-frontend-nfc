@@ -11,6 +11,8 @@ export interface PasskeyVerifyResponse {
   publicKey?: string;
   verified?: boolean;
   token?: string;
+  walletAddress?: string;
+  walletName?: string;
 }
 
 export interface TokenVerifyResponse {
@@ -58,7 +60,9 @@ export async function requestChallenge(
  */
 export async function verifyPasskey(
   challenge: string,
-  credential: any
+  credential: any,
+  walletAddress?: string,
+  walletName?: string
 ): Promise<PasskeyVerifyResponse> {
   const response = await fetch(`${API_BASE_URL}/passkey/verify`, {
     method: 'POST',
@@ -66,6 +70,8 @@ export async function verifyPasskey(
     body: JSON.stringify({
       challenge,
       attestation: credential,
+      walletAddress,
+      walletName,
     }),
   });
 
