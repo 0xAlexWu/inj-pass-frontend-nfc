@@ -57,6 +57,7 @@ export async function requestChallenge(
 
 /**
  * Verify Passkey attestation/assertion with backend
+ * CRITICAL: Only send walletAddress and walletName during registration, never during authentication
  */
 export async function verifyPasskey(
   challenge: string,
@@ -64,15 +65,25 @@ export async function verifyPasskey(
   walletAddress?: string,
   walletName?: string
 ): Promise<PasskeyVerifyResponse> {
+  // Build request body - only include walletAddress and walletName if they have values
+  // This ensures we never accidentally send undefined/null during authentication
+  const requestBody: any = {
+    challenge,
+    attestation: credential,
+  };
+
+  // Only include wallet fields if they are explicitly provided (registration only)
+  if (walletAddress) {
+    requestBody.walletAddress = walletAddress;
+  }
+  if (walletName) {
+    requestBody.walletName = walletName;
+  }
+
   const response = await fetch(`${API_BASE_URL}/passkey/verify`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      challenge,
-      attestation: credential,
-      walletAddress,
-      walletName,
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
