@@ -55,7 +55,7 @@ First, run the development server:
 npm run dev
 # or
 yarn dev
-# or(recommend)
+# or
 pnpm dev
 # or
 bun dev
