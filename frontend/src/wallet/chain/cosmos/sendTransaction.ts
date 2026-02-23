@@ -69,6 +69,8 @@ export async function sendCosmosTransaction(
 
     txRaw.signatures = [signature];
 
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore – TxClient type definition omits the endpoint arg in this SDK version
     const txClient = new TxClient(COSMOS_LCD);
     const response = await txClient.broadcast(txRaw);
 
