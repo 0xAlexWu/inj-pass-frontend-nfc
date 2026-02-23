@@ -11,10 +11,8 @@ import {
   BaseAccount,
   PrivateKey,
 } from '@injectivelabs/sdk-ts';
-import { Network, getNetworkEndpoints } from '@injectivelabs/networks';
-
-const INJECTIVE_NETWORK = Network.Mainnet;
-const endpoints = getNetworkEndpoints(INJECTIVE_NETWORK);
+const COSMOS_LCD = 'https://lcd.injective.network';
+const COSMOS_CHAIN_ID = 'injective-1';
 
 const DEFAULT_FEE = {
   amount: [{ denom: 'inj', amount: '5000000000000000' }],
@@ -41,7 +39,7 @@ export async function sendCosmosTransaction(
     const privateKeyInstance = PrivateKey.fromHex(privateKeyHex);
     const injectiveAddress = privateKeyInstance.toBech32('inj');
 
-    const chainRestAuthApi = new ChainRestAuthApi(endpoints.lcd);
+    const chainRestAuthApi = new ChainRestAuthApi(COSMOS_LCD);
 
     const accountDetailsResponse = await chainRestAuthApi.fetchAccount(injectiveAddress);
     const baseAccount = BaseAccount.fromRestApi(accountDetailsResponse);
@@ -64,7 +62,7 @@ export async function sendCosmosTransaction(
       pubKey: privateKeyInstance.toPublicKey().toBase64(),
       sequence: baseAccount.sequence,
       accountNumber: baseAccount.accountNumber,
-      chainId: INJECTIVE_NETWORK.chainId,
+      chainId: COSMOS_CHAIN_ID,
     });
 
     const signature = await privateKeyInstance.sign(Buffer.from(signBytes));
