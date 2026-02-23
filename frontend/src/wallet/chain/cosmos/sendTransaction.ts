@@ -69,7 +69,7 @@ export async function sendCosmosTransaction(
 
     txRaw.signatures = [signature];
 
-    const txClient = new TxClient(endpoints.lcd);
+    const txClient = new TxClient(COSMOS_LCD);
     const response = await txClient.broadcast(txRaw);
 
     if (response.code !== 0) {
