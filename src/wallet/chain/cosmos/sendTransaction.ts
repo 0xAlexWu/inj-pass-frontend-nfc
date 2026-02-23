@@ -9,17 +9,17 @@ import {
   MsgSend,
   TxClient,
   BaseAccount,
+  PrivateKey,
 } from '@injectivelabs/sdk-ts';
+import { Network, getNetworkEndpoints } from '@injectivelabs/networks';
+
+const INJECTIVE_NETWORK = Network.Mainnet;
+const endpoints = getNetworkEndpoints(INJECTIVE_NETWORK);
 
 const DEFAULT_FEE = {
   amount: [{ denom: 'inj', amount: '5000000000000000' }],
   gas: '200000',
 };
-import { Network, getNetworkEndpoints } from '@injectivelabs/networks';
-import { PrivateKey } from '@injectivelabs/sdk-ts/dist/core/accounts/PrivateKey';
-
-const INJECTIVE_NETWORK = Network.Mainnet;
-const endpoints = getNetworkEndpoints(INJECTIVE_NETWORK);
 
 /**
  * Send a Cosmos transaction
