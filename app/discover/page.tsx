@@ -38,11 +38,11 @@ export default function DiscoverPage() {
     },
     {
       id: '2',
-      name: 'INJ Ecosystem',
-      description: 'Explore the Injective Ecosystem',
-      icon: 'https://www.google.com/s2/favicons?domain=injective.com&sz=128',
+      name: 'Name Service',
+      description: '.inj Domain Names',
+      icon: 'https://www.google.com/s2/favicons?domain=inj.space.id&sz=128',
       category: 'defi',
-      url: 'https://injective.com',
+      url: 'https://www.inj.space.id/',
       featured: true
     },
     {
