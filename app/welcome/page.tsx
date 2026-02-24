@@ -153,9 +153,8 @@ export default function WelcomePage() {
           <div className="flex flex-col gap-4 w-full max-w-md mx-auto animate-fade-in">
 
             {/*
-              ── Slot 1: CREATE NEW WALLET button  ↔  wallet-name input ──
-              Both children share the same grid cell so neither displaces
-              RECOVER WALLET when one swaps for the other.
+              Slot 1: CREATE NEW WALLET button swaps with wallet-name input.
+              Both share the same grid cell so RECOVER WALLET never shifts.
             */}
             <div className="grid">
               {/* CREATE NEW WALLET button */}
@@ -206,7 +205,7 @@ export default function WelcomePage() {
                       }
                     }}
                   />
-                  {/* Black arrow — absolute-centred on the right */}
+                  {/* Submit arrow button */}
                   <button
                     onClick={handleCreateWallet}
                     disabled={loading || !walletNameInput.trim()}
@@ -227,7 +226,7 @@ export default function WelcomePage() {
               </div>
             </div>
 
-            {/* RECOVER WALLET — position is always identical */}
+            {/* RECOVER WALLET */}
             <button
               onClick={handleRecoverWallet}
               disabled={loading}
@@ -242,10 +241,7 @@ export default function WelcomePage() {
               <span>{loading ? 'RECOVERING...' : 'RECOVER WALLET'}</span>
             </button>
 
-            {/*
-              Back — always rendered (same height reserved) so RECOVER WALLET
-              never shifts. Fades in/out with pointer-events toggled.
-            */}
+            {/* Back link — fades in when wallet name input is shown */}
             <div
               className={`transition-all duration-300 ease-in-out ${
                 showCreateModal
