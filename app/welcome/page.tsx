@@ -143,6 +143,7 @@ export default function WelcomePage() {
 
           <div className="flex flex-col gap-4 w-full max-w-md mx-auto animate-fade-in">
             {/* CREATE NEW WALLET — toggles between button and inline input */}
+            {/* CREATE NEW WALLET — toggles between button and inline input */}
             {!showCreateModal ? (
               <button
                 onClick={() => setShowCreateModal(true)}
@@ -156,56 +157,42 @@ export default function WelcomePage() {
                 <span>CREATE NEW WALLET</span>
               </button>
             ) : (
-              <div className="flex flex-col gap-2">
-                {/* Input row — same height / rounded style as the original button */}
-                <div className="flex items-center bg-white rounded-2xl shadow-lg overflow-hidden">
-                  <input
-                    type="text"
-                    value={walletNameInput}
-                    onChange={(e) => setWalletNameInput(e.target.value)}
-                    placeholder="Wallet name…"
-                    className="flex-1 bg-transparent px-5 py-4 text-black text-sm md:text-base font-bold placeholder-black/40 focus:outline-none"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && walletNameInput.trim()) {
-                        handleCreateWallet();
-                      }
-                      if (e.key === 'Escape') {
-                        setShowCreateModal(false);
-                        setWalletNameInput('');
-                        setError('');
-                      }
-                    }}
-                  />
-                  {/* Continue arrow */}
-                  <button
-                    onClick={handleCreateWallet}
-                    disabled={loading || !walletNameInput.trim()}
-                    className="flex items-center justify-center w-14 h-full bg-black/90 hover:bg-black transition-colors disabled:opacity-30 disabled:cursor-not-allowed self-stretch"
-                    title="Continue"
-                  >
-                    {loading ? (
-                      <svg className="w-5 h-5 text-white animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-
-                {/* Back text */}
-                <button
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    setWalletNameInput('');
-                    setError('');
+              /* Input row — same height / rounded style as the original button */
+              <div className="relative bg-white rounded-2xl shadow-lg">
+                <input
+                  type="text"
+                  value={walletNameInput}
+                  onChange={(e) => setWalletNameInput(e.target.value)}
+                  placeholder="Wallet name…"
+                  className="w-full bg-transparent pl-5 pr-14 py-4 text-black text-sm md:text-base font-bold placeholder-black/40 focus:outline-none rounded-2xl"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && walletNameInput.trim()) {
+                      handleCreateWallet();
+                    }
+                    if (e.key === 'Escape') {
+                      setShowCreateModal(false);
+                      setWalletNameInput('');
+                      setError('');
+                    }
                   }}
-                  className="text-gray-400 text-sm hover:text-white transition-colors text-center py-1"
+                />
+                {/* Continue arrow — black icon, vertically centred inside input */}
+                <button
+                  onClick={handleCreateWallet}
+                  disabled={loading || !walletNameInput.trim()}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl hover:bg-black/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  title="Continue"
                 >
-                  ← Back
+                  {loading ? (
+                    <svg className="w-5 h-5 text-black animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                    </svg>
+                  )}
                 </button>
               </div>
             )}
@@ -223,6 +210,20 @@ export default function WelcomePage() {
               </svg>
               <span>{loading ? 'RECOVERING...' : 'RECOVER WALLET'}</span>
             </button>
+
+            {/* Back — shown below RECOVER WALLET when input is active */}
+            {showCreateModal && (
+              <button
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setWalletNameInput('');
+                  setError('');
+                }}
+                className="text-gray-400 text-sm hover:text-white transition-colors text-center py-1"
+              >
+                ← Back
+              </button>
+            )}
           </div>
         </div>
       </div>
