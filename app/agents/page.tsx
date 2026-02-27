@@ -525,7 +525,7 @@ export default function AgentsPage() {
         if (!inCode) { inCode = true; codeLines = []; }
         else {
           elements.push(
-            <pre key={keyIdx++} className="bg-white/5 border border-white/10 rounded-lg p-3 my-2 overflow-x-auto text-xs font-mono text-green-300 whitespace-pre-wrap">
+            <pre key={keyIdx++} className="bg-white/5 border border-white/10 rounded-lg p-3 my-2 overflow-x-auto text-xs font-mono text-green-300 whitespace-pre-wrap break-all">
               {codeLines.join('\n')}
             </pre>
           );
@@ -536,7 +536,7 @@ export default function AgentsPage() {
       if (inCode) { codeLines.push(line); continue; }
 
       elements.push(
-        <p key={keyIdx++} className="mb-1 leading-relaxed">
+        <p key={keyIdx++} className="mb-1 leading-relaxed break-all">
           {renderInline(line)}
         </p>
       );
@@ -547,12 +547,12 @@ export default function AgentsPage() {
   function renderInline(text: string): React.ReactNode {
     return text.split(/(`[^`]+`|\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\))/g).map((part, i) => {
       if (part.startsWith('`') && part.endsWith('`'))
-        return <code key={i} className="bg-white/10 px-1 rounded text-xs font-mono text-blue-300">{part.slice(1, -1)}</code>;
+        return <code key={i} className="bg-white/10 px-1 rounded text-xs font-mono text-blue-300 break-all">{part.slice(1, -1)}</code>;
       if (part.startsWith('**') && part.endsWith('**'))
         return <strong key={i}>{part.slice(2, -2)}</strong>;
       const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
       if (linkMatch)
-        return <a key={i} href={linkMatch[2]} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">{linkMatch[1]}</a>;
+        return <a key={i} href={linkMatch[2]} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline break-all">{linkMatch[1]}</a>;
       return part;
     });
   }
@@ -695,7 +695,7 @@ export default function AgentsPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
                 </svg>
               </div>
-              <h2 className="text-xl font-bold mb-2">INJ Pass Agent</h2>
+              <h2 className="text-xl font-bold mb-2"><span className="lambda-gradient">λ</span> Agent</h2>
               <p className="text-gray-400 text-sm max-w-sm mb-8">
                 AI-powered wallet assistant. Ask me to check balances, swap tokens, send INJ, or explain anything on Injective.
               </p>
@@ -721,9 +721,9 @@ export default function AgentsPage() {
               {messages.filter((msg) => msg.role !== 'tool').map((msg) => (
                 <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                   <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold ${
-                    msg.role === 'user' ? 'bg-white text-black' : 'bg-white/10 text-white'
+                    msg.role === 'user' ? 'bg-white text-black' : 'bg-white/10'
                   }`}>
-                    {msg.role === 'user' ? 'U' : 'λ'}
+                    {msg.role === 'user' ? 'U' : <span className="lambda-gradient">λ</span>}
                   </div>
                   <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                     msg.role === 'user' ? 'bg-white text-black rounded-tr-sm'
@@ -740,7 +740,9 @@ export default function AgentsPage() {
 
               {isRunning && (
                 <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm font-bold text-white">λ</div>
+                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm font-bold">
+                    <span className="lambda-gradient">λ</span>
+                  </div>
                   <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3">
                     <div className="flex gap-1 items-center h-5">
                       {[0, 150, 300].map((d) => (
