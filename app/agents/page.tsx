@@ -106,7 +106,7 @@ function saveConversations(convs: Conversation[]) {
 
 export default function AgentsPage() {
   const router = useRouter();
-  const { isUnlocked, address, privateKey, keystore, isCheckingSession, unlock } = useWallet();
+  const { isUnlocked, address, privateKey, keystore, isCheckingSession, unlock, resetTxAuth } = useWallet();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -239,6 +239,7 @@ export default function AgentsPage() {
           userAddress: address as Address,
           privateKey: pkHex,
         });
+        resetTxAuth(); // extend the PIN-free window
         return JSON.stringify({
           success: true,
           txHash,
@@ -250,6 +251,7 @@ export default function AgentsPage() {
         if (!pk) return JSON.stringify({ error: 'Wallet locked' });
         const { toAddress, amount } = input as { toAddress: string; amount: string };
         const txHash = await sendTransaction(pk, toAddress, amount);
+        resetTxAuth(); // extend the PIN-free window
         return JSON.stringify({
           success: true,
           txHash,
