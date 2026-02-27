@@ -7,6 +7,8 @@ import { getTokenBalances, executeSwap, getSwapQuote } from '@/services/dex-swap
 import { sendTransaction } from '@/wallet/chain/evm/sendTransaction';
 import { getTxHistory } from '@/wallet/chain/evm/getTxHistory';
 import { privateKeyToHex } from '@/utils/wallet';
+import { unlockByPasskey } from '@/wallet/key-management/createByPasskey';
+import { decryptKey } from '@/wallet/keystore';
 import type { Address } from 'viem';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -104,7 +106,7 @@ function saveConversations(convs: Conversation[]) {
 
 export default function AgentsPage() {
   const router = useRouter();
-  const { isUnlocked, address, privateKey, isCheckingSession } = useWallet();
+  const { isUnlocked, address, privateKey, keystore, isCheckingSession, unlock } = useWallet();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -114,6 +116,10 @@ export default function AgentsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirmation | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -187,8 +193,13 @@ export default function AgentsPage() {
 
   // ─── Tool execution ──────────────────────────────────────────────────────
 
-  async function executeTool(name: string, input: Record<string, unknown>): Promise<string> {
+  async function executeTool(
+    name: string,
+    input: Record<string, unknown>,
+    overridePk?: Uint8Array,
+  ): Promise<string> {
     if (!address) return JSON.stringify({ error: 'Wallet not connected' });
+    const pk = overridePk ?? privateKey;
 
     try {
       if (name === 'get_wallet_info') {
@@ -217,11 +228,11 @@ export default function AgentsPage() {
       }
 
       if (name === 'execute_swap') {
-        if (!privateKey) return JSON.stringify({ error: 'Wallet locked' });
+        if (!pk) return JSON.stringify({ error: 'Wallet locked' });
         const { fromToken, toToken, amount, slippage = 0.5 } = input as {
           fromToken: string; toToken: string; amount: string; slippage?: number;
         };
-        const pkHex = privateKeyToHex(privateKey);
+        const pkHex = privateKeyToHex(pk);
         const txHash = await executeSwap({
           fromToken, toToken, amountIn: amount,
           slippage: Number(slippage),
@@ -236,9 +247,9 @@ export default function AgentsPage() {
       }
 
       if (name === 'send_token') {
-        if (!privateKey) return JSON.stringify({ error: 'Wallet locked' });
+        if (!pk) return JSON.stringify({ error: 'Wallet locked' });
         const { toAddress, amount } = input as { toAddress: string; amount: string };
-        const txHash = await sendTransaction(privateKey, toAddress, amount);
+        const txHash = await sendTransaction(pk, toAddress, amount);
         return JSON.stringify({
           success: true,
           txHash,
@@ -364,13 +375,22 @@ export default function AgentsPage() {
 
   async function handleConfirm() {
     if (!pendingConfirm) return;
+    // If private key not yet in memory, ask the user to re-authenticate first
+    if (!privateKey) {
+      setShowAuthModal(true);
+      return;
+    }
+    await executeConfirmedTool();
+  }
+
+  async function executeConfirmedTool(overridePk?: Uint8Array) {
+    if (!pendingConfirm) return;
     const { convId, toolUseId, toolName, toolInput } = pendingConfirm;
     setConfirmLoading(true);
 
-    const resultContent = await executeTool(toolName, toolInput);
+    const resultContent = await executeTool(toolName, toolInput, overridePk);
     const parsed = JSON.parse(resultContent);
 
-    // Display result
     appendDisplay(convId, {
       id: uid(),
       role: 'tool',
@@ -379,21 +399,56 @@ export default function AgentsPage() {
         : `✅ **${toolName}** executed\nTx Hash: \`${parsed.txHash}\`\n[View on Blockscout](${parsed.explorerUrl})`,
     });
 
-    // Add tool_result to API history and continue loop
     const toolResultMsg: ApiMessage = {
       role: 'user',
       content: [{ type: 'tool_result', tool_use_id: toolUseId, content: resultContent }],
     };
     appendApi(convId, toolResultMsg);
 
-    // Get current history including the new tool result
     const currentHistory = [...getApiHistory(convId), toolResultMsg];
 
     setPendingConfirm(null);
     setConfirmLoading(false);
 
-    // Continue the agent loop with updated history
     await runLoop(convId, currentHistory);
+  }
+
+  async function handleAuthWithPasskey() {
+    if (!keystore?.credentialId) return;
+    setAuthLoading(true);
+    setAuthError('');
+    try {
+      const entropy = await unlockByPasskey(keystore.credentialId);
+      const pk = await decryptKey(keystore.encryptedPrivateKey, entropy);
+      unlock(pk, keystore);
+      setShowAuthModal(false);
+      setAuthLoading(false);
+      await executeConfirmedTool(pk);
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : 'Authentication failed');
+      setAuthLoading(false);
+    }
+  }
+
+  async function handleAuthWithPassword() {
+    if (!keystore || !authPassword) return;
+    setAuthLoading(true);
+    setAuthError('');
+    try {
+      const encoder = new TextEncoder();
+      const rawEntropy = encoder.encode(authPassword);
+      const entropy = new Uint8Array(Math.max(rawEntropy.length, 32));
+      entropy.set(rawEntropy);
+      const pk = await decryptKey(keystore.encryptedPrivateKey, entropy);
+      unlock(pk, keystore);
+      setShowAuthModal(false);
+      setAuthPassword('');
+      setAuthLoading(false);
+      await executeConfirmedTool(pk);
+    } catch {
+      setAuthError('Incorrect password');
+      setAuthLoading(false);
+    }
   }
 
   function handleCancel() {
@@ -797,6 +852,78 @@ export default function AgentsPage() {
                     {confirmLoading ? 'Processing…' : 'Confirm'}
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Re-auth modal (privateKey not in memory) ── */}
+        {showAuthModal && (
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
+            <div className="bg-[#111] border border-white/15 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+              <div className="px-5 pt-5 pb-4 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm">Verify Identity</h3>
+                    <p className="text-xs text-gray-400">Re-authenticate to sign this transaction</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-5 py-4">
+                {authError && (
+                  <div className="mb-3 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+                    {authError}
+                  </div>
+                )}
+
+                {keystore?.source === 'passkey' && (
+                  <button
+                    onClick={handleAuthWithPasskey}
+                    disabled={authLoading}
+                    className="w-full py-3 rounded-xl bg-white text-black font-bold text-sm hover:bg-gray-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {authLoading
+                      ? <><div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />Verifying…</>
+                      : <>🔑 Authenticate with Passkey</>}
+                  </button>
+                )}
+
+                {keystore?.source === 'import' && (
+                  <div className="space-y-3">
+                    <input
+                      type="password"
+                      value={authPassword}
+                      onChange={(e) => setAuthPassword(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAuthWithPassword()}
+                      placeholder="Enter your wallet password"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-white/30 transition-colors"
+                      autoFocus
+                    />
+                    <button
+                      onClick={handleAuthWithPassword}
+                      disabled={authLoading || !authPassword}
+                      className="w-full py-3 rounded-xl bg-white text-black font-bold text-sm hover:bg-gray-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {authLoading
+                        ? <><div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />Verifying…</>
+                        : '🔓 Unlock & Sign'}
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => { setShowAuthModal(false); setAuthError(''); setAuthPassword(''); }}
+                  disabled={authLoading}
+                  className="w-full mt-2 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 font-semibold text-sm transition-colors"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>
