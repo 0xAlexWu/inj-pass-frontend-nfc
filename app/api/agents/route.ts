@@ -112,10 +112,11 @@ export interface AgentMessage {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { messages, model = 'claude-sonnet-4-6', toolResults } = body as {
+    const { messages, model = 'claude-sonnet-4-6', toolResults, systemExtra } = body as {
       messages: AgentMessage[];
       model?: string;
       toolResults?: { tool_use_id: string; content: string }[];
+      systemExtra?: string;
     };
 
     const apiMessages: Anthropic.MessageParam[] = messages.map((m) => ({
@@ -160,7 +161,7 @@ RULES:
 7. For Hash Mahjong: display the tile emojis and the win rule clearly. For multi-round play, show a round-by-round table and a final summary (total rounds, wins, win rate, best rule).
 8. Cap play_hash_mahjong_multi at 20 rounds maximum to protect the user's balance.
 
-Respond in the same language the user writes in. Be concise and direct.`,
+Respond in the same language the user writes in. Be concise and direct.${systemExtra ? `\n\n${systemExtra}` : ''}`,
       tools: AGENT_TOOLS,
       messages: apiMessages,
     });
