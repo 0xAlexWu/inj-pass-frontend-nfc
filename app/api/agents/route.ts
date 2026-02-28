@@ -73,6 +73,31 @@ export const AGENT_TOOLS: Anthropic.Tool[] = [
       required: [],
     },
   },
+  {
+    name: 'play_hash_mahjong',
+    description:
+      'Play one round of Hash Mahjong on Injective EVM. Costs 0.000001 INJ. ' +
+      'Sends a transaction to the game contract, derives 10 mahjong tiles from ' +
+      'the tx hash, and evaluates 18 win rules. Requires user confirmation.',
+    input_schema: { type: 'object' as const, properties: {}, required: [] },
+  },
+  {
+    name: 'play_hash_mahjong_multi',
+    description:
+      'Play Hash Mahjong multiple times in a row. Costs 0.000001 INJ per round. ' +
+      'Plays all rounds sequentially and returns a complete win/loss summary with ' +
+      'tile hands and matched rules. Requires user confirmation.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        rounds: {
+          type: 'number',
+          description: 'Number of rounds to play (1–20). Default 5.',
+        },
+      },
+      required: ['rounds'],
+    },
+  },
 ];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -122,6 +147,8 @@ CAPABILITIES:
 - execute_swap: swap tokens (INJ↔USDT, INJ↔USDC, USDT↔USDC)
 - send_token: send INJ to another address
 - get_tx_history: view recent transactions
+- play_hash_mahjong: play one round of Hash Mahjong (costs 0.000001 INJ)
+- play_hash_mahjong_multi: play N rounds of Hash Mahjong and get a win summary (costs 0.000001 INJ × N)
 
 RULES:
 1. When the user asks to "swap all" or uses vague amounts, call get_balance FIRST to get the exact amount, then get_swap_quote, then execute_swap.
@@ -129,7 +156,9 @@ RULES:
 3. After execute_swap succeeds, always report the transaction hash and the Blockscout explorer link.
 4. When the user asks for their address/wallet, call get_wallet_info.
 5. Never ask for private keys — they are managed securely by the wallet.
-6. After a safe tool returns results, continue the task autonomously without asking for confirmation again unless it is a destructive action (swap or send).
+6. After a safe tool returns results, continue the task autonomously without asking for confirmation again unless it is a destructive action (swap, send, or mahjong play).
+7. For Hash Mahjong: display the tile emojis and the win rule clearly. For multi-round play, show a round-by-round table and a final summary (total rounds, wins, win rate, best rule).
+8. Cap play_hash_mahjong_multi at 20 rounds maximum to protect the user's balance.
 
 Respond in the same language the user writes in. Be concise and direct.`,
       tools: AGENT_TOOLS,
