@@ -102,6 +102,91 @@ function saveConversations(convs: Conversation[]) {
   } catch { /* storage full */ }
 }
 
+// ─── Hash Mahjong game logic (ported from hash-mahjong-two.vercel.app) ──────
+
+const HM_TILE: Record<string, string> = {
+  '0': '🀆', '1': '🀇', '2': '🀈', '3': '🀉', '4': '🀊',
+  '5': '🀋', '6': '🀌', '7': '🀍', '8': '🀎', '9': '🀏',
+  a: '🀐', b: '🀑', c: '🀒', d: '🀓', e: '🀄', f: '🀅',
+};
+const HM_GAME_ADDRESS = '0x6cd6592b7d2a9b1e59aa60a6138434d2fe4cd062';
+const HM_PLAY_COST    = '0.000001'; // INJ per round
+
+interface HMRule { id: number; name: string; payout: string }
+
+function hmCounts(s: string): Record<string, number> {
+  const m: Record<string, number> = {};
+  for (const c of s) m[c] = (m[c] || 0) + 1;
+  return m;
+}
+function hmPairs(c: Record<string, number>)   { return Object.values(c).filter(v => v === 2).length; }
+function hmTriples(c: Record<string, number>) { return Object.values(c).filter(v => v === 3).length; }
+function hmHasAtLeast(c: Record<string, number>, n: number) { return Object.values(c).some(v => v >= n); }
+function hmHasExact(c: Record<string, number>, n: number)   { return Object.values(c).some(v => v === n); }
+function hmCountExact(c: Record<string, number>, n: number) { return Object.values(c).filter(v => v === n).length; }
+function hmHexVal(ch: string) { const v = parseInt(ch, 16); return Number.isFinite(v) ? v : null; }
+function hmStraight(s: string, len: number) {
+  const a = s.split('').map(hmHexVal);
+  for (let i = 0; i <= a.length - len; i++) {
+    let asc = true, desc = true;
+    for (let j = 1; j < len; j++) {
+      if (a[i+j] !== (a[i] as number) + j) asc = false;
+      if (a[i+j] !== (a[i] as number) - j) desc = false;
+    }
+    if (asc || desc) return true;
+  }
+  return false;
+}
+function hmDouble4(s: string) {
+  const a = s.split('').map(hmHexVal), runs: [number,number][] = [];
+  for (let i = 0; i <= 6; i++) {
+    let asc = true, desc = true;
+    for (let j = 1; j < 4; j++) {
+      if (a[i+j] !== (a[i] as number)+j) asc = false;
+      if (a[i+j] !== (a[i] as number)-j) desc = false;
+    }
+    if (asc || desc) runs.push([i, i+3]);
+  }
+  for (let x = 0; x < runs.length; x++)
+    for (let y = x+1; y < runs.length; y++)
+      if (runs[x][1] < runs[y][0] || runs[y][1] < runs[x][0]) return true;
+  return false;
+}
+
+const HM_RULES: { id: number; name: string; payout: string; test: (s: string, c: Record<string,number>) => boolean }[] = [
+  { id: 1,  name: 'Tenfold Harmony',   payout: '10000x', test: (_, c) => hmHasAtLeast(c, 10) },
+  { id: 2,  name: 'Ninefold Harmony',  payout: '2000x',  test: (_, c) => hmHasAtLeast(c, 9)  },
+  { id: 3,  name: 'Eightfold Harmony', payout: '500x',   test: (_, c) => hmHasAtLeast(c, 8)  },
+  { id: 4,  name: 'Sevenfold Harmony', payout: '200x',   test: (_, c) => hmHasAtLeast(c, 7)  },
+  { id: 5,  name: 'Sixfold Harmony',   payout: '80x',    test: (_, c) => hmHasAtLeast(c, 6)  },
+  { id: 6,  name: 'Fivefold Harmony',  payout: '30x',    test: (_, c) => hmHasAtLeast(c, 5)  },
+  { id: 7,  name: 'Double Quads',      payout: '200x',   test: (_, c) => hmCountExact(c, 4) >= 2 },
+  { id: 8,  name: 'Quad + Triple',     payout: '120x',   test: (_, c) => hmHasExact(c, 4) && hmHasExact(c, 3) },
+  { id: 9,  name: 'Three Triples',     payout: '90x',    test: (_, c) => hmTriples(c) >= 3   },
+  { id: 10, name: 'Two Triples',       payout: '35x',    test: (_, c) => hmTriples(c) >= 2   },
+  { id: 11, name: 'Five Pairs',        payout: '25x',    test: (_, c) => hmPairs(c) === 5 && Object.keys(c).length === 5 },
+  { id: 12, name: 'Four Pairs',        payout: '10x',    test: (_, c) => hmPairs(c) === 4    },
+  { id: 13, name: 'Full House',        payout: '20x',    test: (_, c) => hmTriples(c) >= 1 && hmPairs(c) >= 1 },
+  { id: 14, name: 'Any Triple',        payout: '5x',     test: (_, c) => hmTriples(c) >= 1   },
+  { id: 15, name: 'Straight-5',        payout: '15x',    test: (s)    => hmStraight(s, 5)    },
+  { id: 16, name: 'Double Straight-4', payout: '30x',    test: (s)    => hmDouble4(s)        },
+  { id: 17, name: 'Palindrome',        payout: '50x',    test: (s)    => s === s.split('').reverse().join('') },
+  { id: 18, name: 'Alternating AB',    payout: '40x',    test: (s)    => s.length === 10 && s[0] !== s[1] && [...s].every((c,i) => c === s[i%2===0?0:1]) },
+];
+
+function hmEvaluate(seed10: string): HMRule | null {
+  const c = hmCounts(seed10);
+  for (const r of HM_RULES) if (r.test(seed10, c)) return { id: r.id, name: r.name, payout: r.payout };
+  return null;
+}
+
+function hmPlayResult(txHash: string) {
+  const seed10 = txHash.replace(/^0x/i, '').slice(-10).toLowerCase();
+  const tiles   = seed10.split('').map(h => HM_TILE[h] ?? '?').join('');
+  const rule    = hmEvaluate(seed10);
+  return { seed10, tiles, win: !!rule, rule };
+}
+
 // ─── Main Component ────────────────────────────────────────────────────────
 
 export default function AgentsPage() {
@@ -265,6 +350,48 @@ export default function AgentsPage() {
         return JSON.stringify(history);
       }
 
+      if (name === 'play_hash_mahjong') {
+        if (!pk) return JSON.stringify({ error: 'Wallet locked' });
+        const txHash = await sendTransaction(pk, HM_GAME_ADDRESS, HM_PLAY_COST);
+        const result = hmPlayResult(txHash);
+        resetTxAuth();
+        return JSON.stringify({
+          txHash,
+          tiles: result.tiles,
+          seed10: result.seed10,
+          win: result.win,
+          rule: result.rule ? `${result.rule.name} (${result.rule.payout})` : null,
+          explorerUrl: `https://blockscout.injective.network/tx/${txHash}`,
+        });
+      }
+
+      if (name === 'play_hash_mahjong_multi') {
+        if (!pk) return JSON.stringify({ error: 'Wallet locked' });
+        const rounds = Math.min(Math.max(1, Number(input.rounds) || 5), 20);
+        const results: { round: number; txHash: string; tiles: string; win: boolean; rule: string | null }[] = [];
+        for (let i = 0; i < rounds; i++) {
+          const txHash = await sendTransaction(pk, HM_GAME_ADDRESS, HM_PLAY_COST);
+          const r = hmPlayResult(txHash);
+          results.push({
+            round: i + 1,
+            txHash,
+            tiles: r.tiles,
+            win: r.win,
+            rule: r.rule ? `${r.rule.name} (${r.rule.payout})` : null,
+          });
+        }
+        resetTxAuth();
+        const wins = results.filter(r => r.win);
+        return JSON.stringify({
+          totalRounds: rounds,
+          wins: wins.length,
+          losses: rounds - wins.length,
+          winRate: `${((wins.length / rounds) * 100).toFixed(1)}%`,
+          bestRule: wins.reduce<string | null>((best, r) => r.rule ?? best, null),
+          results,
+        });
+      }
+
       return JSON.stringify({ error: `Unknown tool: ${name}` });
     } catch (err) {
       return JSON.stringify({ error: err instanceof Error ? err.message : String(err) });
@@ -324,7 +451,11 @@ export default function AgentsPage() {
           const toolName = tool.name!;
           const toolInput = (tool.input ?? {}) as Record<string, unknown>;
           const toolId = tool.id!;
-          const isDestructive = toolName === 'execute_swap' || toolName === 'send_token';
+          const isDestructive =
+            toolName === 'execute_swap' ||
+            toolName === 'send_token' ||
+            toolName === 'play_hash_mahjong' ||
+            toolName === 'play_hash_mahjong_multi';
 
           if (isDestructive) {
             // Pause and show confirmation modal
@@ -567,6 +698,11 @@ export default function AgentsPage() {
     if (name === 'send_token') {
       const addr = String(input.toAddress);
       return `Send ${input.amount} INJ to ${addr.slice(0, 10)}...${addr.slice(-6)}`;
+    }
+    if (name === 'play_hash_mahjong') return 'Play Hash Mahjong × 1 round (0.000001 INJ)';
+    if (name === 'play_hash_mahjong_multi') {
+      const rounds = Math.min(Math.max(1, Number(input.rounds) || 5), 20);
+      return `Play Hash Mahjong × ${rounds} rounds (${(rounds * 0.000001).toFixed(6)} INJ total)`;
     }
     return name;
   }
@@ -829,6 +965,26 @@ export default function AgentsPage() {
                     <div className="bg-white/5 rounded-xl p-3">
                       <div className="text-xs text-gray-400 mb-1">To address</div>
                       <div className="text-xs font-mono text-white break-all">{toAddress}</div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Hash Mahjong visual */}
+              {(pendingConfirm.toolName === 'play_hash_mahjong' || pendingConfirm.toolName === 'play_hash_mahjong_multi') && (() => {
+                const rounds = pendingConfirm.toolName === 'play_hash_mahjong'
+                  ? 1
+                  : Math.min(Math.max(1, Number(pendingConfirm.toolInput.rounds) || 5), 20);
+                const totalCost = (rounds * 0.000001).toFixed(6);
+                return (
+                  <div className="px-5 py-4 border-b border-white/10">
+                    <div className="text-center mb-3">
+                      <div className="text-3xl mb-2">🀄</div>
+                      <div className="text-lg font-bold">{rounds === 1 ? 'Hash Mahjong' : `Hash Mahjong × ${rounds} rounds`}</div>
+                      <div className="text-sm text-gray-400 mt-1">Cost: {totalCost} INJ</div>
+                    </div>
+                    <div className="bg-white/5 rounded-xl p-3 text-xs text-gray-400 text-center">
+                      Tiles are derived from your on-chain tx hash. 18 win patterns supported.
                     </div>
                   </div>
                 );
