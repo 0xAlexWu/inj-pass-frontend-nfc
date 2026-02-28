@@ -9,6 +9,9 @@ import { getTxHistory } from '@/wallet/chain/evm/getTxHistory';
 import { privateKeyToHex } from '@/utils/wallet';
 import { unlockByPasskey } from '@/wallet/key-management/createByPasskey';
 import { decryptKey } from '@/wallet/keystore';
+import { TOKENS_MAINNET } from '@/services/tokens';
+import { privateKeyToAccount } from 'viem/accounts';
+import { parseUnits } from 'viem';
 import type { Address } from 'viem';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -50,6 +53,9 @@ interface Conversation {
   createdAt: number;
   messages: ChatMessage[];
   apiHistory: ApiMessage[];
+  /** Sandbox wallet — only present when sandbox mode was enabled at conversation creation */
+  sandboxKey?: string;     // 64-char hex, no 0x prefix
+  sandboxAddress?: string; // 0x address
 }
 
 /** State while waiting for the user to confirm a destructive tool */
@@ -71,6 +77,7 @@ const MODEL_OPTIONS: { value: Model; label: string }[] = [
 ];
 
 const STORAGE_KEY = 'injpass_agent_conversations';
+const SANDBOX_MODE_KEY = 'injpass_sandbox_mode';
 
 const TOKEN_ICONS: Record<string, string> = {
   INJ: '/injswap.png',
@@ -94,6 +101,34 @@ function loadConversations(): Conversation[] {
   } catch {
     return [];
   }
+}
+
+// ─── Sandbox helpers ────────────────────────────────────────────────────────
+
+function isSandboxEnabled(): boolean {
+  if (typeof window === 'undefined') return true;
+  const val = localStorage.getItem(SANDBOX_MODE_KEY);
+  return val === null || val === 'true'; // default: enabled
+}
+
+function generateSandboxWallet(): { key: string; addr: string } {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  const account = privateKeyToAccount(`0x${hex}` as `0x${string}`);
+  return { key: hex, addr: account.address };
+}
+
+function hexToUint8(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
+  return bytes;
+}
+
+/** ABI-encode an ERC-20 transfer(address,uint256) call */
+function encodeERC20Transfer(to: string, amount: bigint): `0x${string}` {
+  const paddedTo = to.replace(/^0x/i, '').toLowerCase().padStart(64, '0');
+  const paddedAmt = amount.toString(16).padStart(64, '0');
+  return `0xa9059cbb${paddedTo}${paddedAmt}` as `0x${string}`;
 }
 
 function saveConversations(convs: Conversation[]) {
@@ -206,6 +241,10 @@ export default function AgentsPage() {
   const [authError, setAuthError] = useState('');
   const [authPassword, setAuthPassword] = useState('');
 
+  // Sandbox
+  const [sandboxBalances, setSandboxBalances] = useState<{ INJ: string; USDT: string; USDC: string } | null>(null);
+  const [harvestLoading, setHarvestLoading] = useState(false);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -241,11 +280,33 @@ export default function AgentsPage() {
     saveConversations(conversations);
   }, [conversations]);
 
+  // Poll sandbox wallet balance
+  useEffect(() => {
+    const sandboxAddr = activeConv?.sandboxAddress;
+    if (!sandboxAddr || !isSandboxEnabled()) { setSandboxBalances(null); return; }
+    let alive = true;
+    async function refresh() {
+      try {
+        const bals = await getTokenBalances(['INJ', 'USDT', 'USDC'], sandboxAddr as Address);
+        if (alive) setSandboxBalances({ INJ: bals.INJ ?? '0', USDT: bals.USDT ?? '0', USDC: bals.USDC ?? '0' });
+      } catch { /* silent */ }
+    }
+    refresh();
+    const timer = setInterval(refresh, 30_000);
+    return () => { alive = false; clearInterval(timer); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId, activeConv?.sandboxAddress]);
+
   // ─── Conversation management ────────────────────────────────────────────
 
   function newConversation() {
     const id = uid();
-    const conv: Conversation = { id, title: 'New chat', createdAt: Date.now(), messages: [], apiHistory: [] };
+    const sandbox = isSandboxEnabled() ? generateSandboxWallet() : undefined;
+    const conv: Conversation = {
+      id, title: 'New chat', createdAt: Date.now(), messages: [], apiHistory: [],
+      sandboxKey: sandbox?.key,
+      sandboxAddress: sandbox?.addr,
+    };
     setConversations((prev) => [conv, ...prev]);
     setActiveId(id);
     setSidebarOpen(false);
@@ -294,15 +355,27 @@ export default function AgentsPage() {
     overridePk?: Uint8Array,
   ): Promise<string> {
     if (!address) return JSON.stringify({ error: 'Wallet not connected' });
-    const pk = overridePk ?? privateKey;
+
+    // Sandbox mode: use sandbox wallet instead of user's real wallet
+    const sandboxKey = activeConv?.sandboxKey ? hexToUint8(activeConv.sandboxKey) : undefined;
+    const sandboxAddr = activeConv?.sandboxAddress ?? null;
+    const inSandbox = isSandboxEnabled() && !!sandboxKey && !!sandboxAddr;
+    const activeAddr = (inSandbox ? sandboxAddr : address) as Address;
+    const pk = inSandbox ? sandboxKey : (overridePk ?? privateKey);
 
     try {
       if (name === 'get_wallet_info') {
-        return JSON.stringify({ address, network: 'Injective EVM Mainnet', chainId: 1776 });
+        return JSON.stringify({
+          address: activeAddr,
+          network: 'Injective EVM Mainnet',
+          chainId: 1776,
+          ...(inSandbox ? { note: 'SANDBOX wallet — not the user\'s real wallet' } : {}),
+        });
       }
 
       if (name === 'get_balance') {
-        const balances = await getTokenBalances(['INJ', 'USDT', 'USDC'], address as Address);
+        const balances = await getTokenBalances(['INJ', 'USDT', 'USDC'], activeAddr);
+        if (inSandbox) setSandboxBalances({ INJ: balances.INJ ?? '0', USDT: balances.USDT ?? '0', USDC: balances.USDC ?? '0' });
         return JSON.stringify({ INJ: balances.INJ, USDT: balances.USDT, USDC: balances.USDC });
       }
 
@@ -331,7 +404,7 @@ export default function AgentsPage() {
         const txHash = await executeSwap({
           fromToken, toToken, amountIn: amount,
           slippage: Number(slippage),
-          userAddress: address as Address,
+          userAddress: activeAddr,
           privateKey: pkHex,
         });
         resetTxAuth(); // extend the PIN-free window
@@ -356,7 +429,7 @@ export default function AgentsPage() {
 
       if (name === 'get_tx_history') {
         const limit = (input.limit as number) ?? 10;
-        const history = await getTxHistory(address, limit);
+        const history = await getTxHistory(activeAddr, limit);
         return JSON.stringify(history);
       }
 
@@ -408,6 +481,42 @@ export default function AgentsPage() {
     }
   }
 
+  // ─── Sandbox harvest ─────────────────────────────────────────────────────
+
+  async function harvestSandbox() {
+    if (!activeConv?.sandboxKey || !address) return;
+    const pk = hexToUint8(activeConv.sandboxKey);
+    const sandboxAddr = activeConv.sandboxAddress as Address;
+    setHarvestLoading(true);
+    try {
+      const bals = await getTokenBalances(['INJ', 'USDT', 'USDC'], sandboxAddr);
+      // ERC-20: USDT
+      if (parseFloat(bals.USDT ?? '0') > 0) {
+        const amt = parseUnits(bals.USDT, 6);
+        await sendTransaction(pk, TOKENS_MAINNET.USDT.address, '0', encodeERC20Transfer(address, amt));
+      }
+      // ERC-20: USDC
+      if (parseFloat(bals.USDC ?? '0') > 0) {
+        const amt = parseUnits(bals.USDC, 6);
+        await sendTransaction(pk, TOKENS_MAINNET.USDC.address, '0', encodeERC20Transfer(address, amt));
+      }
+      // Native INJ — leave 0.001 for gas
+      const injBal = parseFloat(bals.INJ ?? '0');
+      if (injBal > 0.002) {
+        await sendTransaction(pk, address, (injBal - 0.001).toFixed(6));
+      }
+      // Refresh balances after a short delay
+      setTimeout(async () => {
+        const nb = await getTokenBalances(['INJ', 'USDT', 'USDC'], sandboxAddr);
+        setSandboxBalances({ INJ: nb.INJ ?? '0', USDT: nb.USDT ?? '0', USDC: nb.USDC ?? '0' });
+      }, 4000);
+    } catch (err) {
+      console.error('[harvest]', err);
+    } finally {
+      setHarvestLoading(false);
+    }
+  }
+
   // ─── Core agent loop ─────────────────────────────────────────────────────
   // Runs until the model returns a final text response with no more tool calls.
   // Destructive tools (swap, send) pause and wait for the confirmation modal.
@@ -421,7 +530,13 @@ export default function AgentsPage() {
         const res = await fetch('/api/agents', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: history, model }),
+          body: JSON.stringify({
+            messages: history,
+            model,
+            systemExtra: (isSandboxEnabled() && activeConv?.sandboxAddress)
+              ? `SANDBOX MODE ACTIVE: You are controlling a disposable sandbox wallet (address: ${activeConv.sandboxAddress}). This is NOT the user's real wallet. All operations (swaps, sends, game plays) will use this sandbox address. The user can sweep any sandbox funds to their real wallet at any time using the harvest button.`
+              : undefined,
+          }),
         });
 
         if (!res.ok) {
@@ -1099,6 +1214,14 @@ export default function AgentsPage() {
         {/* Input area */}
         <div className="flex-shrink-0 border-t border-white/10 bg-black/80 backdrop-blur-sm p-4">
           <div className="max-w-3xl mx-auto">
+            {/* Sandbox address strip */}
+            {isSandboxEnabled() && activeConv?.sandboxAddress && (
+              <div className="flex items-center gap-2 mb-2 px-1">
+                <span className="text-[10px] font-medium text-amber-400/70 bg-amber-400/10 border border-amber-400/20 rounded-full px-2 py-0.5 select-all">
+                  🛡 Sandbox · {activeConv.sandboxAddress.slice(0, 10)}…{activeConv.sandboxAddress.slice(-6)}
+                </span>
+              </div>
+            )}
             <div className="flex items-end gap-3 bg-white/5 border border-white/15 rounded-2xl px-4 py-3 focus-within:border-white/30 transition-colors">
               <select
                 value={model}
@@ -1120,6 +1243,40 @@ export default function AgentsPage() {
                 disabled={isRunning || !!pendingConfirm}
                 className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 resize-none outline-none min-h-[24px] max-h-40 py-1 disabled:opacity-50"
               />
+              {/* 🌾 Harvest button — only shown in sandbox mode */}
+              {isSandboxEnabled() && activeConv?.sandboxKey && (() => {
+                const hasfunds = sandboxBalances != null && (
+                  parseFloat(sandboxBalances.INJ) > 0.002 ||
+                  parseFloat(sandboxBalances.USDT) > 0 ||
+                  parseFloat(sandboxBalances.USDC) > 0
+                );
+                const balSummary = sandboxBalances
+                  ? [
+                      parseFloat(sandboxBalances.INJ) > 0 && `${parseFloat(sandboxBalances.INJ).toFixed(4)} INJ`,
+                      parseFloat(sandboxBalances.USDT) > 0 && `${parseFloat(sandboxBalances.USDT).toFixed(2)} USDT`,
+                      parseFloat(sandboxBalances.USDC) > 0 && `${parseFloat(sandboxBalances.USDC).toFixed(2)} USDC`,
+                    ].filter(Boolean).join(', ')
+                  : '';
+                const tooltip = hasfunds
+                  ? `Sweep sandbox funds to your wallet${balSummary ? ` (${balSummary})` : ''}`
+                  : 'Sandbox wallet has no funds to harvest';
+                return (
+                  <button
+                    title={tooltip}
+                    onClick={hasfunds && !harvestLoading ? harvestSandbox : undefined}
+                    disabled={!hasfunds || harvestLoading}
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all flex-shrink-0 self-end text-base
+                      ${hasfunds
+                        ? 'bg-amber-500/20 hover:bg-amber-500/40 border border-amber-500/40 cursor-pointer'
+                        : 'bg-white/5 border border-white/10 cursor-not-allowed opacity-40'
+                      }`}
+                  >
+                    {harvestLoading
+                      ? <div className="w-3.5 h-3.5 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+                      : '🌾'}
+                  </button>
+                );
+              })()}
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || isRunning || !!pendingConfirm}
