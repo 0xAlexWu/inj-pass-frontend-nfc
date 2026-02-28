@@ -20,6 +20,10 @@ export default function SettingsPage() {
   const [verifyingPasskey, setVerifyingPasskey] = useState(false);
   const [passkeyError, setPasskeyError] = useState('');
   
+  // PIN-Free warning
+  const [showPinFreeWarning, setShowPinFreeWarning] = useState(false);
+  const [pendingPinFreeMinutes, setPendingPinFreeMinutes] = useState<number>(0);
+
   // PIN Management
   const [showPinSetup, setShowPinSetup] = useState(false);
   const [showPinChange, setShowPinChange] = useState(false);
@@ -347,8 +351,14 @@ export default function SettingsPage() {
                               <button
                                 key={minutes}
                                 onClick={() => {
-                                  setAutoLockMinutes(minutes);
                                   setShowAutoLockMenu(false);
+                                  if (minutes > 0 && autoLockMinutes === 0) {
+                                    // Enabling from disabled — show risk warning first
+                                    setPendingPinFreeMinutes(minutes);
+                                    setShowPinFreeWarning(true);
+                                  } else {
+                                    setAutoLockMinutes(minutes);
+                                  }
                                 }}
                                 className={`w-full py-2 px-3 rounded-lg text-sm font-bold transition-all ${
                                   autoLockMinutes === minutes
@@ -781,6 +791,69 @@ export default function SettingsPage() {
                   Lock Now
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PIN-Free Transactions Warning Modal */}
+      {showPinFreeWarning && (
+        <div className="modal-overlay fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="modal-content bg-[#111] border border-white/10 rounded-3xl w-full max-w-sm overflow-hidden">
+            {/* Header */}
+            <div className="px-5 pt-5 pb-4 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm">Enable AI Agent Automation?</h3>
+                  <p className="text-xs text-gray-400">Transactions will auto-sign for {pendingPinFreeMinutes}m</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-5 py-4 space-y-3">
+              {/* Risk notice */}
+              <div className="flex items-start gap-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+                <svg className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <p className="text-xs text-amber-300 leading-relaxed">
+                  With PIN-Free enabled, the <strong>AI Agent can automatically execute swaps, transfers, and other on-chain actions</strong> within the time window without asking for confirmation. Only enable this if you trust your current AI session.
+                </p>
+              </div>
+
+              {/* Security guarantee */}
+              <div className="flex items-center gap-2.5 bg-white/5 border border-white/10 rounded-xl p-3">
+                <svg className="w-3.5 h-3.5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <p className="text-xs security-text-shine">Private key never leaves your device. Signed locally.</p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="px-5 pb-5 flex gap-3">
+              <button
+                onClick={() => { setShowPinFreeWarning(false); setPendingPinFreeMinutes(0); }}
+                className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 font-bold text-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setAutoLockMinutes(pendingPinFreeMinutes);
+                  setShowPinFreeWarning(false);
+                  setPendingPinFreeMinutes(0);
+                }}
+                className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm transition-colors"
+              >
+                Enable
+              </button>
             </div>
           </div>
         </div>
