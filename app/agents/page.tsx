@@ -276,6 +276,16 @@ export default function AgentsPage() {
     return conversations.find((c) => c.id === convId)?.apiHistory ?? [];
   }
 
+  // ─── PIN-Free check ──────────────────────────────────────────────────────
+
+  function isPinFreeActive(): boolean {
+    if (!privateKey) return false;
+    const minutes = parseInt(localStorage.getItem('auto_lock_minutes') ?? '0', 10);
+    if (minutes <= 0) return false;
+    const lastAuth = parseInt(localStorage.getItem('injpass_last_tx_auth') ?? '0', 10);
+    return Date.now() - lastAuth <= minutes * 60 * 1000;
+  }
+
   // ─── Tool execution ──────────────────────────────────────────────────────
 
   async function executeTool(
@@ -457,7 +467,7 @@ export default function AgentsPage() {
             toolName === 'play_hash_mahjong' ||
             toolName === 'play_hash_mahjong_multi';
 
-          if (isDestructive) {
+          if (isDestructive && !isPinFreeActive()) {
             // Pause and show confirmation modal
             setPendingConfirm({
               convId,
@@ -998,7 +1008,7 @@ export default function AgentsPage() {
                   <svg className="w-3.5 h-3.5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
-                  <p className="text-xs text-gray-400">Private key never leaves your device. Signed locally.</p>
+                  <p className="text-xs security-text-shine">Private key never leaves your device. Signed locally.</p>
                 </div>
                 <div className="flex gap-3">
                   <button onClick={handleCancel} disabled={confirmLoading} className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 font-bold text-sm transition-colors">

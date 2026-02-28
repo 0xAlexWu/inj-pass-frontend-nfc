@@ -1074,3 +1074,29 @@ body.sidebar-mode .sidebar-overlay {
   transform: translateZ(50px);
   perspective: 1000px;
 }
+
+/* Security notice text — one-shot left-to-right shine */
+@keyframes textShimmer {
+  0% {
+    background-position: -100% center;
+  }
+  100% {
+    background-position: 100% center;
+  }
+}
+
+.security-text-shine {
+  background: linear-gradient(
+    90deg,
+    #9ca3af 0%,
+    #9ca3af 30%,
+    #f9fafb 50%,
+    #9ca3af 70%,
+    #9ca3af 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: textShimmer 1.6s ease-out 0.4s 1 both;
+}
