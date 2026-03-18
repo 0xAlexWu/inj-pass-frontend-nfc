@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { usePin } from '@/contexts/PinContext';
 import { useWallet } from '@/contexts/WalletContext';
+import { decryptKey } from '@/wallet/keystore';
 
 interface TransactionAuthModalProps {
   isOpen: boolean;
@@ -17,11 +18,12 @@ export default function TransactionAuthModal({
   onSuccess,
   transactionType,
 }: TransactionAuthModalProps) {
-  const { defaultAuthMethod, hasPin, isPinLocked, verifyPin, resetActivity } = usePin();
-  const { keystore } = useWallet();
+  const { defaultAuthMethod, verifyPin, resetActivity } = usePin();
+  const { keystore, privateKey, unlock } = useWallet();
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [verifying, setVerifying] = useState(false);
+  const requiresPasskeyUnlock = !privateKey;
 
   if (!isOpen) return null;
 
@@ -43,7 +45,7 @@ export default function TransactionAuthModal({
       } else {
         setError('Incorrect PIN');
       }
-    } catch (err) {
+    } catch {
       setError('Failed to verify PIN');
     } finally {
       setVerifying(false);
@@ -61,7 +63,9 @@ export default function TransactionAuthModal({
         throw new Error('No passkey found');
       }
       
-      await unlockByPasskey(keystore.credentialId);
+      const decryptionEntropy = await unlockByPasskey(keystore.credentialId);
+      const decryptedPrivateKey = await decryptKey(keystore.encryptedPrivateKey, decryptionEntropy);
+      unlock(decryptedPrivateKey, keystore);
       resetActivity();
       onSuccess();
     } catch (err) {
@@ -72,7 +76,7 @@ export default function TransactionAuthModal({
   };
 
   const handleVerify = () => {
-    if (defaultAuthMethod === 'pin') {
+    if (!requiresPasskeyUnlock && defaultAuthMethod === 'pin') {
       handlePinVerify();
     } else {
       handlePasskeyVerify();
@@ -101,14 +105,16 @@ export default function TransactionAuthModal({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <p className="text-xs text-blue-400">
-              {defaultAuthMethod === 'pin' 
-                ? 'Enter your 6-digit PIN to authorize this transaction'
-                : 'Use your biometric authentication to authorize this transaction'
+              {requiresPasskeyUnlock
+                ? 'Your signing key needs to be re-unlocked with Passkey before this transaction can proceed'
+                : defaultAuthMethod === 'pin' 
+                  ? 'Enter your 6-digit PIN to authorize this transaction'
+                  : 'Use your biometric authentication to authorize this transaction'
               }
             </p>
           </div>
 
-          {defaultAuthMethod === 'pin' && (
+          {defaultAuthMethod === 'pin' && !requiresPasskeyUnlock && (
             <div>
               <label className="block text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
                 Enter PIN
@@ -145,7 +151,7 @@ export default function TransactionAuthModal({
             </button>
             <button
               onClick={handleVerify}
-              disabled={verifying || (defaultAuthMethod === 'pin' && pin.length !== 6)}
+              disabled={verifying || (defaultAuthMethod === 'pin' && !requiresPasskeyUnlock && pin.length !== 6)}
               className="flex-1 py-3 rounded-xl bg-white text-black font-bold text-sm hover:bg-gray-100 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {verifying ? (
@@ -156,7 +162,7 @@ export default function TransactionAuthModal({
                   Verifying...
                 </>
               ) : (
-                'Verify'
+                requiresPasskeyUnlock ? 'Unlock with Passkey' : 'Verify'
               )}
             </button>
           </div>

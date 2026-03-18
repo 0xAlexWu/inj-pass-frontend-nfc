@@ -1,24 +1,61 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePin } from '@/contexts/PinContext';
 import { useWallet } from '@/contexts/WalletContext';
-import { getBalance } from '@/wallet/chain';
-import { Balance, INJECTIVE_MAINNET } from '@/types/chain';
+import { estimateGas, getBalance, getCosmosTxHistory, getTxHistory, sendTransaction } from '@/wallet/chain';
+import { Balance, GasEstimate, INJECTIVE_MAINNET } from '@/types/chain';
 import { getTokenPrice } from '@/services/price';
-import { getTokenBalances } from '@/services/dex-swap';
+import { executeSwap, getSwapQuote, getTokenBalances, ROUTER_ADDRESS } from '@/services/dex-swap';
 import { startQRScanner, stopQRScanner, clearQRScanner, isCameraSupported, isValidAddress } from '@/services/qr-scanner';
 import { getN1NJ4NFTs, type NFT } from '@/services/nft';
 import { getUserStakingInfo, type StakingInfo } from '@/services/staking';
 import { QRCodeSVG } from 'qrcode.react';
-import type { Address } from 'viem';
+import { formatEther, type Address } from 'viem';
 import Image from 'next/image';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import NFTDetailModal from '@/components/NFTDetailModal';
+import TransactionAuthModal from '@/components/TransactionAuthModal';
 import { AGENT_CREDITS_STATS } from '@/config/agent-credits';
 import ThemeToggleButton from '@/components/ThemeToggleButton';
+import { privateKeyToHex } from '@/utils/wallet';
+import { getInjectiveAddress, getEthereumAddress } from '@injectivelabs/sdk-ts';
 
 type AssetTab = 'tokens' | 'nfts' | 'defi' | 'earn';
+type WalletPanel = 'overview' | 'send' | 'receive' | 'swap' | 'history';
+type AddressType = 'evm' | 'cosmos';
+type DashboardTransactionType = 'send' | 'receive' | 'swap';
+type DashboardTransactionStatus = 'completed' | 'pending' | 'failed';
+type DashboardHistoryFilter = 'all' | DashboardTransactionType;
+type DashboardChainType = 'EVM' | 'Cosmos';
+
+interface DashboardTransaction {
+  id: string;
+  type: DashboardTransactionType;
+  amount: string;
+  token: string;
+  address: string;
+  timestamp: Date;
+  status: DashboardTransactionStatus;
+  txHash?: string;
+  chainType: DashboardChainType;
+}
+
+function truncateMiddle(value: string, start = 6, end = 4) {
+  if (!value) return '';
+  if (value.length <= start + end + 3) return value;
+  return `${value.slice(0, start)}...${value.slice(-end)}`;
+}
+
+function formatDashboardTimestamp(date: Date) {
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 const ROLLING_DIGIT_STACK = Array.from({ length: 20 }, (_, index) => String(index % 10));
 
@@ -271,7 +308,8 @@ function PixelTrendChart({
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { isUnlocked, address, isCheckingSession } = useWallet();
+  const { isUnlocked, address, privateKey, resetTxAuth, isCheckingSession } = useWallet();
+  const { autoLockMinutes, isPinLocked } = usePin();
   const [balance, setBalance] = useState<Balance | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -306,6 +344,35 @@ export default function DashboardPage() {
   // Staking states
   const [stakingInfo, setStakingInfo] = useState<StakingInfo | null>(null);
   const [stakingLoading, setStakingLoading] = useState(false);
+  
+  // Wallet action states
+  const [walletPanel, setWalletPanel] = useState<WalletPanel>('overview');
+  const [receiveAddressType, setReceiveAddressType] = useState<AddressType>('evm');
+  const [receiveCopied, setReceiveCopied] = useState(false);
+  const [sendRecipient, setSendRecipient] = useState('');
+  const [sendAmount, setSendAmount] = useState('');
+  const [sendGasEstimate, setSendGasEstimate] = useState<GasEstimate | null>(null);
+  const [sendEstimating, setSendEstimating] = useState(false);
+  const [sendSubmitting, setSendSubmitting] = useState(false);
+  const [sendError, setSendError] = useState('');
+  const [sendTxHash, setSendTxHash] = useState('');
+  const [swapFromToken, setSwapFromToken] = useState<'INJ' | 'USDT' | 'USDC'>('INJ');
+  const [swapToToken, setSwapToToken] = useState<'INJ' | 'USDT' | 'USDC'>('USDT');
+  const [swapAmount, setSwapAmount] = useState('');
+  const [swapQuoteAmount, setSwapQuoteAmount] = useState('');
+  const [swapSlippage, setSwapSlippage] = useState('0.5');
+  const [swapQuoteLoading, setSwapQuoteLoading] = useState(false);
+  const [swapSubmitting, setSwapSubmitting] = useState(false);
+  const [swapPriceImpact, setSwapPriceImpact] = useState('0.00');
+  const [swapError, setSwapError] = useState('');
+  const [swapTxHash, setSwapTxHash] = useState('');
+  const [historyFilter, setHistoryFilter] = useState<DashboardHistoryFilter>('all');
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState('');
+  const [historyItems, setHistoryItems] = useState<DashboardTransaction[]>([]);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [pendingAuthAction, setPendingAuthAction] = useState<'send' | 'swap' | null>(null);
+  const [postAuthAction, setPostAuthAction] = useState<'send' | 'swap' | null>(null);
 
   useEffect(() => {
     // Wait for session check to complete
@@ -326,7 +393,7 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isUnlocked, address, isCheckingSession]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!address) return;
 
     try {
@@ -355,7 +422,7 @@ export default function DashboardPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [address]);
 
   // Load NFTs when switching to NFTs tab
   const loadNFTs = async () => {
@@ -429,6 +496,379 @@ export default function DashboardPage() {
       setTimeout(() => setCopied(false), 2000);
     }
   };
+
+  const toggleWalletPanel = (panel: Exclude<WalletPanel, 'overview'>) => {
+    setWalletPanel((current) => (current === panel ? 'overview' : panel));
+  };
+
+  const getCosmosAddress = useCallback((evmAddress: string) => {
+    if (!evmAddress) return '';
+    try {
+      return getInjectiveAddress(evmAddress);
+    } catch (error) {
+      console.error('Failed to convert address to cosmos format:', error);
+      return '';
+    }
+  }, []);
+
+  const getEvmAddress = useCallback((value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+    if (trimmed.startsWith('0x')) return trimmed;
+    if (trimmed.startsWith('inj1')) {
+      return getEthereumAddress(trimmed);
+    }
+    return trimmed;
+  }, []);
+
+  const receiveDisplayAddress = receiveAddressType === 'evm' ? (address || '') : getCosmosAddress(address || '');
+  const sendGasCost = sendGasEstimate ? formatEther(sendGasEstimate.totalCost) : '';
+  const sendBalanceValue = parseFloat(tokenBalances.INJ || '0');
+  const swapTokenOptions = [
+    { symbol: 'INJ' as const, name: 'Injective', icon: '/injswap.png', balance: tokenBalances.INJ },
+    { symbol: 'USDT' as const, name: 'Tether', icon: '/USDT_Logo.png', balance: tokenBalances.USDT },
+    { symbol: 'USDC' as const, name: 'USD Coin', icon: '/USDC_Logo.png', balance: tokenBalances.USDC },
+  ];
+  const swapFromMeta = swapTokenOptions.find((token) => token.symbol === swapFromToken) || swapTokenOptions[0];
+  const swapToMeta = swapTokenOptions.find((token) => token.symbol === swapToToken) || swapTokenOptions[1];
+  const filteredHistoryItems = historyFilter === 'all'
+    ? historyItems
+    : historyItems.filter((item) => item.type === historyFilter);
+  const walletPanelMeta: Record<Exclude<WalletPanel, 'overview'>, { title: string; subtitle: string }> = {
+    send: {
+      title: 'Send INJ',
+      subtitle: 'Transfer directly from this wallet card without leaving the dashboard.',
+    },
+    receive: {
+      title: 'Receive Assets',
+      subtitle: 'Show your address and QR code inline for quick inbound transfers.',
+    },
+    swap: {
+      title: 'Swap Assets',
+      subtitle: 'Run a quick Injective swap inside your main wallet surface.',
+    },
+    history: {
+      title: 'Recent Activity',
+      subtitle: 'Review your latest on-chain transfers and swaps right here.',
+    },
+  };
+
+  const loadHistory = useCallback(async () => {
+    if (!address || !isUnlocked) {
+      setHistoryItems([]);
+      return;
+    }
+
+    setHistoryLoading(true);
+    setHistoryError('');
+
+    try {
+      const [evmTxHistory, cosmosTxHistory] = await Promise.all([
+        getTxHistory(address, 20).catch((error) => {
+          console.error('Failed to fetch EVM transactions:', error);
+          return [];
+        }),
+        (async () => {
+          try {
+            const cosmosAddress = getInjectiveAddress(address);
+            return await getCosmosTxHistory(cosmosAddress, 20);
+          } catch (error) {
+            console.error('Failed to fetch Cosmos transactions:', error);
+            return [];
+          }
+        })(),
+      ]);
+
+      const routerAddress = ROUTER_ADDRESS.toLowerCase();
+
+      const evmTransactions: DashboardTransaction[] = evmTxHistory.map((tx) => {
+        const isSwapTx = tx.to?.toLowerCase() === routerAddress;
+        const isSent = tx.from.toLowerCase() === address.toLowerCase();
+        const type: DashboardTransactionType = isSwapTx ? 'swap' : isSent ? 'send' : 'receive';
+        const targetAddress = type === 'send' || type === 'swap' ? (tx.to || 'Contract Creation') : tx.from;
+
+        return {
+          id: `evm-${tx.hash}`,
+          type,
+          amount: (Number(tx.value) / 10 ** 18).toFixed(3),
+          token: 'INJ',
+          address: targetAddress.startsWith('0x') ? truncateMiddle(targetAddress) : targetAddress,
+          timestamp: new Date(tx.timestamp * 1000),
+          status: tx.status === 'success' ? 'completed' : tx.status === 'failed' ? 'failed' : 'pending',
+          txHash: tx.hash,
+          chainType: 'EVM',
+        };
+      });
+
+      const cosmosAddress = getInjectiveAddress(address);
+      const cosmosTransactions: DashboardTransaction[] = cosmosTxHistory.map((tx) => {
+        const isSwapTx = (tx as { isSwap?: boolean }).isSwap === true;
+        const isSent = tx.from.toLowerCase() === cosmosAddress.toLowerCase();
+        const type: DashboardTransactionType = isSwapTx ? 'swap' : isSent ? 'send' : 'receive';
+        const targetAddress = type === 'send' || type === 'swap' ? (tx.to || '') : tx.from;
+
+        return {
+          id: `cosmos-${tx.hash}`,
+          type,
+          amount: (Number(tx.value) / 10 ** 18).toFixed(3),
+          token: 'INJ',
+          address: targetAddress.startsWith('inj') ? truncateMiddle(targetAddress, 8, 6) : targetAddress,
+          timestamp: new Date(tx.timestamp * 1000),
+          status: tx.status === 'success' ? 'completed' : tx.status === 'failed' ? 'failed' : 'pending',
+          txHash: tx.hash,
+          chainType: 'Cosmos',
+        };
+      });
+
+      const allTransactions = [...evmTransactions, ...cosmosTransactions].sort(
+        (left, right) => right.timestamp.getTime() - left.timestamp.getTime()
+      );
+
+      setHistoryItems(allTransactions);
+    } catch (error) {
+      console.error('Failed to load history:', error);
+      setHistoryError('Unable to load recent activity right now.');
+      setHistoryItems([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [address, isUnlocked]);
+
+  const executeInlineSend = useCallback(async () => {
+    const trimmedRecipient = sendRecipient.trim();
+    const trimmedAmount = sendAmount.trim();
+    const numericAmount = Number(trimmedAmount);
+    const gasCost = sendGasEstimate ? Number(formatEther(sendGasEstimate.totalCost)) : 0;
+
+    if (!trimmedRecipient || !trimmedAmount) {
+      setSendError('Enter a recipient and amount.');
+      return;
+    }
+
+    if (!isValidAddress(trimmedRecipient)) {
+      setSendError('Enter a valid EVM or Injective address.');
+      return;
+    }
+
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      setSendError('Enter a valid transfer amount.');
+      return;
+    }
+
+    if (numericAmount + gasCost > sendBalanceValue) {
+      setSendError('Amount plus gas exceeds your INJ balance.');
+      return;
+    }
+
+    if (!privateKey) {
+      setSendError('Signing key is not loaded. Verify with Passkey and try again.');
+      return;
+    }
+
+    setSendSubmitting(true);
+    setSendError('');
+
+    try {
+      const recipientAddress = getEvmAddress(trimmedRecipient);
+      const hash = await sendTransaction(
+        privateKey,
+        recipientAddress,
+        trimmedAmount,
+        undefined,
+        INJECTIVE_MAINNET
+      );
+
+      setSendTxHash(hash);
+      resetTxAuth();
+      await loadData();
+      await loadHistory();
+    } catch (error) {
+      setSendError(error instanceof Error ? error.message : 'Failed to send transaction');
+    } finally {
+      setSendSubmitting(false);
+    }
+  }, [getEvmAddress, loadData, loadHistory, privateKey, resetTxAuth, sendAmount, sendBalanceValue, sendGasEstimate, sendRecipient]);
+
+  const executeInlineSwap = useCallback(async () => {
+    const numericAmount = Number(swapAmount);
+    const availableBalance = Number(swapFromMeta.balance || '0');
+
+    if (swapFromToken === swapToToken) {
+      setSwapError('Choose two different assets.');
+      return;
+    }
+
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      setSwapError('Enter a valid amount to swap.');
+      return;
+    }
+
+    if (numericAmount > availableBalance) {
+      setSwapError(`Insufficient ${swapFromToken} balance.`);
+      return;
+    }
+
+    if (!privateKey || !address) {
+      setSwapError('Signing key is not loaded. Verify with Passkey and try again.');
+      return;
+    }
+
+    setSwapSubmitting(true);
+    setSwapError('');
+
+    try {
+      const hash = await executeSwap({
+        fromToken: swapFromToken,
+        toToken: swapToToken,
+        amountIn: swapAmount,
+        slippage: Number(swapSlippage),
+        userAddress: address as Address,
+        privateKey: privateKeyToHex(privateKey),
+      });
+
+      setSwapTxHash(hash);
+      resetTxAuth();
+      await loadData();
+      await loadHistory();
+    } catch (error) {
+      setSwapError(error instanceof Error ? error.message : 'Swap failed');
+    } finally {
+      setSwapSubmitting(false);
+    }
+  }, [address, loadData, loadHistory, privateKey, resetTxAuth, swapAmount, swapFromMeta.balance, swapFromToken, swapSlippage, swapToToken]);
+
+  const handleSendAction = () => {
+    if (isPinLocked || autoLockMinutes === 0 || !privateKey) {
+      setPendingAuthAction('send');
+      setShowAuthModal(true);
+      return;
+    }
+
+    void executeInlineSend();
+  };
+
+  const handleSwapAction = () => {
+    if (isPinLocked || autoLockMinutes === 0 || !privateKey) {
+      setPendingAuthAction('swap');
+      setShowAuthModal(true);
+      return;
+    }
+
+    void executeInlineSwap();
+  };
+
+  const handleTransactionAuthSuccess = () => {
+    setShowAuthModal(false);
+    if (pendingAuthAction) {
+      setPostAuthAction(pendingAuthAction);
+      setPendingAuthAction(null);
+    }
+  };
+
+  useEffect(() => {
+    if (!postAuthAction || !privateKey) return;
+
+    if (postAuthAction === 'send') {
+      void executeInlineSend();
+    } else {
+      void executeInlineSwap();
+    }
+
+    setPostAuthAction(null);
+  }, [executeInlineSend, executeInlineSwap, postAuthAction, privateKey]);
+
+  useEffect(() => {
+    if (walletPanel !== 'history') return;
+    void loadHistory();
+  }, [loadHistory, walletPanel]);
+
+  useEffect(() => {
+    if (walletPanel !== 'send') return;
+
+    const trimmedRecipient = sendRecipient.trim();
+    const trimmedAmount = sendAmount.trim();
+
+    if (!address || !trimmedRecipient || !trimmedAmount || !isValidAddress(trimmedRecipient) || Number(trimmedAmount) <= 0) {
+      setSendGasEstimate(null);
+      setSendEstimating(false);
+      return;
+    }
+
+    let ignore = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        setSendEstimating(true);
+        const estimate = await estimateGas(
+          address,
+          getEvmAddress(trimmedRecipient),
+          trimmedAmount,
+          undefined,
+          INJECTIVE_MAINNET
+        );
+
+        if (!ignore) {
+          setSendGasEstimate(estimate);
+        }
+      } catch (error) {
+        if (!ignore) {
+          console.error('Failed to estimate gas:', error);
+          setSendGasEstimate(null);
+        }
+      } finally {
+        if (!ignore) {
+          setSendEstimating(false);
+        }
+      }
+    }, 350);
+
+    return () => {
+      ignore = true;
+      window.clearTimeout(timer);
+    };
+  }, [address, getEvmAddress, sendAmount, sendRecipient, walletPanel]);
+
+  useEffect(() => {
+    if (walletPanel !== 'swap') return;
+
+    if (!swapAmount || Number(swapAmount) <= 0 || swapFromToken === swapToToken) {
+      setSwapQuoteAmount('');
+      setSwapQuoteLoading(false);
+      setSwapPriceImpact('0.00');
+      return;
+    }
+
+    let ignore = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        setSwapQuoteLoading(true);
+        const quote = await getSwapQuote(
+          swapFromToken,
+          swapToToken,
+          swapAmount,
+          Number(swapSlippage)
+        );
+
+        if (!ignore) {
+          setSwapQuoteAmount(quote.expectedOutput);
+          setSwapPriceImpact(quote.priceImpact);
+        }
+      } catch (error) {
+        if (!ignore) {
+          console.error('Failed to get swap quote:', error);
+          setSwapQuoteAmount('');
+        }
+      } finally {
+        if (!ignore) {
+          setSwapQuoteLoading(false);
+        }
+      }
+    }, 400);
+
+    return () => {
+      ignore = true;
+      window.clearTimeout(timer);
+    };
+  }, [swapAmount, swapFromToken, swapSlippage, swapToToken, walletPanel]);
 
   const assetTabOrder: AssetTab[] = ['tokens', 'nfts', 'defi', 'earn'];
   const assetTabIndex = assetTabOrder.indexOf(assetTab);
@@ -754,38 +1194,50 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-4 gap-4 mt-1">
                   {/* Send Button */}
                   <button 
-                    onClick={() => router.push('/send')}
+                    onClick={() => toggleWalletPanel('send')}
                     className="flex flex-col items-center gap-2 group"
                   >
-                    <div className="w-14 h-14 rounded-full bg-white hover:bg-gray-100 flex items-center justify-center shadow-lg transition-all group-hover:scale-105">
+                    <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all ${
+                      walletPanel === 'send'
+                        ? 'bg-white scale-105 ring-4 ring-white/10'
+                        : 'bg-white hover:bg-gray-100 group-hover:scale-105'
+                    }`}>
                       <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <line x1="12" y1="19" x2="12" y2="5" strokeWidth={2.5} strokeLinecap="round" />
                         <polyline points="5 12 12 5 19 12" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </div>
-                    <span className="text-xs font-semibold text-gray-300">Send</span>
+                    <span className={`text-xs font-semibold transition-colors ${walletPanel === 'send' ? 'text-white' : 'text-gray-300'}`}>Send</span>
                   </button>
 
                   {/* Receive Button */}
                   <button 
-                    onClick={() => router.push('/receive')}
+                    onClick={() => toggleWalletPanel('receive')}
                     className="flex flex-col items-center gap-2 group"
                   >
-                    <div className="w-14 h-14 rounded-full bg-white hover:bg-gray-100 flex items-center justify-center shadow-lg transition-all group-hover:scale-105">
+                    <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all ${
+                      walletPanel === 'receive'
+                        ? 'bg-white scale-105 ring-4 ring-white/10'
+                        : 'bg-white hover:bg-gray-100 group-hover:scale-105'
+                    }`}>
                       <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <line x1="12" y1="5" x2="12" y2="19" strokeWidth={2.5} strokeLinecap="round" />
                         <polyline points="19 12 12 19 5 12" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </div>
-                    <span className="text-xs font-semibold text-gray-300">Receive</span>
+                    <span className={`text-xs font-semibold transition-colors ${walletPanel === 'receive' ? 'text-white' : 'text-gray-300'}`}>Receive</span>
                   </button>
 
                   {/* Swap Button */}
                   <button 
-                    onClick={() => router.push('/swap')}
+                    onClick={() => toggleWalletPanel('swap')}
                     className="flex flex-col items-center gap-2 group"
                   >
-                    <div className="w-14 h-14 rounded-full bg-white hover:bg-gray-100 flex items-center justify-center shadow-lg transition-all group-hover:scale-105">
+                    <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all ${
+                      walletPanel === 'swap'
+                        ? 'bg-white scale-105 ring-4 ring-white/10'
+                        : 'bg-white hover:bg-gray-100 group-hover:scale-105'
+                    }`}>
                       <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <polyline points="16 3 21 3 21 8" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                         <line x1="4" y1="20" x2="21" y2="3" strokeWidth={2.5} strokeLinecap="round" />
@@ -794,23 +1246,457 @@ export default function DashboardPage() {
                         <line x1="4" y1="4" x2="9" y2="9" strokeWidth={2.5} strokeLinecap="round" />
                       </svg>
                     </div>
-                    <span className="text-xs font-semibold text-gray-300">Swap</span>
+                    <span className={`text-xs font-semibold transition-colors ${walletPanel === 'swap' ? 'text-white' : 'text-gray-300'}`}>Swap</span>
                   </button>
 
                   {/* History Button */}
                   <button 
-                    onClick={() => router.push('/history')}
+                    onClick={() => toggleWalletPanel('history')}
                     className="flex flex-col items-center gap-2 group"
                   >
-                    <div className="w-14 h-14 rounded-full bg-white hover:bg-gray-100 flex items-center justify-center shadow-lg transition-all group-hover:scale-105">
+                    <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all ${
+                      walletPanel === 'history'
+                        ? 'bg-white scale-105 ring-4 ring-white/10'
+                        : 'bg-white hover:bg-gray-100 group-hover:scale-105'
+                    }`}>
                       <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <circle cx="12" cy="12" r="10" strokeWidth={2.5} strokeLinecap="round" />
                         <polyline points="12 6 12 12 16 14" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </div>
-                    <span className="text-xs font-semibold text-gray-300">History</span>
+                    <span className={`text-xs font-semibold transition-colors ${walletPanel === 'history' ? 'text-white' : 'text-gray-300'}`}>History</span>
                   </button>
                 </div>
+
+                {walletPanel !== 'overview' && (
+                  <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-white/[0.03] px-4 py-4 sm:px-5 sm:py-5">
+                    <div className="flex items-start justify-between gap-4 border-b border-white/6 pb-4">
+                      <div>
+                        <div className="text-sm font-bold text-white">{walletPanelMeta[walletPanel].title}</div>
+                        <div className="mt-1 text-xs text-gray-400">{walletPanelMeta[walletPanel].subtitle}</div>
+                      </div>
+                      <button
+                        onClick={() => setWalletPanel('overview')}
+                        className="w-9 h-9 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all"
+                        title="Close panel"
+                      >
+                        <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    {walletPanel === 'send' && (
+                      <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(260px,0.8fr)]">
+                        <div className="space-y-4">
+                          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">Recipient</span>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const text = await navigator.clipboard.readText();
+                                    setSendRecipient(text);
+                                    setSendError('');
+                                  } catch (error) {
+                                    console.error('Failed to read clipboard:', error);
+                                  }
+                                }}
+                                className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400 hover:text-white transition-colors"
+                              >
+                                Paste
+                              </button>
+                            </div>
+                            <input
+                              value={sendRecipient}
+                              onChange={(event) => {
+                                setSendRecipient(event.target.value);
+                                setSendError('');
+                              }}
+                              placeholder="0x... or inj1..."
+                              className="w-full bg-transparent text-sm text-white placeholder:text-gray-600 outline-none font-mono"
+                            />
+                          </div>
+
+                          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">Amount</span>
+                              <button
+                                onClick={() => {
+                                  setSendAmount(tokenBalances.INJ);
+                                  setSendError('');
+                                }}
+                                className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400 hover:text-white transition-colors"
+                              >
+                                Max
+                              </button>
+                            </div>
+                            <div className="flex items-end gap-3">
+                              <input
+                                value={sendAmount}
+                                onChange={(event) => {
+                                  setSendAmount(event.target.value);
+                                  setSendError('');
+                                }}
+                                inputMode="decimal"
+                                placeholder="0.0000"
+                                className="w-full bg-transparent text-2xl font-mono text-white placeholder:text-gray-600 outline-none"
+                              />
+                              <span className="pb-1 text-sm font-semibold text-gray-400">INJ</span>
+                            </div>
+                          </div>
+
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">Estimated Gas</div>
+                              <div className="mt-2 text-sm font-mono text-white">
+                                {sendEstimating ? 'Estimating...' : sendGasEstimate ? `${Number(sendGasCost).toFixed(6)} INJ` : 'Awaiting input'}
+                              </div>
+                            </div>
+                            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">Available</div>
+                              <div className="mt-2 text-sm font-mono text-white">{tokenBalances.INJ} INJ</div>
+                            </div>
+                          </div>
+
+                          {sendError && (
+                            <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                              {sendError}
+                            </div>
+                          )}
+
+                          {sendTxHash && (
+                            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3">
+                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-200">Latest Transfer</div>
+                              <div className="mt-2 text-sm font-mono text-white">{truncateMiddle(sendTxHash, 10, 8)}</div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="rounded-2xl border border-white/10 bg-black/25 p-4 flex flex-col">
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">Summary</div>
+                          <div className="mt-4 space-y-3">
+                            <div className="flex items-center justify-between gap-3 text-sm">
+                              <span className="text-gray-400">To</span>
+                              <span className="font-mono text-white text-right">{sendRecipient ? truncateMiddle(sendRecipient, 8, 6) : 'Not set'}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3 text-sm">
+                              <span className="text-gray-400">Amount</span>
+                              <span className="font-mono text-white">{sendAmount || '0.0000'} INJ</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3 text-sm">
+                              <span className="text-gray-400">Network</span>
+                              <span className="text-white">Injective EVM</span>
+                            </div>
+                          </div>
+
+                          <div className="mt-auto pt-5">
+                            <button
+                              onClick={handleSendAction}
+                              disabled={sendSubmitting || !sendRecipient || !sendAmount}
+                              className="w-full rounded-2xl bg-white text-black font-bold py-3.5 hover:bg-gray-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              {sendSubmitting ? 'Sending...' : 'Send INJ'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {walletPanel === 'receive' && (
+                      <div className="mt-5 grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-center">
+                        <div className="flex justify-center">
+                          <div className="rounded-[2rem] bg-white p-4 shadow-2xl">
+                            <QRCodeSVG
+                              value={receiveDisplayAddress || address || ''}
+                              size={180}
+                              level="H"
+                              bgColor="#FFFFFF"
+                              fgColor="#000000"
+                              includeMargin={false}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="relative p-1 bg-white/5 rounded-2xl border border-white/10">
+                            <div
+                              className={`absolute top-1 bottom-1 w-[calc(50%-0.25rem)] rounded-[0.85rem] bg-white transition-all duration-300 ${
+                                receiveAddressType === 'evm' ? 'left-1' : 'left-[calc(50%+0rem)]'
+                              }`}
+                            />
+                            <div className="relative grid grid-cols-2 gap-2">
+                              <button
+                                onClick={() => setReceiveAddressType('evm')}
+                                className={`rounded-[0.85rem] px-3 py-2.5 text-sm font-bold transition-all ${receiveAddressType === 'evm' ? 'text-black' : 'text-gray-400 hover:text-white'}`}
+                              >
+                                EVM
+                              </button>
+                              <button
+                                onClick={() => setReceiveAddressType('cosmos')}
+                                className={`rounded-[0.85rem] px-3 py-2.5 text-sm font-bold transition-all ${receiveAddressType === 'cosmos' ? 'text-black' : 'text-gray-400 hover:text-white'}`}
+                              >
+                                Cosmos
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">Wallet Address</div>
+                            <div className="mt-3 flex items-center gap-3">
+                              <div className="flex-1 overflow-x-auto scrollbar-hide font-mono text-sm text-white whitespace-nowrap">
+                                {receiveDisplayAddress}
+                              </div>
+                              <button
+                                onClick={() => {
+                                  if (!receiveDisplayAddress) return;
+                                  navigator.clipboard.writeText(receiveDisplayAddress);
+                                  setReceiveCopied(true);
+                                  setTimeout(() => setReceiveCopied(false), 2000);
+                                }}
+                                className={`flex-shrink-0 rounded-xl border px-3 py-2 text-xs font-bold transition-all ${
+                                  receiveCopied
+                                    ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
+                                    : 'border-white/10 bg-white/5 text-white hover:bg-white/10'
+                                }`}
+                              >
+                                {receiveCopied ? 'Copied' : 'Copy'}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-2xl border border-emerald-500/15 bg-emerald-500/5 px-4 py-3 text-sm text-gray-300">
+                              Use <span className="text-white">{receiveAddressType === 'evm' ? 'EVM' : 'Cosmos'}</span> format depending on the sender you are receiving from.
+                            </div>
+                            <div className="rounded-2xl border border-yellow-500/15 bg-yellow-500/5 px-4 py-3 text-sm text-gray-300">
+                              Double-check the network before sending assets in. Wrong network deposits may not be recoverable.
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {walletPanel === 'swap' && (
+                      <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)]">
+                        <div className="space-y-4">
+                          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">From</div>
+                            <div className="mt-3 grid grid-cols-3 gap-2">
+                              {swapTokenOptions.map((token) => (
+                                <button
+                                  key={`from-${token.symbol}`}
+                                  onClick={() => {
+                                    setSwapFromToken(token.symbol);
+                                    if (token.symbol === swapToToken) {
+                                      setSwapToToken(token.symbol === 'INJ' ? 'USDT' : 'INJ');
+                                    }
+                                    setSwapError('');
+                                  }}
+                                  className={`rounded-2xl border px-3 py-3 text-left transition-all ${
+                                    swapFromToken === token.symbol
+                                      ? 'border-white/20 bg-white text-black'
+                                      : 'border-white/10 bg-white/5 hover:bg-white/10'
+                                  }`}
+                                >
+                                  <div className="font-bold text-sm">{token.symbol}</div>
+                                  <div className={`mt-1 text-xs ${swapFromToken === token.symbol ? 'text-black/70' : 'text-gray-400'}`}>{token.balance}</div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">To</div>
+                            <div className="mt-3 grid grid-cols-3 gap-2">
+                              {swapTokenOptions.map((token) => (
+                                <button
+                                  key={`to-${token.symbol}`}
+                                  onClick={() => {
+                                    setSwapToToken(token.symbol);
+                                    if (token.symbol === swapFromToken) {
+                                      setSwapFromToken(token.symbol === 'INJ' ? 'USDT' : 'INJ');
+                                    }
+                                    setSwapError('');
+                                  }}
+                                  className={`rounded-2xl border px-3 py-3 text-left transition-all ${
+                                    swapToToken === token.symbol
+                                      ? 'border-white/20 bg-white text-black'
+                                      : 'border-white/10 bg-white/5 hover:bg-white/10'
+                                  }`}
+                                >
+                                  <div className="font-bold text-sm">{token.symbol}</div>
+                                  <div className={`mt-1 text-xs ${swapToToken === token.symbol ? 'text-black/70' : 'text-gray-400'}`}>{token.balance}</div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">Swap Amount</span>
+                              <button
+                                onClick={() => {
+                                  setSwapAmount(swapFromMeta.balance);
+                                  setSwapError('');
+                                }}
+                                className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400 hover:text-white transition-colors"
+                              >
+                                Max
+                              </button>
+                            </div>
+                            <div className="flex items-end gap-3">
+                              <input
+                                value={swapAmount}
+                                onChange={(event) => {
+                                  setSwapAmount(event.target.value);
+                                  setSwapError('');
+                                }}
+                                inputMode="decimal"
+                                placeholder="0.0000"
+                                className="w-full bg-transparent text-2xl font-mono text-white placeholder:text-gray-600 outline-none"
+                              />
+                              <span className="pb-1 text-sm font-semibold text-gray-400">{swapFromToken}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2">
+                            {['0.5', '1.0', '2.0'].map((value) => (
+                              <button
+                                key={value}
+                                onClick={() => setSwapSlippage(value)}
+                                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
+                                  swapSlippage === value
+                                    ? 'bg-white text-black'
+                                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                                }`}
+                              >
+                                {value}% Slippage
+                              </button>
+                            ))}
+                          </div>
+
+                          {swapError && (
+                            <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                              {swapError}
+                            </div>
+                          )}
+
+                          {swapTxHash && (
+                            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3">
+                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-200">Latest Swap</div>
+                              <div className="mt-2 text-sm font-mono text-white">{truncateMiddle(swapTxHash, 10, 8)}</div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="rounded-2xl border border-white/10 bg-black/25 p-4 flex flex-col">
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">Quote</div>
+                          <div className="mt-4 space-y-3">
+                            <div className="flex items-center justify-between gap-3 text-sm">
+                              <span className="text-gray-400">From</span>
+                              <span className="font-mono text-white">{swapAmount || '0.0000'} {swapFromToken}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3 text-sm">
+                              <span className="text-gray-400">Expected Out</span>
+                              <span className="font-mono text-white">
+                                {swapQuoteLoading ? 'Quoting...' : swapQuoteAmount ? `${Number(swapQuoteAmount).toFixed(4)} ${swapToToken}` : 'Awaiting input'}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3 text-sm">
+                              <span className="text-gray-400">Price Impact</span>
+                              <span className="text-white">{swapPriceImpact}%</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3 text-sm">
+                              <span className="text-gray-400">Available</span>
+                              <span className="font-mono text-white">{swapFromMeta.balance} {swapFromToken}</span>
+                            </div>
+                          </div>
+
+                          <div className="mt-auto pt-5">
+                            <button
+                              onClick={handleSwapAction}
+                              disabled={swapSubmitting || !swapAmount || swapFromToken === swapToToken}
+                              className="w-full rounded-2xl bg-white text-black font-bold py-3.5 hover:bg-gray-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              {swapSubmitting ? 'Swapping...' : `Swap to ${swapToMeta.symbol}`}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {walletPanel === 'history' && (
+                      <div className="mt-5">
+                        <div className="flex flex-wrap gap-2">
+                          {(['all', 'send', 'receive', 'swap'] as DashboardHistoryFilter[]).map((filter) => (
+                            <button
+                              key={filter}
+                              onClick={() => setHistoryFilter(filter)}
+                              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
+                                historyFilter === filter
+                                  ? 'bg-white text-black'
+                                  : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                              }`}
+                            >
+                              {filter === 'all' ? 'All' : filter.charAt(0).toUpperCase() + filter.slice(1)}
+                            </button>
+                          ))}
+                        </div>
+
+                        {historyError && (
+                          <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                            {historyError}
+                          </div>
+                        )}
+
+                        {historyLoading ? (
+                          <div className="mt-5 flex items-center justify-center py-14">
+                            <div className="w-10 h-10 rounded-full border-4 border-white/10 border-t-white animate-spin" />
+                          </div>
+                        ) : filteredHistoryItems.length === 0 ? (
+                          <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 px-4 py-10 text-center text-sm text-gray-400">
+                            No transactions yet. Your recent wallet activity will appear here.
+                          </div>
+                        ) : (
+                          <div className="mt-5 space-y-3">
+                            {filteredHistoryItems.map((item) => (
+                              <div
+                                key={item.id}
+                                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4"
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-bold text-white capitalize">{item.type}</span>
+                                      <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400">
+                                        {item.chainType}
+                                      </span>
+                                    </div>
+                                    <div className="mt-1 text-sm text-gray-400">{item.address}</div>
+                                    <div className="mt-2 text-xs text-gray-500">{formatDashboardTimestamp(item.timestamp)}</div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-sm font-mono text-white">{item.amount} {item.token}</div>
+                                    <div className={`mt-1 text-xs font-semibold ${
+                                      item.status === 'completed'
+                                        ? 'text-emerald-300'
+                                        : item.status === 'failed'
+                                          ? 'text-red-300'
+                                          : 'text-amber-300'
+                                    }`}>
+                                      {item.status}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1113,6 +1999,17 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      <TransactionAuthModal
+        isOpen={showAuthModal}
+        onClose={() => {
+          setShowAuthModal(false);
+          setPendingAuthAction(null);
+          setPostAuthAction(null);
+        }}
+        onSuccess={handleTransactionAuthSuccess}
+        transactionType={pendingAuthAction ?? 'send'}
+      />
 
       {/* NFT Detail Modal */}
       {selectedNFT && (
