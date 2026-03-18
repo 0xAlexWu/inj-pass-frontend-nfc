@@ -20,6 +20,7 @@ import TransactionAuthModal from '@/components/TransactionAuthModal';
 import ThemeToggleButton from '@/components/ThemeToggleButton';
 import CardCenterModal from '@/components/CardCenterModal';
 import NinjaMinerGame from '@/components/NinjaMinerGame';
+import { AGENT_CREDITS_STATS } from '@/config/agent-credits';
 import { formatAddress, privateKeyToHex } from '@/utils/wallet';
 import { getInjectiveAddress, getEthereumAddress } from '@injectivelabs/sdk-ts';
 

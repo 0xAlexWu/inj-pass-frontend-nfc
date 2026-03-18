@@ -305,18 +305,15 @@ export default function DiscoverPage() {
           <div className="grid grid-cols-3 gap-4 py-3">
             {/* Settings */}
             <button
-              onClick={() => {
-                setActiveTab('settings');
-                router.push('/settings');
-              }}
+              onClick={() => router.push('/settings')}
               className={`flex flex-col items-center gap-1 py-2 rounded-xl transition-all duration-300 ease-in-out transform ${
-                activeTab === 'settings' 
+                false
                   ? 'text-white scale-105' 
                   : 'text-gray-500 hover:text-gray-300'
               }`}
             >
               <div className={`p-2 rounded-xl transition-all duration-300 ease-in-out ${
-                activeTab === 'settings' 
+                false
                   ? 'bg-white/10' 
                   : 'bg-transparent'
               }`}>
@@ -330,18 +327,15 @@ export default function DiscoverPage() {
 
             {/* Wallet */}
             <button
-              onClick={() => {
-                setActiveTab('wallet');
-                router.push('/dashboard');
-              }}
+              onClick={() => router.push('/dashboard')}
               className={`flex flex-col items-center gap-1 py-2 rounded-xl transition-all duration-300 ease-in-out transform ${
-                activeTab === 'wallet' 
+                false
                   ? 'text-white scale-105' 
                   : 'text-gray-500 hover:text-gray-300'
               }`}
             >
               <div className={`p-2 rounded-xl transition-all duration-300 ease-in-out ${
-                activeTab === 'wallet' 
+                false
                   ? 'bg-white/10' 
                   : 'bg-transparent'
               }`}>
@@ -356,15 +350,15 @@ export default function DiscoverPage() {
 
             {/* Discover */}
             <button
-              onClick={() => setActiveTab('discover')}
+              onClick={() => router.push('/discover')}
               className={`flex flex-col items-center gap-1 py-2 rounded-xl transition-all duration-300 ease-in-out transform ${
-                activeTab === 'discover' 
+                true
                   ? 'text-white scale-105' 
                   : 'text-gray-500 hover:text-gray-300'
               }`}
             >
               <div className={`p-2 rounded-xl transition-all duration-300 ease-in-out ${
-                activeTab === 'discover' 
+                true
                   ? 'bg-white/10' 
                   : 'bg-transparent'
               }`}>
