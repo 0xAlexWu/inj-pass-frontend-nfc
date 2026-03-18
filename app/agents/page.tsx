@@ -13,6 +13,7 @@ import { TOKENS_MAINNET } from '@/services/tokens';
 import { privateKeyToAccount } from 'viem/accounts';
 import { parseUnits } from 'viem';
 import type { Address } from 'viem';
+import { AGENT_CREDITS_STATS } from '@/config/agent-credits';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -1440,17 +1441,19 @@ export default function AgentsPage() {
                     </div>
                     <div className="rounded-2xl border border-blue-400/25 bg-gradient-to-r from-[#4c3af9]/25 to-transparent p-6">
                       <p className="text-xs uppercase tracking-[0.2em] text-blue-200/80">Available</p>
-                      <p className="mt-2 text-4xl font-bold">2,360</p>
-                      <p className="text-sm text-gray-300 mt-2">640 credits to unlock Pro Agent Routing.</p>
+                      <p className="mt-2 text-4xl font-bold">{AGENT_CREDITS_STATS.available.toLocaleString()}</p>
+                      <p className="text-sm text-gray-300 mt-2">
+                        {AGENT_CREDITS_STATS.unlockGap.toLocaleString()} credits to unlock {AGENT_CREDITS_STATS.unlockLabel}.
+                      </p>
                       <div className="mt-4 h-2 rounded-full bg-white/10 overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-[#4c3af9] to-blue-400 w-[79%]" />
+                        <div className="h-full bg-gradient-to-r from-[#4c3af9] to-blue-400" style={{ width: `${AGENT_CREDITS_STATS.unlockProgress}%` }} />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {[
-                        { title: 'This Week', value: '+980' },
-                        { title: 'Spent on AI', value: '-410' },
-                        { title: 'Referral Bonus', value: '+650' },
+                        { title: 'This Week', value: AGENT_CREDITS_STATS.weeklyDelta },
+                        { title: 'Spent on AI', value: AGENT_CREDITS_STATS.spentOnAi },
+                        { title: 'Referral Bonus', value: AGENT_CREDITS_STATS.referralBonus },
                       ].map((item) => (
                         <div key={item.title} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                           <p className="text-xs text-gray-400">{item.title}</p>

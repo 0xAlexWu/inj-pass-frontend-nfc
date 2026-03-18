@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useWallet } from '@/contexts/WalletContext';
 import { getBalance } from '@/wallet/chain';
 import { Balance, INJECTIVE_MAINNET } from '@/types/chain';
-import { getInjPrice, getTokenPrice } from '@/services/price';
+import { getTokenPrice } from '@/services/price';
 import { getTokenBalances } from '@/services/dex-swap';
 import { startQRScanner, stopQRScanner, clearQRScanner, isCameraSupported, isValidAddress } from '@/services/qr-scanner';
 import { getN1NJ4NFTs, type NFT } from '@/services/nft';
@@ -15,10 +15,11 @@ import type { Address } from 'viem';
 import Image from 'next/image';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import NFTDetailModal from '@/components/NFTDetailModal';
+import { AGENT_CREDITS_STATS } from '@/config/agent-credits';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { isUnlocked, address, lock, isCheckingSession } = useWallet();
+  const { isUnlocked, address, isCheckingSession } = useWallet();
   const [balance, setBalance] = useState<Balance | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -462,6 +463,84 @@ export default function DashboardPage() {
                     </svg>
                   </div>
                   <span className="text-xs font-semibold text-gray-300">History</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-[2rem] border border-white/10 bg-white/[0.04] overflow-hidden relative">
+            <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-r from-[#4c3af9]/18 via-blue-400/10 to-transparent blur-2xl" />
+            <div className="relative p-5 md:p-6">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="relative w-11 h-11 rounded-2xl border border-[#6e5dff]/30 bg-gradient-to-br from-[#4c3af9]/28 via-white/[0.08] to-transparent shadow-[0_0_28px_rgba(76,58,249,0.16)] flex items-center justify-center overflow-hidden">
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_24%,rgba(255,255,255,0.18),transparent_42%)] opacity-90" />
+                      <svg className="relative w-5.5 h-5.5 text-white/95" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.9} d="M8 9.5l7-2.5M8.4 10.7l6.2 4.1M15.2 8.5v4.8" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.9} d="M17.2 7H20m0 0l-1.8-1.8M20 7l-1.8 1.8" />
+                        <circle cx="6.5" cy="10" r="1.65" fill="currentColor" stroke="none" />
+                        <circle cx="16" cy="6.7" r="1.65" fill="currentColor" stroke="none" />
+                        <circle cx="16" cy="15.7" r="1.65" fill="currentColor" stroke="none" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-200/80">AI Credits</div>
+                      <div className="text-sm text-gray-400 mt-1">Visible now on dashboard, not hidden in Agents.</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-end gap-3">
+                    <span className="text-4xl md:text-5xl font-bold text-white tracking-tight">
+                      {AGENT_CREDITS_STATS.available.toLocaleString()}
+                    </span>
+                    <span className="text-lg font-semibold text-blue-300 pb-1">Credits</span>
+                  </div>
+
+                  <p className="mt-3 text-sm text-gray-300">
+                    {AGENT_CREDITS_STATS.unlockGap.toLocaleString()} credits to unlock {AGENT_CREDITS_STATS.unlockLabel}.
+                  </p>
+
+                  <div className="mt-4 h-2.5 rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-[#4c3af9] via-[#6e5dff] to-blue-400"
+                      style={{ width: `${AGENT_CREDITS_STATS.unlockProgress}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 lg:min-w-[320px]">
+                  {[
+                    { title: 'This Week', value: AGENT_CREDITS_STATS.weeklyDelta, tone: 'text-emerald-300' },
+                    { title: 'Spent on AI', value: AGENT_CREDITS_STATS.spentOnAi, tone: 'text-white' },
+                    { title: 'Referral', value: AGENT_CREDITS_STATS.referralBonus, tone: 'text-blue-300' },
+                  ].map((item) => (
+                    <div key={item.title} className="rounded-2xl border border-white/10 bg-black/35 px-4 py-4">
+                      <div className="text-[11px] uppercase tracking-[0.18em] text-gray-500">{item.title}</div>
+                      <div className={`mt-2 text-xl font-semibold ${item.tone}`}>{item.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="inline-flex items-center gap-2 text-sm text-gray-400">
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full border border-blue-400/25 bg-blue-400/10 text-blue-200 font-semibold">
+                    Invite Reward {AGENT_CREDITS_STATS.inviteReward}
+                  </span>
+                  <span>Bring one activated friend into INJ Pass.</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setActiveTab('agents');
+                    router.push('/agents');
+                  }}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white text-black px-4 py-3 text-sm font-bold hover:bg-gray-100 transition-all"
+                >
+                  Open Agents
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -1037,5 +1116,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {};
