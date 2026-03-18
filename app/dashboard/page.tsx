@@ -95,6 +95,160 @@ function RollingBalanceNumber({ value }: { value: string }) {
   );
 }
 
+function buildPixelTrendSeries(currentValue: number, changePct: number) {
+  const pointCount = 18;
+
+  if (!Number.isFinite(currentValue) || currentValue <= 0) {
+    return Array.from({ length: pointCount }, () => 0);
+  }
+
+  const safeFactor = Math.max(0.15, 1 + changePct / 100);
+  const startValue = currentValue / safeFactor;
+  const drift = currentValue - startValue;
+  const waveBase = Math.max(Math.abs(drift) * 0.16, currentValue * 0.018);
+  const rippleBase = Math.max(Math.abs(drift) * 0.05, currentValue * 0.008);
+
+  const series = Array.from({ length: pointCount }, (_, index) => {
+    const t = index / (pointCount - 1);
+    const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    const wave = Math.sin((t * 3.2 + 0.15) * Math.PI) * waveBase * (1 - t * 0.15);
+    const ripple = Math.cos((t * 6.4 + 0.2) * Math.PI) * rippleBase;
+
+    return Math.max(0, startValue + drift * eased + wave + ripple);
+  });
+
+  series[pointCount - 1] = currentValue;
+
+  return series;
+}
+
+function PixelTrendChart({
+  values,
+  hidden,
+  changePct,
+  currentValueLabel,
+}: {
+  values: number[];
+  hidden: boolean;
+  changePct: number;
+  currentValueLabel: string;
+}) {
+  const width = 320;
+  const height = 184;
+  const paddingLeft = 20;
+  const paddingRight = 18;
+  const paddingTop = 18;
+  const paddingBottom = 30;
+  const chartWidth = width - paddingLeft - paddingRight;
+  const chartHeight = height - paddingTop - paddingBottom;
+  const minValue = values.length > 0 ? Math.min(...values) : 0;
+  const maxValue = values.length > 0 ? Math.max(...values) : 0;
+  const range = maxValue - minValue;
+  const accentClass = changePct >= 0 ? 'text-emerald-300' : 'text-orange-300';
+  const accentColor = changePct >= 0 ? '#6ee7b7' : '#fb923c';
+  const accentFill = changePct >= 0 ? 'rgba(110,231,183,0.16)' : 'rgba(251,146,60,0.16)';
+  const gridDots = Array.from({ length: 11 }, (_, column) =>
+    Array.from({ length: 6 }, (_, row) => ({
+      x: paddingLeft + column * (chartWidth / 10),
+      y: paddingTop + row * (chartHeight / 5),
+      key: `${column}-${row}`,
+    }))
+  ).flat();
+
+  const points = values.map((value, index) => {
+    const x = paddingLeft + (index / Math.max(values.length - 1, 1)) * chartWidth;
+    const normalized = range < 0.0001 ? 0.55 : 1 - (value - minValue) / range;
+    const y = paddingTop + normalized * chartHeight;
+
+    return { x, y };
+  });
+
+  const stepPath = points
+    .map((point, index) => {
+      if (index === 0) {
+        return `M ${point.x} ${point.y}`;
+      }
+
+      return `H ${point.x} V ${point.y}`;
+    })
+    .join(' ');
+
+  const areaPath =
+    points.length > 0
+      ? `${stepPath} V ${paddingTop + chartHeight} H ${points[0].x} Z`
+      : '';
+
+  return (
+    <div className="relative h-full min-h-[220px] rounded-[1.75rem] border border-white/10 bg-gradient-to-br from-white/[0.06] via-white/[0.03] to-transparent px-4 py-4 overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_45%)]" />
+      <div className="relative flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-gray-500">24H Trend</div>
+          <div className="mt-1 text-xs text-gray-400">Pixel asset movement</div>
+        </div>
+        <div className={`text-sm font-semibold ${accentClass}`}>
+          {changePct >= 0 ? '+' : ''}
+          {changePct.toFixed(2)}%
+        </div>
+      </div>
+
+      {hidden ? (
+        <div className="relative mt-4 flex h-[184px] items-center justify-center rounded-2xl border border-white/5 bg-black/20">
+          <div className="text-center">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-gray-500">Trend Hidden</div>
+            <div className="mt-2 text-sm text-gray-400">Unhide balance to view</div>
+          </div>
+        </div>
+      ) : (
+        <svg
+          className="relative mt-4 h-[184px] w-full"
+          viewBox={`0 0 ${width} ${height}`}
+          fill="none"
+          aria-label="24 hour asset movement chart"
+        >
+          {gridDots.map((dot) => (
+            <rect
+              key={dot.key}
+              x={dot.x - 1.5}
+              y={dot.y - 1.5}
+              width="3"
+              height="3"
+              rx="0.5"
+              fill="rgba(255,255,255,0.10)"
+              shapeRendering="crispEdges"
+            />
+          ))}
+          <path d={areaPath} fill={accentFill} shapeRendering="crispEdges" />
+          <path
+            d={stepPath}
+            stroke={accentColor}
+            strokeWidth="3"
+            strokeLinejoin="miter"
+            strokeLinecap="square"
+            shapeRendering="crispEdges"
+          />
+          {points.map((point, index) => (
+            <rect
+              key={`point-${index}`}
+              x={point.x - 3}
+              y={point.y - 3}
+              width="6"
+              height="6"
+              fill={accentColor}
+              shapeRendering="crispEdges"
+            />
+          ))}
+        </svg>
+      )}
+
+      <div className="relative mt-3 flex items-center justify-between text-[11px] uppercase tracking-[0.2em] text-gray-500">
+        <span>Now</span>
+        <span className="font-mono text-gray-300">${hidden ? '••••' : currentValueLabel}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const { isUnlocked, address, isCheckingSession } = useWallet();
@@ -418,7 +572,9 @@ export default function DashboardPage() {
   const injUsdValue = balance ? (parseFloat(balance.formatted) * injPrice) : 0;
   const usdtValue = parseFloat(tokenBalances.USDT);
   const usdcValue = parseFloat(tokenBalances.USDC);
-  const totalUsdValue = (injUsdValue + usdtValue + usdcValue).toFixed(2);
+  const totalUsdNumeric = injUsdValue + usdtValue + usdcValue;
+  const totalUsdValue = totalUsdNumeric.toFixed(2);
+  const assetTrendSeries = buildPixelTrendSeries(totalUsdNumeric, injPriceChange24h);
 
   return (
     <div className="min-h-screen pb-24 md:pb-8 bg-black">
@@ -523,43 +679,56 @@ export default function DashboardPage() {
                 </button>
               </div>
 
-              {/* Main Balance Display */}
-              <div className="mb-5">
-                <div className="flex items-end gap-3 md:gap-4 flex-wrap">
-                  <span className="text-4xl md:text-5xl font-bold text-white font-mono tracking-tight">
-                    {balanceVisible ? <RollingBalanceNumber value={formattedBalance} /> : '••••••'}
-                  </span>
-                  <span className="text-xl font-semibold text-gray-400">INJ</span>
-                  <div className="flex items-baseline gap-2 pb-1 md:pb-1.5">
-                    <span className="text-sm md:text-base font-semibold text-white/90 font-mono tracking-tight">
-                      {balanceVisible ? AGENT_CREDITS_STATS.available.toLocaleString() : '••••'}
-                    </span>
-                    <span className="text-[11px] md:text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
-                      Passbits
-                    </span>
+              <div className="flex flex-col gap-6 xl:flex-row xl:items-end">
+                <div className="min-w-0 flex-1">
+                  {/* Main Balance Display */}
+                  <div className="mb-5">
+                    <div className="flex items-end gap-3 md:gap-4 flex-wrap">
+                      <span className="text-4xl md:text-5xl font-bold text-white font-mono tracking-tight">
+                        {balanceVisible ? <RollingBalanceNumber value={formattedBalance} /> : '••••••'}
+                      </span>
+                      <span className="text-xl font-semibold text-gray-400">INJ</span>
+                      <div className="flex items-baseline gap-2 pb-1 md:pb-1.5">
+                        <span className="text-sm md:text-base font-semibold text-white/90 font-mono tracking-tight">
+                          {balanceVisible ? AGENT_CREDITS_STATS.available.toLocaleString() : '••••'}
+                        </span>
+                        <span className="text-[11px] md:text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
+                          Passbits
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 mt-2">
+                      <div className="text-base text-gray-400 font-mono">
+                        ≈ ${balanceVisible ? totalUsdValue : '••••••'} USD
+                      </div>
+                      {/* 24h Change */}
+                      {balanceVisible && balance && (
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-semibold ${injPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {injPriceChange24h >= 0 ? '+' : ''}${(parseFloat(balance.formatted) * injPrice * injPriceChange24h / 100).toFixed(2)}
+                          </span>
+                          <span className={`text-sm ${injPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {injPriceChange24h >= 0 ? '+' : ''}{injPriceChange24h.toFixed(2)}%
+                          </span>
+                          <span className="text-gray-500 text-xs">24h</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 mt-2">
-                  <div className="text-base text-gray-400 font-mono">
-                    ≈ ${balanceVisible ? totalUsdValue : '••••••'} USD
-                  </div>
-                  {/* 24h Change */}
-                  {balanceVisible && balance && (
-                    <div className="flex items-center gap-2">
-                      <span className={`text-sm font-semibold ${injPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {injPriceChange24h >= 0 ? '+' : ''}${(parseFloat(balance.formatted) * injPrice * injPriceChange24h / 100).toFixed(2)}
-                      </span>
-                      <span className={`text-sm ${injPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {injPriceChange24h >= 0 ? '+' : ''}{injPriceChange24h.toFixed(2)}%
-                      </span>
-                      <span className="text-gray-500 text-xs">24h</span>
-                    </div>
-                  )}
+
+                <div className="xl:w-[320px] xl:flex-shrink-0">
+                  <PixelTrendChart
+                    values={assetTrendSeries}
+                    hidden={!balanceVisible}
+                    changePct={injPriceChange24h}
+                    currentValueLabel={totalUsdValue}
+                  />
                 </div>
               </div>
 
               {/* Action Buttons - Circular White Style */}
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-4 gap-4 mt-1">
                 {/* Send Button */}
                 <button 
                   onClick={() => router.push('/send')}
