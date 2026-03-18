@@ -9,13 +9,17 @@ interface AccountHeaderProps {
   accountName?: string;
   showScanButton?: boolean;
   onScanClick?: () => void;
+  showFaucetButton?: boolean;
+  onFaucetClick?: () => void;
 }
 
 export default function AccountHeader({ 
   address, 
   accountName = 'Account 1',
   showScanButton = false,
-  onScanClick
+  onScanClick,
+  showFaucetButton = false,
+  onFaucetClick,
 }: AccountHeaderProps) {
   const [copied, setCopied] = useState(false);
 
@@ -70,6 +74,34 @@ export default function AccountHeader({
 
       <div className="flex items-center gap-3">
         <ThemeToggleButton />
+
+        {showFaucetButton && (
+          <button
+            onClick={onFaucetClick}
+            className="p-3 rounded-xl bg-white/5 hover:bg-violet-600/20 border border-white/10 hover:border-violet-500/40 transition-all group"
+            title="Testnet Faucet"
+          >
+            <svg
+              className="w-5 h-5 text-gray-400 group-hover:text-violet-300 transition-colors"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M2 12h7" />
+              <path d="M9 9h5a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H9V9z" />
+              <path d="M10 9V7M13 9V7" />
+              <path d="M10 7h3" />
+              <path d="M15 12h4" />
+              <path d="M19 10v4" />
+              <path d="M11.5 14v2" />
+              <path d="M10 16h3" />
+              <path d="M11.5 16.5c0 0-2 2-2 3.5a2 2 0 0 0 4 0c0-1.5-2-3.5-2-3.5z" />
+            </svg>
+          </button>
+        )}
 
         {/* Scan QR Code Button */}
         {showScanButton && (

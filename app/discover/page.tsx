@@ -23,10 +23,27 @@ export default function DiscoverPage() {
   const { isUnlocked, address, isCheckingSession } = useWallet();
   const [activeCategory, setActiveCategory] = useState<DAppCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'settings' | 'wallet' | 'discover'>('discover');
 
   // DApp data with Google Favicon Service (more reliable)
   const dapps: DApp[] = [
+    {
+      id: '9',
+      name: 'Omisper',
+      description: 'Decentralized Social Platform',
+      icon: '/omisper.png',
+      category: 'social',
+      url: 'https://omisper-front.pages.dev/',
+      featured: true
+    },
+    {
+      id: '10',
+      name: 'Hash Mahjong',
+      description: 'Injective EVM Mini Game',
+      icon: '/hashmahjong.png',
+      category: 'game',
+      url: 'https://hash-mahjong-two.vercel.app/',
+      featured: true
+    },
     {
       id: '1',
       name: 'Helix',
@@ -59,8 +76,7 @@ export default function DiscoverPage() {
       description: 'NFT Marketplace',
       icon: 'https://www.google.com/s2/favicons?domain=talis.art&sz=128',
       category: 'nft',
-      url: 'https://talis.art',
-      featured: true
+      url: 'https://talis.art'
     },
     {
       id: '5',
@@ -68,8 +84,7 @@ export default function DiscoverPage() {
       description: 'Multichain NFT Marketplace',
       icon: 'https://www.google.com/s2/favicons?domain=rarible.com&sz=128',
       category: 'nft',
-      url: 'https://rarible.com',
-      featured: true
+      url: 'https://rarible.com'
     },
     {
       id: '8',
@@ -134,10 +149,12 @@ export default function DiscoverPage() {
             {/* Header - OKX Style */}
             <div className="bg-gradient-to-b from-white/5 to-transparent border-b border-white/5 backdrop-blur-sm">
           <div className="max-w-7xl mx-auto px-4 py-6">
-            {/* Account Header with Scan Button */}
+            {/* Account Header with Faucet + Scan Buttons */}
             <div className="mb-6">
               <AccountHeader 
                 address={address || undefined}
+                showFaucetButton={true}
+                onFaucetClick={() => router.push('/faucet')}
                 showScanButton={true}
                 onScanClick={() => {/* TODO: Implement scan functionality */}}
               />

@@ -17,8 +17,8 @@ import Image from 'next/image';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import NFTDetailModal from '@/components/NFTDetailModal';
 import TransactionAuthModal from '@/components/TransactionAuthModal';
-import { AGENT_CREDITS_STATS } from '@/config/agent-credits';
 import ThemeToggleButton from '@/components/ThemeToggleButton';
+import NinjaMinerGame from '@/components/NinjaMinerGame';
 import { privateKeyToHex } from '@/utils/wallet';
 import { getInjectiveAddress, getEthereumAddress } from '@injectivelabs/sdk-ts';
 
@@ -872,71 +872,6 @@ export default function DashboardPage() {
 
   const assetTabOrder: AssetTab[] = ['tokens', 'nfts', 'defi', 'earn'];
   const assetTabIndex = assetTabOrder.indexOf(assetTab);
-
-  const earnTasks = [
-    {
-      title: 'Daily Wallet Check-In',
-      subtitle: 'Refresh balances and keep your Passbits streak active.',
-      reward: '+25',
-      actionLabel: 'Check In',
-      badge: 'Daily',
-      onClick: handleRefresh,
-      iconShell: 'rounded-2xl bg-gradient-to-br from-[#4c3af9] to-blue-500 shadow-[0_10px_30px_rgba(76,58,249,0.24)]',
-      icon: (
-        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 6v6l3.5 2M12 3.5a8.5 8.5 0 11-8.5 8.5" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M3.5 7.5V3.5h4" />
-        </svg>
-      ),
-    },
-    {
-      title: 'Complete an On-Chain Swap',
-      subtitle: 'Trade on Injective and unlock your first activity reward.',
-      reward: '+300',
-      actionLabel: 'Swap Now',
-      badge: 'On-Chain',
-      onClick: () => router.push('/swap'),
-      iconShell: 'rounded-2xl bg-gradient-to-br from-emerald-500 to-cyan-500 shadow-[0_10px_30px_rgba(16,185,129,0.22)]',
-      icon: (
-        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M7 7h11m0 0l-3-3m3 3l-3 3M17 17H6m0 0l3-3m-3 3l3 3" />
-        </svg>
-      ),
-    },
-    {
-      title: 'Invite One Activated Friend',
-      subtitle: 'Bring a verified user into INJ Pass for the biggest boost.',
-      reward: AGENT_CREDITS_STATS.inviteReward,
-      actionLabel: 'Invite',
-      badge: 'Social',
-      onClick: () => router.push('/agents'),
-      iconShell: 'rounded-2xl bg-gradient-to-br from-fuchsia-500 to-violet-500 shadow-[0_10px_30px_rgba(217,70,239,0.22)]',
-      icon: (
-        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.1} d="M8 9.5l7-2.5M8.4 10.7l6.2 4.1M15.2 8.5v4.8" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.1} d="M17.2 7H20m0 0l-1.8-1.8M20 7l-1.8 1.8" />
-          <circle cx="6.5" cy="10" r="1.4" fill="currentColor" stroke="none" />
-          <circle cx="16" cy="6.7" r="1.4" fill="currentColor" stroke="none" />
-          <circle cx="16" cy="15.7" r="1.4" fill="currentColor" stroke="none" />
-        </svg>
-      ),
-    },
-    {
-      title: 'Explore Discover',
-      subtitle: 'Open the Discover hub and finish today’s exploration task.',
-      reward: '+120',
-      actionLabel: 'Open',
-      badge: 'Explore',
-      onClick: () => router.push('/discover'),
-      iconShell: 'rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 shadow-[0_10px_30px_rgba(245,158,11,0.22)]',
-      icon: (
-        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="8" strokeWidth={2.2} />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M14.8 9.2l-1.9 5-5 1.9 1.9-5 5-1.9z" />
-        </svg>
-      ),
-    },
-  ];
 
   // QR Scanner handlers
   const openQRScanner = async () => {
@@ -1966,32 +1901,7 @@ export default function DashboardPage() {
           )}
 
           {assetTab === 'earn' && (
-            <>
-              {earnTasks.map((task) => (
-                <button
-                  key={task.title}
-                  onClick={task.onClick}
-                  className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all text-left cursor-pointer"
-                >
-                  <div className={`w-12 h-12 flex items-center justify-center flex-shrink-0 ${task.iconShell}`}>
-                    {task.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="font-bold">{task.title}</div>
-                      <span className="px-2 py-1 rounded-full border border-blue-400/20 bg-blue-400/10 text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-200">
-                        {task.badge}
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-400 mt-1">{task.subtitle}</div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <div className="font-bold text-blue-300">{task.reward} Passbits</div>
-                    <div className="text-xs text-gray-500 mt-1">{task.actionLabel}</div>
-                  </div>
-                </button>
-              ))}
-            </>
+            <NinjaMinerGame walletAddress={address} />
           )}
         </div>
       </div>
