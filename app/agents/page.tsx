@@ -972,9 +972,14 @@ export default function AgentsPage() {
                   Get 1,000 Credits
                 </p>
               </div>
-              <div className="w-8 h-8 rounded-full border border-white/20 bg-white/10 group-hover:bg-[#4c3af9]/30 group-hover:border-[#6e5dff] transition-all flex items-center justify-center">
-                <svg className="w-4 h-4 text-white/90 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 6l6 6-6 6" />
+              <div className="relative w-11 h-11 rounded-2xl border border-[#6e5dff]/30 bg-gradient-to-br from-[#4c3af9]/28 via-white/[0.08] to-transparent shadow-[0_0_28px_rgba(76,58,249,0.16)] group-hover:border-[#8b7bff]/55 group-hover:shadow-[0_0_34px_rgba(76,58,249,0.24)] transition-all flex items-center justify-center overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_24%,rgba(255,255,255,0.18),transparent_42%)] opacity-90" />
+                <svg className="relative w-5.5 h-5.5 text-white/95 transition-transform group-hover:scale-105" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.9} d="M8 9.5l7-2.5M8.4 10.7l6.2 4.1M15.2 8.5v4.8" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.9} d="M17.2 7H20m0 0l-1.8-1.8M20 7l-1.8 1.8" />
+                  <circle cx="6.5" cy="10" r="1.65" fill="currentColor" stroke="none" />
+                  <circle cx="16" cy="6.7" r="1.65" fill="currentColor" stroke="none" />
+                  <circle cx="16" cy="15.7" r="1.65" fill="currentColor" stroke="none" />
                 </svg>
               </div>
             </div>
