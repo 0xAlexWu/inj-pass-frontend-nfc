@@ -1148,18 +1148,34 @@ export default function DashboardPage() {
                       </div>
 
                       <div className="pointer-events-none flex flex-1 items-center justify-center pt-2 xl:justify-start xl:pl-6">
-                        <div className="relative h-[188px] w-[188px] sm:h-[220px] sm:w-[220px] xl:h-[250px] xl:w-[250px]">
-                          <div className="absolute inset-4 rounded-[2rem] bg-[radial-gradient(circle_at_50%_38%,rgba(255,164,78,0.26),transparent_68%)] blur-3xl" />
-                          <div className="absolute inset-0 rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.015))] shadow-[0_22px_54px_rgba(0,0,0,0.36)]" />
-                          <div className="absolute inset-[1px] rounded-[calc(2rem-1px)] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(0,0,0,0.04))]" />
-                          <div className="absolute inset-0 overflow-hidden rounded-[2rem]">
-                            <Image
-                              src="/N1NJ4DEMO.png"
-                              alt="N1NJ4 demo"
-                              fill
-                              priority
-                              className="object-cover object-center opacity-95"
-                            />
+                        <div className="flex items-center justify-center gap-3 sm:gap-5 xl:gap-6">
+                          <div className="relative h-[176px] w-[176px] sm:h-[212px] sm:w-[212px] xl:h-[248px] xl:w-[248px]">
+                            <div className="absolute inset-4 rounded-[2rem] bg-[radial-gradient(circle_at_50%_38%,rgba(255,164,78,0.26),transparent_68%)] blur-3xl" />
+                            <div className="absolute inset-0 rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.015))] shadow-[0_22px_54px_rgba(0,0,0,0.36)]" />
+                            <div className="absolute inset-[1px] rounded-[calc(2rem-1px)] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(0,0,0,0.04))]" />
+                            <div className="absolute inset-0 overflow-hidden rounded-[2rem]">
+                              <Image
+                                src="/N1NJ4DEMO.png"
+                                alt="N1NJ4 demo primary"
+                                fill
+                                priority
+                                className="object-cover object-center opacity-95"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="relative h-[176px] w-[176px] sm:h-[212px] sm:w-[212px] xl:h-[248px] xl:w-[248px]">
+                            <div className="absolute inset-4 rounded-[2rem] bg-[radial-gradient(circle_at_52%_40%,rgba(255,176,94,0.2),transparent_70%)] blur-3xl" />
+                            <div className="absolute inset-0 rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.012))] shadow-[0_22px_54px_rgba(0,0,0,0.3)]" />
+                            <div className="absolute inset-[1px] rounded-[calc(2rem-1px)] bg-[linear-gradient(180deg,rgba(255,255,255,0.025),rgba(0,0,0,0.05))]" />
+                            <div className="absolute inset-0 overflow-hidden rounded-[2rem]">
+                              <Image
+                                src="/N1NJ4DEMO.png"
+                                alt="N1NJ4 demo secondary"
+                                fill
+                                className="object-cover object-center opacity-88 saturate-[0.92] brightness-[0.95]"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
