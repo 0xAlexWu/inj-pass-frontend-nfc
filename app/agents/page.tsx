@@ -970,7 +970,7 @@ export default function AgentsPage() {
                   Share INJ Pass with Friends
                 </p>
                 <p className="text-[11px] mt-1 text-blue-200/90 font-medium tracking-wide">
-                  Get 1,000 Credits
+                  Get 1,000 Passbits
                 </p>
               </div>
               <div className="relative w-11 h-11 rounded-2xl border border-[#6e5dff]/30 bg-gradient-to-br from-[#4c3af9]/28 via-white/[0.08] to-transparent shadow-[0_0_28px_rgba(76,58,249,0.16)] group-hover:border-[#8b7bff]/55 group-hover:shadow-[0_0_34px_rgba(76,58,249,0.24)] transition-all flex items-center justify-center overflow-hidden">
@@ -1362,7 +1362,7 @@ export default function AgentsPage() {
                         <p className="mt-1 text-2xl font-semibold">{INVITED_FRIENDS.length}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-widest">Credits Earned</p>
+                        <p className="text-xs text-gray-400 uppercase tracking-widest">Passbits Earned</p>
                         <p className="mt-1 text-2xl font-semibold text-blue-300">{totalInviteCredits.toLocaleString()}</p>
                       </div>
                     </div>
@@ -1382,7 +1382,7 @@ export default function AgentsPage() {
                         </div>
                         <div className="mt-2 flex items-center justify-between text-xs text-gray-400">
                           <span>Joined {friend.joinedAt}</span>
-                          <span>+{friend.credits.toLocaleString()} Credits</span>
+                          <span>+{friend.credits.toLocaleString()} Passbits</span>
                         </div>
                       </div>
                     ))}
@@ -1409,8 +1409,8 @@ export default function AgentsPage() {
                   <p className="text-sm font-semibold text-white mt-1">Agent Control Center</p>
                 </div>
                 {[
-                  { key: 'credits' as SettingsTab, label: 'Credits Balance' },
-                  { key: 'tasks' as SettingsTab, label: 'Earn Credits' },
+                  { key: 'credits' as SettingsTab, label: 'Passbits Balance' },
+                  { key: 'tasks' as SettingsTab, label: 'Earn Passbits' },
                   { key: 'payments' as SettingsTab, label: 'AI Payments' },
                   { key: 'telegram' as SettingsTab, label: 'Telegram' },
                 ].map((item) => (
@@ -1436,14 +1436,14 @@ export default function AgentsPage() {
                 {activeSettingsTab === 'credits' && (
                   <div className="space-y-5">
                     <div>
-                      <h3 className="text-2xl font-semibold tracking-tight">Credits Balance</h3>
-                      <p className="text-sm text-gray-400 mt-1">Track current credits and upcoming reward tiers.</p>
+                      <h3 className="text-2xl font-semibold tracking-tight">Passbits Balance</h3>
+                      <p className="text-sm text-gray-400 mt-1">Track current Passbits and upcoming reward tiers.</p>
                     </div>
                     <div className="rounded-2xl border border-blue-400/25 bg-gradient-to-r from-[#4c3af9]/25 to-transparent p-6">
                       <p className="text-xs uppercase tracking-[0.2em] text-blue-200/80">Available</p>
                       <p className="mt-2 text-4xl font-bold">{AGENT_CREDITS_STATS.available.toLocaleString()}</p>
                       <p className="text-sm text-gray-300 mt-2">
-                        {AGENT_CREDITS_STATS.unlockGap.toLocaleString()} credits to unlock {AGENT_CREDITS_STATS.unlockLabel}.
+                        {AGENT_CREDITS_STATS.unlockGap.toLocaleString()} Passbits to unlock {AGENT_CREDITS_STATS.unlockLabel}.
                       </p>
                       <div className="mt-4 h-2 rounded-full bg-white/10 overflow-hidden">
                         <div className="h-full bg-gradient-to-r from-[#4c3af9] to-blue-400" style={{ width: `${AGENT_CREDITS_STATS.unlockProgress}%` }} />
@@ -1467,8 +1467,8 @@ export default function AgentsPage() {
                 {activeSettingsTab === 'tasks' && (
                   <div className="space-y-5">
                     <div>
-                      <h3 className="text-2xl font-semibold tracking-tight">Tasks to Earn Credits</h3>
-                      <p className="text-sm text-gray-400 mt-1">Complete daily and growth tasks to increase credits.</p>
+                      <h3 className="text-2xl font-semibold tracking-tight">Tasks to Earn Passbits</h3>
+                      <p className="text-sm text-gray-400 mt-1">Complete daily and growth tasks to increase Passbits.</p>
                     </div>
                     <div className="space-y-3">
                       {[
@@ -1479,7 +1479,7 @@ export default function AgentsPage() {
                         <div key={task.title} className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 flex items-center justify-between gap-3">
                           <div>
                             <p className="text-sm font-medium text-white">{task.title}</p>
-                            <p className="text-xs text-blue-200 mt-1">{task.reward} Credits</p>
+                            <p className="text-xs text-blue-200 mt-1">{task.reward} Passbits</p>
                           </div>
                           <button className="px-3 py-2 rounded-lg bg-white/5 border border-white/15 text-xs font-semibold hover:bg-white/10 transition-colors">
                             {task.action}
@@ -1546,7 +1546,7 @@ export default function AgentsPage() {
                       <div className="space-y-2 text-xs text-gray-300">
                         <p>1. Open Telegram and search <span className="font-semibold text-white">@injpass_alert_bot</span></p>
                         <p>2. Send <span className="font-semibold text-white">/bind {inviteCode}</span> to verify wallet ownership</p>
-                        <p>3. Enable alerts: tx confirmations, low credits, and AI payment events</p>
+                        <p>3. Enable alerts: tx confirmations, low Passbits, and AI payment events</p>
                       </div>
                     </div>
                   </div>
