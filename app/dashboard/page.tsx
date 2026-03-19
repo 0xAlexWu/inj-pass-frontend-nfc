@@ -2094,7 +2094,6 @@ export default function DashboardPage() {
                   <div className="relative flex min-h-0 flex-1 flex-col">
                     <div className="mb-4">
                       <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Assets</div>
-                      <div className="mt-1 text-base font-bold text-white">Compact balances</div>
                     </div>
 
                     <div className="space-y-3">

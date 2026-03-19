@@ -297,9 +297,7 @@ export default function AgentsPage() {
   const isCompactStage = isCompactEmbedded && isEmbedded;
   const rootShellClass = `overflow-hidden ${isLight ? 'text-slate-900' : 'text-white'} ${
     isCompactStage
-      ? isLight
-        ? 'relative h-full min-h-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_34%),linear-gradient(180deg,#f8fbff,#eef4ff)] p-2.5'
-        : 'relative h-full min-h-0 bg-[radial-gradient(circle_at_top,rgba(76,58,249,0.08),transparent_34%),linear-gradient(180deg,#040811,#060b14)] p-2.5'
+      ? 'relative h-full min-h-0 bg-transparent p-0'
       : isEmbedded
       ? isLight
         ? 'grid h-full min-h-0 gap-4 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_36%),linear-gradient(180deg,#f8fbff,#eef4ff)] p-3 md:p-4 xl:grid-cols-[310px_minmax(0,1fr)]'
@@ -324,20 +322,18 @@ export default function AgentsPage() {
       } transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`;
   const mainShellClass = `min-w-0 h-full relative overflow-hidden flex flex-col ${
     isCompactEmbedded && isEmbedded
-      ? isLight
-        ? 'rounded-[1.75rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(241,245,255,0.92))] shadow-[0_20px_70px_rgba(148,163,184,0.18)]'
-        : 'rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#090d17,#070b13)] shadow-[0_20px_70px_rgba(0,0,0,0.24)]'
+      ? 'bg-transparent border-0 rounded-none shadow-none'
       : isEmbedded
       ? isLight
         ? 'rounded-[1.75rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(241,245,255,0.92))] shadow-[0_20px_70px_rgba(148,163,184,0.18)]'
         : 'rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#090d17,#070b13)] shadow-[0_20px_70px_rgba(0,0,0,0.24)]'
       : 'flex-1'
   }`;
-  const headerShellClass = `flex items-center gap-3 border-b ${isLight ? 'border-slate-200/80' : 'border-white/10'} flex-shrink-0 ${
+  const headerShellClass = `flex items-center gap-3 ${isCompactStage ? (isLight ? 'border-b border-slate-200/80' : 'border-b border-white/10') : `border-b ${isLight ? 'border-slate-200/80' : 'border-white/10'}`} flex-shrink-0 ${
     isCompactEmbedded && isEmbedded
       ? isLight
-        ? 'px-3 py-3 bg-white/70'
-        : 'px-3 py-3 bg-white/[0.02]'
+        ? 'px-4 py-3 bg-transparent'
+        : 'px-4 py-3 bg-transparent'
       : isEmbedded
       ? isLight
         ? 'px-5 py-4 bg-white/70'
@@ -1227,7 +1223,7 @@ export default function AgentsPage() {
         </header>
 
         {/* Messages */}
-          <div className={`flex-1 ${isCompactStage ? (messages.length === 0 ? 'overflow-hidden' : 'overflow-y-auto scrollbar-hide') : 'overflow-y-auto'} ${isEmbedded ? (isLight ? 'bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.05),transparent_36%)]' : 'bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_36%)]') : ''}`}>
+          <div className={`flex-1 ${isCompactStage ? (messages.length === 0 ? 'overflow-hidden' : 'overflow-y-auto scrollbar-hide') : 'overflow-y-auto'} ${isCompactStage ? '' : isEmbedded ? (isLight ? 'bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.05),transparent_36%)]' : 'bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_36%)]') : ''}`}>
           {messages.length === 0 ? (
             isCompactStage ? (
               <div className="flex h-full min-h-0 flex-col px-4 py-3">
@@ -1903,7 +1899,7 @@ export default function AgentsPage() {
         )}
 
         {/* Input area */}
-        <div className={`flex-shrink-0 border-t ${isLight ? 'border-slate-200/80' : 'border-white/10'} ${isCompactStage ? (isLight ? 'bg-white/70 p-3' : 'bg-white/[0.02] p-3') : isEmbedded ? (isLight ? 'bg-white/70 p-5' : 'bg-white/[0.02] p-5') : (isLight ? 'bg-white/72 backdrop-blur-xl p-4' : 'bg-black/80 backdrop-blur-sm p-4')}`}>
+        <div className={`flex-shrink-0 border-t ${isLight ? 'border-slate-200/80' : 'border-white/10'} ${isCompactStage ? 'bg-transparent p-3' : isEmbedded ? (isLight ? 'bg-white/70 p-5' : 'bg-white/[0.02] p-5') : (isLight ? 'bg-white/72 backdrop-blur-xl p-4' : 'bg-black/80 backdrop-blur-sm p-4')}`}>
           <div className={`${isCompactStage ? 'max-w-none' : isEmbedded ? 'max-w-4xl' : 'max-w-3xl'} mx-auto`}>
 
             {/* Sandbox / takeover address badge — click to flip card */}
