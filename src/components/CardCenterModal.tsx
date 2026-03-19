@@ -9,6 +9,7 @@ type ScanState = 'idle' | 'scanning' | 'success' | 'error';
 
 interface CardCenterModalProps {
   isOpen: boolean;
+  isActive: boolean;
   onClose: () => void;
   onUseCardAddress?: (address: string) => void;
 }
@@ -52,6 +53,7 @@ function ScannerArtwork({ scanning, isLight }: { scanning: boolean; isLight: boo
 
 export default function CardCenterModal({
   isOpen,
+  isActive,
   onClose,
   onUseCardAddress,
 }: CardCenterModalProps) {
@@ -115,7 +117,7 @@ export default function CardCenterModal({
   };
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen || !isActive) {
       scanSessionRef.current += 1;
       return;
     }
@@ -141,7 +143,7 @@ export default function CardCenterModal({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleEscape);
     };
-  }, [isOpen, onClose, resetScanner, startScanner]);
+  }, [isActive, isOpen, onClose, resetScanner, startScanner]);
 
   if (!isOpen) {
     return null;
@@ -175,11 +177,17 @@ export default function CardCenterModal({
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
       <button
         aria-label="Close card center"
-        className={`absolute inset-0 backdrop-blur-md ${isLight ? 'bg-slate-100/80' : 'bg-black/80'}`}
+        className={`absolute inset-0 backdrop-blur-md transition-opacity duration-200 ${
+          isActive ? 'opacity-100' : 'opacity-0'
+        } ${isLight ? 'bg-slate-100/80' : 'bg-black/80'}`}
         onClick={onClose}
       />
 
-      <div className={containerClassName}>
+      <div
+        className={`${containerClassName} transform-gpu transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          isActive ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-4 scale-[0.965] opacity-0'
+        }`}
+      >
         <div className={`border-b px-5 py-4 sm:px-6 ${isLight ? 'border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(255,255,255,0.45))]' : 'border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0))]'}`}>
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-4">

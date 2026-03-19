@@ -458,11 +458,13 @@ export default function DashboardPage() {
   const [pendingAuthAction, setPendingAuthAction] = useState<'send' | 'swap' | null>(null);
   const [postAuthAction, setPostAuthAction] = useState<'send' | 'swap' | null>(null);
   const [showCardCenter, setShowCardCenter] = useState(false);
+  const [cardCenterActive, setCardCenterActive] = useState(false);
   const [showFaucetSheet, setShowFaucetSheet] = useState(false);
   const [faucetSheetActive, setFaucetSheetActive] = useState(false);
   const [flippedTokenCard, setFlippedTokenCard] = useState<string | null>(null);
   const [copiedTokenInfo, setCopiedTokenInfo] = useState<string | null>(null);
   const tokenFlipTimerRef = useRef<number | null>(null);
+  const cardCenterTimerRef = useRef<number | null>(null);
   const faucetSheetTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -532,6 +534,10 @@ export default function DashboardPage() {
 
   useEffect(() => {
     return () => {
+      if (cardCenterTimerRef.current) {
+        window.clearTimeout(cardCenterTimerRef.current);
+        cardCenterTimerRef.current = null;
+      }
       if (faucetSheetTimerRef.current) {
         window.clearTimeout(faucetSheetTimerRef.current);
         faucetSheetTimerRef.current = null;
@@ -1126,6 +1132,35 @@ export default function DashboardPage() {
     }, 350);
   };
 
+  const openCardCenter = () => {
+    if (cardCenterTimerRef.current) {
+      window.clearTimeout(cardCenterTimerRef.current);
+      cardCenterTimerRef.current = null;
+    }
+
+    setShowCardCenter(true);
+    setCardCenterActive(false);
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        setCardCenterActive(true);
+      });
+    });
+  };
+
+  const closeCardCenter = () => {
+    if (cardCenterTimerRef.current) {
+      window.clearTimeout(cardCenterTimerRef.current);
+      cardCenterTimerRef.current = null;
+    }
+
+    setCardCenterActive(false);
+    cardCenterTimerRef.current = window.setTimeout(() => {
+      setShowCardCenter(false);
+      cardCenterTimerRef.current = null;
+    }, 280);
+  };
+
   const openFaucetSheet = () => {
     if (faucetSheetTimerRef.current) {
       window.clearTimeout(faucetSheetTimerRef.current);
@@ -1305,7 +1340,7 @@ export default function DashboardPage() {
                 </svg>
               </button>
               <button
-                onClick={() => setShowCardCenter(true)}
+                onClick={openCardCenter}
                 className="rounded-lg border border-white/10 bg-white/5 p-2.5 transition-all hover:bg-white/10"
                 title="Open Card Pay"
               >
@@ -2462,9 +2497,10 @@ export default function DashboardPage() {
 
       <CardCenterModal
         isOpen={showCardCenter}
-        onClose={() => setShowCardCenter(false)}
+        isActive={cardCenterActive}
+        onClose={closeCardCenter}
         onUseCardAddress={(nextAddress) => {
-          setShowCardCenter(false);
+          closeCardCenter();
           setWalletPanel('send');
           setSendRecipient(nextAddress);
           setSendError('');
