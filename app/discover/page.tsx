@@ -193,6 +193,10 @@ export default function DiscoverPage() {
   });
 
   const featuredDapps = DAPPS.filter((dapp) => dapp.featured);
+  const activeCategoryIndex = Math.max(
+    CATEGORIES.findIndex((category) => category.id === activeCategory),
+    0
+  );
 
   return (
     <div className={isEmbedded ? 'h-full bg-black' : 'min-h-screen bg-black'}>
@@ -218,20 +222,29 @@ export default function DiscoverPage() {
       {isEmbedded ? (
         <div className="flex h-full flex-col gap-4 px-4 py-3">
           <div className="flex items-center gap-3">
-            <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1 scrollbar-hide">
-              {CATEGORIES.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => setActiveCategory(category.id as DAppCategory)}
-                  className={`whitespace-nowrap rounded-full border px-4 py-2 text-xs font-semibold transition-all ${
-                    activeCategory === category.id
-                      ? 'border-white bg-white text-black'
-                      : 'border-white/10 bg-white/[0.03] text-gray-300 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  {category.name}
-                </button>
-              ))}
+            <div className="relative min-w-0 flex-1 max-w-[560px] rounded-xl bg-white/5 p-1">
+              <div
+                className="pointer-events-none absolute bottom-1 top-1 rounded-lg bg-white shadow-lg transition-all duration-300 ease-out"
+                style={{
+                  width: 'calc((100% - 2rem) / 5)',
+                  left: `calc(0.25rem + ${activeCategoryIndex} * ((100% - 2rem) / 5 + 0.5rem))`,
+                }}
+              />
+              <div className="relative flex gap-2">
+                {CATEGORIES.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => setActiveCategory(category.id as DAppCategory)}
+                    className={`flex-1 whitespace-nowrap rounded-lg px-3 py-2.5 text-xs font-bold transition-all duration-300 ${
+                      activeCategory === category.id
+                        ? 'text-black'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {category.name}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="ml-auto w-[168px] flex-shrink-0 sm:w-[196px] md:w-[220px]">
               <SearchBox value={searchQuery} onChange={setSearchQuery} onClear={() => setSearchQuery('')} />
