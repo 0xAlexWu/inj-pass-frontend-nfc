@@ -343,8 +343,9 @@ export default function DashboardPage() {
   const [assetTab, setAssetTab] = useState<AssetTab>('tokens');
   const [tokenBalances, setTokenBalances] = useState<Record<string, string>>({
     INJ: '0.0000',
-    USDT: '0.00',
     USDC: '0.00',
+    NINJA: '0.00',
+    USDT: '0.00',
   });
   
   // QR Scanner states
@@ -434,8 +435,9 @@ export default function DashboardPage() {
       setUsdcPriceChange24h(usdcPriceData.usd24hChange || 0);
       setTokenBalances({
         INJ: parseFloat(tokenBalData.INJ).toFixed(4),
-        USDT: parseFloat(tokenBalData.USDT).toFixed(2),
         USDC: parseFloat(tokenBalData.USDC).toFixed(2),
+        NINJA: '0.00',
+        USDT: parseFloat(tokenBalData.USDT).toFixed(2),
       });
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -1841,28 +1843,6 @@ export default function DashboardPage() {
               <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
                   <Image 
-                    src="/USDT_Logo.png" 
-                    alt="USDT" 
-                    width={48} 
-                    height={48}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-                <div className="flex-1">
-                  <div className="font-bold mb-1">USDT</div>
-                  <div className="text-sm text-gray-400">{tokenBalances.USDT} USDT</div>
-                </div>
-                <div className="text-right">
-                  <div className="font-bold font-mono">${tokenBalances.USDT}</div>
-                  <div className={`text-sm ${usdtPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {usdtPriceChange24h >= 0 ? '+' : ''}{usdtPriceChange24h.toFixed(2)}%
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
-                  <Image 
                     src="/USDC_Logo.png" 
                     alt="USDC" 
                     width={48} 
@@ -1878,6 +1858,50 @@ export default function DashboardPage() {
                   <div className="font-bold font-mono">${tokenBalances.USDC}</div>
                   <div className={`text-sm ${usdcPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {usdcPriceChange24h >= 0 ? '+' : ''}{usdcPriceChange24h.toFixed(2)}%
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
+                  <Image 
+                    src="/NIJIA.png" 
+                    alt="NINJA" 
+                    width={48} 
+                    height={48}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div className="flex-1">
+                  <div className="font-bold mb-1">NINJA</div>
+                  <div className="text-sm text-gray-400">{tokenBalances.NINJA} NINJA</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold font-mono">$0.00</div>
+                  <div className="text-sm text-gray-500">
+                    +0.00%
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
+                  <Image 
+                    src="/USDT_Logo.png" 
+                    alt="USDT" 
+                    width={48} 
+                    height={48}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div className="flex-1">
+                  <div className="font-bold mb-1">USDT</div>
+                  <div className="text-sm text-gray-400">{tokenBalances.USDT} USDT</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold font-mono">${tokenBalances.USDT}</div>
+                  <div className={`text-sm ${usdtPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {usdtPriceChange24h >= 0 ? '+' : ''}{usdtPriceChange24h.toFixed(2)}%
                   </div>
                 </div>
               </div>
