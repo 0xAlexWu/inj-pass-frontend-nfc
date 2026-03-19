@@ -197,11 +197,13 @@ function PixelTrendChart({
   hidden,
   changePct,
   currentValueLabel,
+  replayKey = 0,
 }: {
   values: number[];
   hidden: boolean;
   changePct: number;
   currentValueLabel: string;
+  replayKey?: number;
 }) {
   const width = 320;
   const height = 184;
@@ -217,7 +219,7 @@ function PixelTrendChart({
   const accentClass = changePct >= 0 ? 'text-emerald-300' : 'text-orange-300';
   const accentColor = changePct >= 0 ? '#6ee7b7' : '#fb923c';
   const accentFill = changePct >= 0 ? 'rgba(110,231,183,0.16)' : 'rgba(251,146,60,0.16)';
-  const chartAnimationKey = `${hidden ? 'hidden' : 'visible'}-${currentValueLabel}-${changePct.toFixed(2)}`;
+  const chartAnimationKey = `${hidden ? 'hidden' : 'visible'}-${currentValueLabel}-${changePct.toFixed(2)}-${replayKey}`;
   const gridDots = Array.from({ length: 11 }, (_, column) =>
     Array.from({ length: 6 }, (_, row) => ({
       x: paddingLeft + column * (chartWidth / 10),
@@ -403,6 +405,7 @@ export default function DashboardPage() {
   const [ninjaBalance, setNinjaBalance] = useState(DEFAULT_NINJA_BALANCE);
   const [assetTab, setAssetTab] = useState<AssetTab>('tokens');
   const [assetSurfaceMode, setAssetSurfaceMode] = useState<AssetSurfaceMode>('assets');
+  const [assetTrendReplayKey, setAssetTrendReplayKey] = useState(0);
   const [workspaceTab, setWorkspaceTab] = useState<DashboardWorkspaceTab>('discover');
   const [tokenBalances, setTokenBalances] = useState<Record<string, string>>({
     INJ: '0.0000',
@@ -1192,7 +1195,14 @@ export default function DashboardPage() {
 
   const openAiAssetSurface = () => {
     setFlippedTokenCard(null);
-    setAssetSurfaceMode((current) => (current === 'ai' ? 'assets' : 'ai'));
+    setAssetSurfaceMode((current) => {
+      if (current === 'ai') {
+        setAssetTrendReplayKey((value) => value + 1);
+        return 'assets';
+      }
+
+      return 'ai';
+    });
   };
 
   const isDashboardReady = !isCheckingSession && !loading && isUnlocked && !!address;
@@ -1477,6 +1487,7 @@ export default function DashboardPage() {
                             hidden={!balanceVisible}
                             changePct={injPriceChange24h}
                             currentValueLabel={totalUsdValue}
+                            replayKey={assetTrendReplayKey}
                           />
                         </div>
                       </div>
