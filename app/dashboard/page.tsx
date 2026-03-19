@@ -2202,45 +2202,25 @@ export default function DashboardPage() {
       </div>
             </div>
           </div>
-          <div className="mt-6 grid gap-6 xl:grid-cols-2">
-            <div className="bg-black rounded-2xl border border-white/10 relative overflow-hidden p-4 sm:p-5">
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-cyan-500/5 to-transparent rounded-full blur-2xl"></div>
+          <div className="mt-6">
+            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black p-4 sm:p-5">
+              <div className="absolute bottom-0 left-0 h-32 w-32 rounded-full bg-gradient-to-tr from-cyan-500/5 to-transparent blur-2xl" />
+              <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-gradient-to-bl from-violet-500/5 to-transparent blur-2xl" />
+
               <div className="relative">
                 <div className="mb-5">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Discover</div>
-                  <div className="mt-1 text-lg font-bold text-white">Explore dApps</div>
+                  <div className="mt-1 text-lg font-bold text-white">Explore apps and AI from one surface</div>
                   <div className="mt-1 text-sm text-gray-400">
-                    Search, filter, and launch Injective apps in a fixed left-right workspace.
+                    Discover is now horizontal, and the Lambda Agent lives inside it as one embedded entry instead of another full dashboard block.
                   </div>
                 </div>
 
                 <div className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-black/30">
-                  <div className="h-[720px] overflow-hidden rounded-[1.35rem] bg-black">
+                  <div className="h-[760px] overflow-hidden rounded-[1.35rem] bg-black">
                     <DashboardSurfaceFrame
                       src="/discover?embed=1"
                       title="Embedded discover"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-black rounded-2xl border border-white/10 relative overflow-hidden p-4 sm:p-5">
-              <div className="absolute bottom-0 right-0 w-32 h-32 bg-gradient-to-tl from-violet-500/5 to-transparent rounded-full blur-2xl"></div>
-              <div className="relative">
-                <div className="mb-5">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Agents</div>
-                  <div className="mt-1 text-lg font-bold text-white">Wallet copilots</div>
-                  <div className="mt-1 text-sm text-gray-400">
-                    Conversations, invite flows, and agent controls stay visible beside the chat workspace.
-                  </div>
-                </div>
-
-                <div className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-black/30">
-                  <div className="h-[720px] overflow-hidden rounded-[1.35rem] bg-black">
-                    <DashboardSurfaceFrame
-                      src="/agents?embed=1"
-                      title="Embedded agents"
                     />
                   </div>
                 </div>
