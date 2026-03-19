@@ -14,6 +14,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { parseUnits } from 'viem';
 import type { Address } from 'viem';
 import { AGENT_CREDITS_STATS } from '@/config/agent-credits';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -242,6 +243,7 @@ function hmPlayResult(txHash: string) {
 
 export default function AgentsPage() {
   const router = useRouter();
+  const { theme } = useTheme();
   const { isUnlocked, address, privateKey, keystore, isCheckingSession, unlock, resetTxAuth } = useWallet();
 
   const [isEmbedded] = useState(
@@ -288,6 +290,50 @@ export default function AgentsPage() {
   const inviteCode = address ? `INJ-${address.slice(2, 6).toUpperCase()}${address.slice(-4).toUpperCase()}` : 'INJ-PASS';
   const inviteLink = `https://injpass.com/welcome?invite=${inviteCode}`;
   const totalInviteCredits = INVITED_FRIENDS.reduce((sum, friend) => sum + friend.credits, 0);
+  const isLight = theme === 'light';
+  const rootShellClass = `overflow-hidden ${isLight ? 'text-slate-900' : 'text-white'} ${
+    isEmbedded
+      ? isLight
+        ? 'grid h-full min-h-0 gap-4 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_36%),linear-gradient(180deg,#f8fbff,#eef4ff)] p-3 md:p-4 xl:grid-cols-[310px_minmax(0,1fr)]'
+        : 'grid h-full min-h-0 gap-4 bg-[radial-gradient(circle_at_top,rgba(76,58,249,0.08),transparent_34%),linear-gradient(180deg,#040811,#060b14)] p-3 md:p-4 xl:grid-cols-[310px_minmax(0,1fr)]'
+      : isLight
+        ? 'flex h-screen bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_32%),linear-gradient(180deg,#f8fbff,#eef4ff)]'
+        : 'flex h-screen bg-black'
+  }`;
+  const sidebarShellClass = isEmbedded
+    ? isLight
+      ? 'min-h-0 h-full rounded-[1.75rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(240,246,255,0.92))] shadow-[0_20px_70px_rgba(148,163,184,0.18)] flex flex-col overflow-hidden'
+      : 'min-h-0 h-full rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#0a101d,#090d16)] shadow-[0_20px_70px_rgba(0,0,0,0.24)] flex flex-col overflow-hidden'
+    : `fixed md:relative z-30 md:z-auto top-0 left-0 h-full w-72 flex-shrink-0 ${
+        isLight
+          ? 'bg-white/88 border-r border-slate-200/80 backdrop-blur-xl flex flex-col'
+          : 'bg-[#0a0a0a] border-r border-white/10 flex flex-col'
+      } transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`;
+  const mainShellClass = `min-w-0 h-full relative overflow-hidden flex flex-col ${
+    isEmbedded
+      ? isLight
+        ? 'rounded-[1.75rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(241,245,255,0.92))] shadow-[0_20px_70px_rgba(148,163,184,0.18)]'
+        : 'rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#090d17,#070b13)] shadow-[0_20px_70px_rgba(0,0,0,0.24)]'
+      : 'flex-1'
+  }`;
+  const headerShellClass = `flex items-center gap-3 border-b ${isLight ? 'border-slate-200/80' : 'border-white/10'} flex-shrink-0 ${
+    isEmbedded
+      ? isLight
+        ? 'px-5 py-4 bg-white/70'
+        : 'px-5 py-4 bg-white/[0.02]'
+      : isLight
+        ? 'px-4 py-3 bg-white/72 backdrop-blur-xl'
+        : 'px-4 py-3 bg-black/50 backdrop-blur-sm'
+  }`;
+  const compactModalClass = isLight
+    ? 'bg-[linear-gradient(180deg,#ffffff,#f5f8ff)] border border-slate-200/80 rounded-2xl w-full max-w-sm shadow-[0_20px_60px_rgba(148,163,184,0.24)] overflow-hidden'
+    : 'bg-[#111] border border-white/15 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden';
+  const inviteModalClass = isLight
+    ? 'w-full max-w-4xl max-h-[88vh] overflow-y-auto rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff,#f6f9ff)] shadow-[0_24px_80px_rgba(148,163,184,0.24)]'
+    : 'w-full max-w-4xl max-h-[88vh] overflow-y-auto rounded-3xl border border-white/15 bg-[#090909] shadow-2xl';
+  const settingsModalClass = isLight
+    ? 'w-full max-w-5xl h-[88vh] rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff,#f6f9ff)] shadow-[0_24px_80px_rgba(148,163,184,0.24)] overflow-hidden flex'
+    : 'w-full max-w-5xl h-[88vh] rounded-3xl border border-white/15 bg-[#090909] shadow-2xl overflow-hidden flex';
 
   const copyInviteCode = useCallback(() => {
     navigator.clipboard.writeText(inviteCode);
@@ -905,8 +951,8 @@ export default function AgentsPage() {
 
   if (isCheckingSession) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+      <div className={`min-h-screen flex items-center justify-center ${isLight ? 'bg-[linear-gradient(180deg,#f8fbff,#eef4ff)]' : 'bg-black'}`}>
+        <div className={`w-8 h-8 border-2 rounded-full animate-spin ${isLight ? 'border-slate-300 border-t-slate-700' : 'border-white/20 border-t-white'}`} />
       </div>
     );
   }
@@ -914,13 +960,7 @@ export default function AgentsPage() {
   // ─── UI ─────────────────────────────────────────────────────────────────
 
   return (
-    <div
-      className={`overflow-hidden text-white ${
-        isEmbedded
-          ? 'grid h-full min-h-0 gap-4 bg-[radial-gradient(circle_at_top,rgba(76,58,249,0.08),transparent_34%),linear-gradient(180deg,#040811,#060b14)] p-3 md:p-4 xl:grid-cols-[310px_minmax(0,1fr)]'
-          : 'flex h-screen bg-black'
-      }`}
-    >
+    <div className={rootShellClass}>
 
       {/* Sidebar overlay (mobile) */}
       {sidebarOpen && !isEmbedded && (
@@ -928,13 +968,8 @@ export default function AgentsPage() {
       )}
 
       {/* Sidebar */}
-      <aside className={isEmbedded ? 'min-h-0 h-full rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#0a101d,#090d16)] shadow-[0_20px_70px_rgba(0,0,0,0.24)] flex flex-col overflow-hidden' : `
-        fixed md:relative z-30 md:z-auto top-0 left-0 h-full w-72 flex-shrink-0
-        bg-[#0a0a0a] border-r border-white/10 flex flex-col
-        transition-transform duration-300
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-      `}>
-        <div className={`${isEmbedded ? 'p-5' : 'p-4'} border-b border-white/10`}>
+      <aside className={sidebarShellClass}>
+        <div className={`${isEmbedded ? 'p-5' : 'p-4'} border-b ${isLight ? 'border-slate-200/80' : 'border-white/10'}`}>
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
@@ -1018,7 +1053,7 @@ export default function AgentsPage() {
           ))}
         </div>
 
-        <div className={`border-t border-white/10 space-y-3 ${isEmbedded ? 'p-4 bg-black/20' : 'p-4'}`}>
+        <div className={`border-t ${isLight ? 'border-slate-200/80' : 'border-white/10'} space-y-3 ${isEmbedded ? `${isLight ? 'p-4 bg-slate-900/[0.03]' : 'p-4 bg-black/20'}` : 'p-4'}`}>
           <button
             onClick={() => { setShowInviteManager(true); setSidebarOpen(false); }}
             className="w-full rounded-2xl border border-white/15 bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent hover:from-white/[0.12] hover:via-white/[0.05] hover:to-white/[0.03] transition-all px-3 py-3 text-left group"
@@ -1079,10 +1114,10 @@ export default function AgentsPage() {
       </aside>
 
       {/* Main chat area */}
-      <div className={`min-w-0 h-full relative overflow-hidden flex flex-col ${isEmbedded ? 'rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#090d17,#070b13)] shadow-[0_20px_70px_rgba(0,0,0,0.24)]' : 'flex-1'}`}>
+      <div className={mainShellClass}>
 
         {/* Top bar */}
-        <header className={`flex items-center gap-3 border-b border-white/10 flex-shrink-0 ${isEmbedded ? 'px-5 py-4 bg-white/[0.02]' : 'px-4 py-3 bg-black/50 backdrop-blur-sm'}`}>
+        <header className={headerShellClass}>
           <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-white/10 transition-colors md:hidden">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -1127,13 +1162,13 @@ export default function AgentsPage() {
         </header>
 
         {/* Messages */}
-        <div className={`flex-1 overflow-y-auto ${isEmbedded ? 'bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_36%)]' : ''}`}>
+          <div className={`flex-1 overflow-y-auto ${isEmbedded ? (isLight ? 'bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.05),transparent_36%)]' : 'bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_36%)]') : ''}`}>
           {messages.length === 0 ? (
             isEmbedded ? (
               <div className="h-full p-5 md:p-6">
                 <div className="grid h-full min-h-[420px] gap-4 xl:grid-cols-[minmax(0,1.12fr)_340px]">
-                  <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.03] p-6 md:p-7 flex flex-col">
-                    <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-6">
+                  <section className={`rounded-[1.75rem] border p-6 md:p-7 flex flex-col ${isLight ? 'border-slate-200/80 bg-white/78 shadow-[0_18px_50px_rgba(148,163,184,0.14)]' : 'border-white/10 bg-white/[0.03]'}`}>
+                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-6 ${isLight ? 'bg-slate-900/[0.03] border border-slate-200/80' : 'bg-white/5 border border-white/10'}`}>
                       <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
                       </svg>
@@ -1153,7 +1188,7 @@ export default function AgentsPage() {
                         <button
                           key={s}
                           onClick={() => { setInput(s); textareaRef.current?.focus(); }}
-                          className="text-left px-4 py-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm text-gray-300 transition-colors"
+                          className={`text-left px-4 py-4 rounded-2xl border text-sm transition-colors ${isLight ? 'bg-slate-900/[0.03] hover:bg-slate-900/[0.05] border-slate-200/80 text-slate-600' : 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-300'}`}
                         >
                           {s}
                         </button>
@@ -1165,14 +1200,14 @@ export default function AgentsPage() {
                     </div>
                   </section>
 
-                  <aside className="rounded-[1.75rem] border border-white/10 bg-white/[0.03] p-5 md:p-6 flex flex-col">
+                  <aside className={`rounded-[1.75rem] border p-5 md:p-6 flex flex-col ${isLight ? 'border-slate-200/80 bg-white/78 shadow-[0_18px_50px_rgba(148,163,184,0.14)]' : 'border-white/10 bg-white/[0.03]'}`}>
                     <div>
                       <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Session</div>
                       <div className="mt-2 text-sm font-semibold text-white">{address?.slice(0, 8)}...{address?.slice(-6)}</div>
                       <div className="mt-1 text-xs text-gray-400">Injective Mainnet</div>
                     </div>
 
-                    <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className={`mt-6 rounded-2xl border p-4 ${isLight ? 'border-slate-200/80 bg-slate-900/[0.03]' : 'border-white/10 bg-black/20'}`}>
                       <div className="text-xs uppercase tracking-[0.18em] text-gray-500">Suggested Flow</div>
                       <div className="mt-3 space-y-3 text-sm text-gray-300">
                         <p>1. Start a new chat.</p>
@@ -1193,7 +1228,7 @@ export default function AgentsPage() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full px-6 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-6">
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-6 ${isLight ? 'bg-slate-900/[0.03] border border-slate-200/80' : 'bg-white/5 border border-white/10'}`}>
                   <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
                   </svg>
@@ -1212,7 +1247,7 @@ export default function AgentsPage() {
                     <button
                       key={s}
                       onClick={() => { setInput(s); textareaRef.current?.focus(); }}
-                      className="text-left px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm text-gray-300 transition-colors"
+                      className={`text-left px-4 py-3 rounded-xl border text-sm transition-colors ${isLight ? 'bg-slate-900/[0.03] hover:bg-slate-900/[0.05] border-slate-200/80 text-slate-600' : 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-300'}`}
                     >
                       {s}
                     </button>
@@ -1232,7 +1267,7 @@ export default function AgentsPage() {
                   <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                     msg.role === 'user' ? 'bg-white text-black rounded-tr-sm'
                     : msg.isError ? 'bg-red-500/10 border border-red-500/20 text-red-200 rounded-tl-sm'
-                    : 'bg-white/5 border border-white/10 text-gray-100 rounded-tl-sm'
+                    : isLight ? 'bg-slate-900/[0.03] border border-slate-200/80 text-slate-700 rounded-tl-sm' : 'bg-white/5 border border-white/10 text-gray-100 rounded-tl-sm'
                   }`}>
                     {msg.role === 'user'
                       ? <p className="text-sm">{msg.content}</p>
@@ -1247,7 +1282,7 @@ export default function AgentsPage() {
                   <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm font-bold">
                     <span className="lambda-gradient">λ</span>
                   </div>
-                  <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3">
+                  <div className={`rounded-2xl rounded-tl-sm px-4 py-3 ${isLight ? 'bg-slate-900/[0.03] border border-slate-200/80' : 'bg-white/5 border border-white/10'}`}>
                     <div className="flex gap-1 items-center h-5">
                       {[0, 150, 300].map((d) => (
                         <div key={d} className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: `${d}ms` }} />
@@ -1264,8 +1299,8 @@ export default function AgentsPage() {
         {/* ── Confirmation modal ── */}
         {pendingConfirm && (
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
-            <div className="bg-[#111] border border-white/15 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
-              <div className="px-5 pt-5 pb-4 border-b border-white/10">
+            <div className={compactModalClass}>
+              <div className={`px-5 pt-5 pb-4 border-b ${isLight ? 'border-slate-200/80' : 'border-white/10'}`}>
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
                     <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1285,7 +1320,7 @@ export default function AgentsPage() {
                   fromToken: string; toToken: string; amount: string; expectedOutput?: string;
                 };
                 return (
-                  <div className="px-5 py-4 border-b border-white/10">
+                  <div className={`px-5 py-4 border-b ${isLight ? 'border-slate-200/80' : 'border-white/10'}`}>
                     <div className="flex items-center gap-3">
                       <div className="flex-1 bg-white/5 rounded-xl p-3 text-center">
                         <div className="flex items-center justify-center mb-2">
@@ -1324,7 +1359,7 @@ export default function AgentsPage() {
               {pendingConfirm.toolName === 'send_token' && (() => {
                 const { toAddress, amount } = pendingConfirm.toolInput as { toAddress: string; amount: string };
                 return (
-                  <div className="px-5 py-4 border-b border-white/10">
+                  <div className={`px-5 py-4 border-b ${isLight ? 'border-slate-200/80' : 'border-white/10'}`}>
                     <div className="text-center mb-3">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src="/injswap.png" alt="INJ" className="w-10 h-10 object-contain mx-auto mb-1" />
@@ -1345,7 +1380,7 @@ export default function AgentsPage() {
                   : Math.min(Math.max(1, Number(pendingConfirm.toolInput.rounds) || 5), 20);
                 const totalCost = (rounds * 0.000001).toFixed(6);
                 return (
-                  <div className="px-5 py-4 border-b border-white/10">
+                  <div className={`px-5 py-4 border-b ${isLight ? 'border-slate-200/80' : 'border-white/10'}`}>
                     <div className="text-center mb-3">
                       <div className="text-3xl mb-2">🀄</div>
                       <div className="text-lg font-bold">{rounds === 1 ? 'Hash Mahjong' : `Hash Mahjong × ${rounds} rounds`}</div>
@@ -1385,8 +1420,8 @@ export default function AgentsPage() {
         {/* ── Re-auth modal (privateKey not in memory) ── */}
         {showAuthModal && (
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
-            <div className="bg-[#111] border border-white/15 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
-              <div className="px-5 pt-5 pb-4 border-b border-white/10">
+            <div className={compactModalClass}>
+              <div className={`px-5 pt-5 pb-4 border-b ${isLight ? 'border-slate-200/80' : 'border-white/10'}`}>
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
                     <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1427,7 +1462,7 @@ export default function AgentsPage() {
                       onChange={(e) => setAuthPassword(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleAuthWithPassword()}
                       placeholder="Enter your wallet password"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-white/30 transition-colors"
+                      className={`w-full rounded-xl px-4 py-3 text-sm focus:outline-none transition-colors ${isLight ? 'bg-slate-900/[0.03] border border-slate-200/80 text-slate-900 placeholder:text-slate-400 focus:border-slate-300' : 'bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-white/30'}`}
                       autoFocus
                     />
                     <button
@@ -1461,10 +1496,10 @@ export default function AgentsPage() {
             onClick={() => setShowInviteManager(false)}
           >
             <div
-              className="w-full max-w-4xl max-h-[88vh] overflow-y-auto rounded-3xl border border-white/15 bg-[#090909] shadow-2xl"
+              className={inviteModalClass}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="px-6 sm:px-8 py-5 border-b border-white/10 flex items-center justify-between">
+              <div className={`px-6 sm:px-8 py-5 border-b flex items-center justify-between ${isLight ? 'border-slate-200/80' : 'border-white/10'}`}>
                 <div>
                   <h3 className="text-xl font-semibold tracking-tight">Share INJ Pass with Friends</h3>
                   <p className="text-sm text-gray-400 mt-1">Invite friends, track activations, and earn rewards.</p>
@@ -1546,10 +1581,10 @@ export default function AgentsPage() {
             onClick={() => setShowAgentSettings(false)}
           >
             <div
-              className="w-full max-w-5xl h-[88vh] rounded-3xl border border-white/15 bg-[#090909] shadow-2xl overflow-hidden flex"
+              className={settingsModalClass}
               onClick={(e) => e.stopPropagation()}
             >
-              <aside className="w-[220px] border-r border-white/10 bg-white/[0.02] p-4 flex flex-col">
+              <aside className={`w-[220px] border-r p-4 flex flex-col ${isLight ? 'border-slate-200/80 bg-slate-900/[0.03]' : 'border-white/10 bg-white/[0.02]'}`}>
                 <div className="mb-5 px-2">
                   <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Settings</p>
                   <p className="text-sm font-semibold text-white mt-1">Agent Control Center</p>
@@ -1563,7 +1598,7 @@ export default function AgentsPage() {
                   <button
                     key={item.key}
                     onClick={() => setActiveSettingsTab(item.key)}
-                    className={`text-left px-3 py-2.5 rounded-xl text-sm transition-colors mb-1 ${activeSettingsTab === item.key ? 'bg-[#4c3af9]/25 text-white border border-[#6e5dff]/40' : 'text-gray-300 hover:bg-white/5 border border-transparent'}`}
+                    className={`text-left px-3 py-2.5 rounded-xl text-sm transition-colors mb-1 ${activeSettingsTab === item.key ? (isLight ? 'bg-[#4c3af9]/12 text-[#312e81] border border-[#8b7bff]/30' : 'bg-[#4c3af9]/25 text-white border border-[#6e5dff]/40') : (isLight ? 'text-slate-600 hover:bg-slate-900/[0.03] border border-transparent' : 'text-gray-300 hover:bg-white/5 border border-transparent')}`}
                   >
                     {item.label}
                   </button>
@@ -1703,7 +1738,7 @@ export default function AgentsPage() {
         )}
 
         {/* Input area */}
-        <div className={`flex-shrink-0 border-t border-white/10 ${isEmbedded ? 'bg-white/[0.02] p-5' : 'bg-black/80 backdrop-blur-sm p-4'}`}>
+        <div className={`flex-shrink-0 border-t ${isLight ? 'border-slate-200/80' : 'border-white/10'} ${isEmbedded ? (isLight ? 'bg-white/70 p-5' : 'bg-white/[0.02] p-5') : (isLight ? 'bg-white/72 backdrop-blur-xl p-4' : 'bg-black/80 backdrop-blur-sm p-4')}`}>
           <div className={`${isEmbedded ? 'max-w-4xl' : 'max-w-3xl'} mx-auto`}>
 
             {/* Sandbox / takeover address badge — click to flip card */}
@@ -1734,17 +1769,17 @@ export default function AgentsPage() {
               >
                 {/* ── Front face: normal input bar ── */}
                 <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' } as React.CSSProperties}>
-                  <div className="flex items-end gap-3 bg-white/5 border border-white/15 rounded-2xl px-4 py-3 focus-within:border-white/30 transition-colors">
+                  <div className={`flex items-end gap-3 rounded-2xl px-4 py-3 transition-colors ${isLight ? 'bg-white/84 border border-slate-200/80 focus-within:border-slate-300 shadow-sm' : 'bg-white/5 border border-white/15 focus-within:border-white/30'}`}>
                     <select
                       value={model}
                       onChange={(e) => setModel(e.target.value as Model)}
-                      className="bg-transparent text-xs text-gray-400 border-none outline-none cursor-pointer hover:text-white transition-colors py-1 pr-1 flex-shrink-0"
+                      className={`bg-transparent text-xs border-none outline-none cursor-pointer transition-colors py-1 pr-1 flex-shrink-0 ${isLight ? 'text-slate-500 hover:text-slate-900' : 'text-gray-400 hover:text-white'}`}
                     >
                       {MODEL_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value} className="bg-black">{opt.label}</option>
+                        <option key={opt.value} value={opt.value} className={isLight ? 'bg-white text-slate-900' : 'bg-black'}>{opt.label}</option>
                       ))}
                     </select>
-                    <div className="w-px h-5 bg-white/15 flex-shrink-0 self-center" />
+                    <div className={`w-px h-5 flex-shrink-0 self-center ${isLight ? 'bg-slate-200/80' : 'bg-white/15'}`} />
                     <textarea
                       ref={textareaRef}
                       value={input}
@@ -1753,7 +1788,7 @@ export default function AgentsPage() {
                       placeholder="Ask anything about your wallet…"
                       rows={1}
                       disabled={isRunning || !!pendingConfirm}
-                      className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 resize-none outline-none min-h-[24px] max-h-40 py-1 disabled:opacity-50"
+                      className={`flex-1 bg-transparent text-sm resize-none outline-none min-h-[24px] max-h-40 py-1 disabled:opacity-50 ${isLight ? 'text-slate-900 placeholder:text-slate-400' : 'text-white placeholder-gray-500'}`}
                     />
                     <button
                       onClick={handleSend}
@@ -1778,7 +1813,7 @@ export default function AgentsPage() {
                     top: 0, left: 0, right: 0, bottom: 0,
                   } as React.CSSProperties}
                 >
-                  <div className="flex flex-col justify-center gap-2 bg-white/5 border border-white/15 rounded-2xl px-4 py-3 h-full">
+                  <div className={`flex flex-col justify-center gap-2 rounded-2xl px-4 py-3 h-full ${isLight ? 'bg-white/84 border border-slate-200/80 shadow-sm' : 'bg-white/5 border border-white/15'}`}>
                     {/* Row 1: balances + action buttons */}
                     <div className="flex items-center gap-4">
                       {/* Balances */}

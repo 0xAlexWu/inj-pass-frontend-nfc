@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/contexts/WalletContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { QRCodeSVG } from 'qrcode.react';
 import { isNFCSupported, readNFCCard, writeNFCCard } from '@/services/nfc';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -18,6 +19,7 @@ interface BonjourCard {
 
 export default function CardsPage() {
   const router = useRouter();
+  const { theme } = useTheme();
   const [isEmbedded] = useState(() => {
     if (typeof window === 'undefined') return false;
     return new URLSearchParams(window.location.search).get('embed') === '1';
@@ -310,17 +312,49 @@ export default function CardsPage() {
   }
 
   const activeCards = boundCards.filter(card => card.isActive).length;
+  const isLight = theme === 'light';
+  const pageShellClass = isEmbedded
+    ? (isLight
+        ? 'bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_36%),linear-gradient(180deg,#f8fbff,#eef4ff)] text-slate-900'
+        : 'bg-black text-white')
+    : (isLight
+        ? 'min-h-screen bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_36%),linear-gradient(180deg,#f8fbff,#eef4ff)] text-slate-900 pb-24 md:pb-8'
+        : 'min-h-screen bg-black text-white pb-24 md:pb-8');
+  const headerShellClass = isLight
+    ? 'bg-gradient-to-b from-slate-100/90 to-transparent border-b border-slate-200/80 backdrop-blur-xl'
+    : 'bg-gradient-to-b from-white/5 to-transparent border-b border-white/5 backdrop-blur-sm';
+  const statsShellClass = isLight
+    ? 'flex items-center gap-3 bg-white/80 border border-slate-200/80 rounded-xl px-4 py-2 shadow-[0_12px_30px_rgba(148,163,184,0.12)]'
+    : 'flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-2';
+  const embeddedStatsShellClass = isLight
+    ? 'mb-5 flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 shadow-[0_12px_30px_rgba(148,163,184,0.12)]'
+    : 'mb-5 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3';
+  const addCardShellClass = isLight
+    ? 'w-full mx-auto aspect-[1.586/1] rounded-3xl border-2 border-dashed border-slate-300 hover:border-slate-400 hover:bg-white/70 transition-all flex items-center justify-center cursor-pointer group'
+    : 'w-full mx-auto aspect-[1.586/1] rounded-3xl border-2 border-dashed border-white/20 hover:border-white/40 hover:bg-white/5 transition-all flex items-center justify-center cursor-pointer group';
+  const addCardIconClass = isLight
+    ? 'w-16 h-16 rounded-full bg-slate-900/5 group-hover:bg-slate-900/10 flex items-center justify-center mx-auto mb-3 transition-all'
+    : 'w-16 h-16 rounded-full bg-white/10 group-hover:bg-white/15 flex items-center justify-center mx-auto mb-3 transition-all';
+  const sheetModalClass = isLight
+    ? 'relative w-full max-w-2xl bg-[linear-gradient(180deg,#ffffff,#f6f9ff)] border-t border-slate-200/80 rounded-t-3xl'
+    : 'relative w-full max-w-2xl bg-black border-t border-white/10 rounded-t-3xl';
+  const dialogModalClass = isLight
+    ? 'relative bg-[linear-gradient(180deg,#ffffff,#f6f9ff)] border border-slate-200/80 rounded-3xl p-8 max-w-md w-full'
+    : 'relative bg-black border border-white/10 rounded-3xl p-8 max-w-md w-full';
+  const aboutCardClass = isLight
+    ? 'mt-8 bg-white/80 border border-slate-200/80 rounded-3xl p-6 shadow-[0_18px_40px_rgba(148,163,184,0.14)]'
+    : 'mt-8 bg-white/5 border border-white/10 rounded-3xl p-6';
 
   return (
-    <div className={`${isEmbedded ? 'bg-black text-white' : 'min-h-screen bg-black text-white pb-24 md:pb-8'}`}>
+    <div className={pageShellClass}>
       {!isEmbedded && (
-        <div className="bg-gradient-to-b from-white/5 to-transparent border-b border-white/5 backdrop-blur-sm">
+        <div className={headerShellClass}>
           <div className="max-w-7xl mx-auto px-4 py-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => router.back()}
-                  className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-all"
+                  className={`${isLight ? 'bg-white/85 hover:bg-white border border-slate-200/80 shadow-sm' : 'bg-white/5 hover:bg-white/10 border border-white/10'} w-10 h-10 rounded-xl flex items-center justify-center transition-all`}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <polyline points="15 18 9 12 15 6" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
@@ -332,7 +366,7 @@ export default function CardsPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-2">
+              <div className={statsShellClass}>
                 <div className="flex items-center gap-1.5">
                   <span className="text-gray-400 text-xs">Total</span>
                   <span className="text-white font-bold text-sm">{boundCards.length}</span>
@@ -356,7 +390,7 @@ export default function CardsPage() {
       {/* Main Content */}
       <div className={`max-w-2xl mx-auto px-4 ${isEmbedded ? 'py-5' : 'py-6'}`}>
         {isEmbedded && (
-          <div className="mb-5 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+          <div className={embeddedStatsShellClass}>
             <div className="flex items-center gap-1.5">
               <span className="text-gray-400 text-xs">Total</span>
               <span className="text-white font-bold text-sm">{boundCards.length}</span>
@@ -649,11 +683,11 @@ export default function CardsPage() {
         {/* Add New Card */}
         {boundCards.length < 5 && (
           <div 
-            className="w-full mx-auto aspect-[1.586/1] rounded-3xl border-2 border-dashed border-white/20 hover:border-white/40 hover:bg-white/5 transition-all flex items-center justify-center cursor-pointer group"
+            className={addCardShellClass}
             onClick={openAddCardModal}
           >
             <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-white/10 group-hover:bg-white/15 flex items-center justify-center mx-auto mb-3 transition-all">
+              <div className={addCardIconClass}>
                 <svg className="w-8 h-8 text-gray-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
@@ -675,7 +709,7 @@ export default function CardsPage() {
             
             {/* Modal Content */}
             <div 
-              className={`relative w-full max-w-2xl bg-black border-t border-white/10 rounded-t-3xl ${
+              className={`${sheetModalClass} ${
                 closingModal ? 'animate-slide-down' : 'animate-slide-up'
               }`}
               onClick={(e) => e.stopPropagation()}
@@ -841,10 +875,10 @@ export default function CardsPage() {
             
             {/* Modal Content */}
             <div 
-              className="relative bg-black border border-white/10 rounded-3xl p-8 max-w-md w-full"
+              className={dialogModalClass}
               onClick={(e) => e.stopPropagation()}
               style={{
-                boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                boxShadow: isLight ? '0 20px 60px rgba(148,163,184,0.24)' : '0 20px 60px rgba(0,0,0,0.5)',
               }}
             >
               {/* Close Button */}
@@ -909,7 +943,7 @@ export default function CardsPage() {
         )}
 
         {/* About Cards */}
-        <div className="mt-8 bg-white/5 border border-white/10 rounded-3xl p-6">
+        <div className={aboutCardClass}>
           <h3 className="text-lg font-bold text-white mb-3">About Cards</h3>
           <p className="text-gray-400 text-sm leading-relaxed mb-4">
             NFC-enabled cards that can be bound to your Injective wallet. 
