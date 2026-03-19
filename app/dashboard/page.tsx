@@ -1302,7 +1302,7 @@ export default function DashboardPage() {
 
                       <div className={`min-h-0 flex-1 ${walletPanel === 'settings' ? 'overflow-hidden pr-0 pt-3' : 'overflow-y-auto pr-1'}`}>
                         {walletPanel === 'send' && (
-                          <div className="grid gap-4 pt-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(260px,0.8fr)]">
+                          <div className="space-y-4 pt-5">
                             <div className="space-y-4">
                               <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                                 <div className="flex items-center justify-between mb-2">
