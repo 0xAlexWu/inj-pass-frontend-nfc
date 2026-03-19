@@ -2187,8 +2187,14 @@ export default function DashboardPage() {
                       {dashboardTokenCards.map((token) => (
                         <div
                           key={`compact-${token.symbol}`}
-                          className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3"
-                          >
+                          draggable
+                          onDragStart={(event) => {
+                            event.dataTransfer.effectAllowed = 'copy';
+                            event.dataTransfer.setData('application/x-injpass-asset', token.symbol);
+                            event.dataTransfer.setData('text/plain', `$${token.symbol}`);
+                          }}
+                          className="flex cursor-grab items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 transition-all hover:bg-white/[0.08] active:cursor-grabbing"
+                        >
                           <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white/[0.04]">
                             <Image
                               src={token.icon}

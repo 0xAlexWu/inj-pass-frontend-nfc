@@ -79,6 +79,8 @@ interface InviteFriend {
   status: 'Active' | 'Pending';
 }
 
+type AssetMentionSymbol = 'INJ' | 'USDC' | 'NINJA' | 'USDT';
+
 const MODEL_OPTIONS: { value: Model; label: string }[] = [
   { value: 'claude-sonnet-4-6',    label: 'Claude Sonnet 4.6' },
   { value: 'claude-sonnet-4-5',    label: 'Claude Sonnet 4.5' },
@@ -255,6 +257,8 @@ export default function AgentsPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState('');
+  const [assetMentions, setAssetMentions] = useState<AssetMentionSymbol[]>([]);
+  const [isAssetDropActive, setIsAssetDropActive] = useState(false);
   const [model, setModel] = useState<Model>('claude-sonnet-4-6');
   const [isRunning, setIsRunning] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -295,6 +299,19 @@ export default function AgentsPage() {
   const totalInviteCredits = INVITED_FRIENDS.reduce((sum, friend) => sum + friend.credits, 0);
   const isLight = theme === 'light';
   const isCompactStage = isCompactEmbedded && isEmbedded;
+  const assetMentionTone: Record<AssetMentionSymbol, string> = isLight
+    ? {
+        INJ: 'border-violet-200/90 bg-violet-500/10 text-violet-700',
+        USDC: 'border-sky-200/90 bg-sky-500/10 text-sky-700',
+        NINJA: 'border-amber-200/90 bg-amber-500/10 text-amber-700',
+        USDT: 'border-emerald-200/90 bg-emerald-500/10 text-emerald-700',
+      }
+    : {
+        INJ: 'border-violet-400/30 bg-violet-500/12 text-violet-200',
+        USDC: 'border-sky-400/30 bg-sky-500/12 text-sky-200',
+        NINJA: 'border-amber-400/30 bg-amber-500/12 text-amber-200',
+        USDT: 'border-emerald-400/30 bg-emerald-500/12 text-emerald-200',
+      };
   const rootShellClass = `overflow-hidden ${isLight ? 'text-slate-900' : 'text-white'} ${
     isCompactStage
       ? 'relative h-full min-h-0 bg-transparent p-0'
@@ -381,6 +398,20 @@ export default function AgentsPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isRunning]);
+
+  useEffect(() => {
+    const handleAssetMentionMessage = (event: MessageEvent) => {
+      const data = event.data as { type?: string; symbol?: AssetMentionSymbol } | undefined;
+      if (!data || data.type !== 'injpass:add-asset-mention' || !data.symbol) return;
+      setAssetMentions((current) => current.includes(data.symbol!) ? current : [...current, data.symbol!]);
+      textareaRef.current?.focus();
+    };
+
+    window.addEventListener('message', handleAssetMentionMessage);
+    return () => {
+      window.removeEventListener('message', handleAssetMentionMessage);
+    };
+  }, []);
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -856,9 +887,11 @@ export default function AgentsPage() {
   // ─── Send message ────────────────────────────────────────────────────────
 
   async function handleSend() {
-    const text = input.trim();
+    const mentionText = assetMentions.map((symbol) => `$${symbol}`).join(' ');
+    const text = [mentionText, input.trim()].filter(Boolean).join(' ').trim();
     if (!text || isRunning) return;
     setInput('');
+    setAssetMentions([]);
 
     let convId = activeId;
     let currentHistory: ApiMessage[] = [];
@@ -890,6 +923,24 @@ export default function AgentsPage() {
       e.preventDefault();
       handleSend();
     }
+  }
+
+  function handleAssetDrop(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const symbol = event.dataTransfer.getData('application/x-injpass-asset') as AssetMentionSymbol;
+    if (!symbol) {
+      setIsAssetDropActive(false);
+      return;
+    }
+
+    setAssetMentions((current) => current.includes(symbol) ? current : [...current, symbol]);
+    setIsAssetDropActive(false);
+    textareaRef.current?.focus();
+  }
+
+  function removeAssetMention(symbol: AssetMentionSymbol) {
+    setAssetMentions((current) => current.filter((item) => item !== symbol));
+    textareaRef.current?.focus();
   }
 
   // ─── Render helpers ──────────────────────────────────────────────────────
@@ -1971,41 +2022,80 @@ export default function AgentsPage() {
               >
                 {/* ── Front face: normal input bar ── */}
                 <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' } as React.CSSProperties}>
-                  <div className={`flex items-end gap-3 rounded-2xl ${isCompactStage ? 'px-3 py-2.5' : 'px-4 py-3'} transition-colors ${isLight ? 'bg-white/84 border border-slate-200/80 focus-within:border-slate-300 shadow-sm' : 'bg-white/5 border border-white/15 focus-within:border-white/30'}`}>
-                    {!isCompactStage && (
-                      <>
-                        <select
-                          value={model}
-                          onChange={(e) => setModel(e.target.value as Model)}
-                          className={`bg-transparent text-xs border-none outline-none cursor-pointer transition-colors py-1 pr-1 flex-shrink-0 ${isLight ? 'text-slate-500 hover:text-slate-900' : 'text-gray-400 hover:text-white'}`}
-                        >
-                          {MODEL_OPTIONS.map((opt) => (
-                            <option key={opt.value} value={opt.value} className={isLight ? 'bg-white text-slate-900' : 'bg-black'}>{opt.label}</option>
-                          ))}
-                        </select>
-                        <div className={`w-px h-5 flex-shrink-0 self-center ${isLight ? 'bg-slate-200/80' : 'bg-white/15'}`} />
-                      </>
-                    )}
-                    <textarea
-                      ref={textareaRef}
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Ask anything about your wallet…"
-                      rows={1}
-                      disabled={isRunning || !!pendingConfirm}
-                      className={`flex-1 bg-transparent text-sm resize-none outline-none min-h-[24px] max-h-40 py-1 disabled:opacity-50 ${isLight ? 'text-slate-900 placeholder:text-slate-400' : 'text-white placeholder-gray-500'}`}
-                    />
-                    <button
-                      onClick={handleSend}
-                      disabled={!input.trim() || isRunning || !!pendingConfirm}
-                      className="w-8 h-8 rounded-xl bg-white hover:bg-gray-100 disabled:bg-white/20 disabled:cursor-not-allowed text-black flex items-center justify-center transition-all flex-shrink-0 self-end"
-                    >
-                      {isRunning
-                        ? <div className="w-3.5 h-3.5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                        : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 12h14M12 5l7 7-7 7" /></svg>
+                  <div
+                    onDragOver={(event) => {
+                      if (event.dataTransfer.types.includes('application/x-injpass-asset')) {
+                        event.preventDefault();
+                        event.dataTransfer.dropEffect = 'copy';
+                        setIsAssetDropActive(true);
                       }
-                    </button>
+                    }}
+                    onDragLeave={() => setIsAssetDropActive(false)}
+                    onDrop={handleAssetDrop}
+                    className={`rounded-2xl transition-all ${isLight ? 'bg-white/84 border border-slate-200/80 focus-within:border-slate-300 shadow-sm' : 'bg-white/5 border border-white/15 focus-within:border-white/30'} ${
+                      isAssetDropActive
+                        ? isLight
+                          ? 'border-violet-300 bg-violet-50/80 shadow-[0_0_0_1px_rgba(167,139,250,0.35)]'
+                          : 'border-violet-400/45 bg-violet-500/10 shadow-[0_0_0_1px_rgba(167,139,250,0.25)]'
+                        : ''
+                    }`}
+                  >
+                    <div className={`flex items-end gap-3 ${isCompactStage ? 'px-3 py-2.5' : 'px-4 py-3'}`}>
+                      {!isCompactStage && (
+                        <>
+                          <select
+                            value={model}
+                            onChange={(e) => setModel(e.target.value as Model)}
+                            className={`bg-transparent text-xs border-none outline-none cursor-pointer transition-colors py-1 pr-1 flex-shrink-0 ${isLight ? 'text-slate-500 hover:text-slate-900' : 'text-gray-400 hover:text-white'}`}
+                          >
+                            {MODEL_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value} className={isLight ? 'bg-white text-slate-900' : 'bg-black'}>{opt.label}</option>
+                            ))}
+                          </select>
+                          <div className={`w-px h-5 flex-shrink-0 self-center ${isLight ? 'bg-slate-200/80' : 'bg-white/15'}`} />
+                        </>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        {assetMentions.length > 0 && (
+                          <div className="mb-2 flex flex-wrap gap-1.5">
+                            {assetMentions.map((symbol) => (
+                              <button
+                                key={symbol}
+                                type="button"
+                                onClick={() => removeAssetMention(symbol)}
+                                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-all ${assetMentionTone[symbol]}`}
+                                title={`Remove $${symbol}`}
+                              >
+                                <span>${symbol}</span>
+                                <svg className="h-3 w-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <textarea
+                          ref={textareaRef}
+                          value={input}
+                          onChange={(e) => setInput(e.target.value)}
+                          onKeyDown={handleKeyDown}
+                          placeholder={isAssetDropActive ? 'Drop asset here to mention it…' : 'Ask anything about your wallet…'}
+                          rows={1}
+                          disabled={isRunning || !!pendingConfirm}
+                          className={`w-full bg-transparent text-sm resize-none outline-none min-h-[24px] max-h-40 py-1 disabled:opacity-50 ${isLight ? 'text-slate-900 placeholder:text-slate-400' : 'text-white placeholder-gray-500'}`}
+                        />
+                      </div>
+                      <button
+                        onClick={handleSend}
+                        disabled={(!input.trim() && assetMentions.length === 0) || isRunning || !!pendingConfirm}
+                        className="w-8 h-8 rounded-xl bg-white hover:bg-gray-100 disabled:bg-white/20 disabled:cursor-not-allowed text-black flex items-center justify-center transition-all flex-shrink-0 self-end"
+                      >
+                        {isRunning
+                          ? <div className="w-3.5 h-3.5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                          : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 12h14M12 5l7 7-7 7" /></svg>
+                        }
+                      </button>
+                    </div>
                   </div>
                 </div>
 
