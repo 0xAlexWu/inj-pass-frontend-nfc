@@ -33,6 +33,7 @@ type DashboardTransactionStatus = 'completed' | 'pending' | 'failed';
 type DashboardHistoryFilter = 'all' | DashboardTransactionType;
 type DashboardChainType = 'EVM' | 'Cosmos';
 type SwapToken = 'INJ' | 'USDT' | 'USDC' | 'NINJA';
+type DashboardWorkspaceTab = 'discover' | 'agent';
 
 const NINJA_STORAGE_PREFIX = 'inj-pass:ninja-miner:';
 const DEFAULT_NINJA_BALANCE = 22;
@@ -368,6 +369,7 @@ export default function DashboardPage() {
   const [copied, setCopied] = useState(false);
   const [ninjaBalance, setNinjaBalance] = useState(DEFAULT_NINJA_BALANCE);
   const [assetTab, setAssetTab] = useState<AssetTab>('tokens');
+  const [workspaceTab, setWorkspaceTab] = useState<DashboardWorkspaceTab>('discover');
   const [tokenBalances, setTokenBalances] = useState<Record<string, string>>({
     INJ: '0.0000',
     USDC: '0.00',
@@ -2208,19 +2210,44 @@ export default function DashboardPage() {
               <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-gradient-to-bl from-violet-500/5 to-transparent blur-2xl" />
 
               <div className="relative">
-                <div className="mb-5">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Discover</div>
-                  <div className="mt-1 text-lg font-bold text-white">Explore apps and AI from one surface</div>
-                  <div className="mt-1 text-sm text-gray-400">
-                    Discover is now horizontal, and the Lambda Agent lives inside it as one embedded entry instead of another full dashboard block.
+                <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Workspace</div>
+                    <div className="mt-1 text-lg font-bold text-white">
+                      {workspaceTab === 'discover' ? 'Explore dApps' : 'Wallet copilots'}
+                    </div>
+                    <div className="mt-1 text-sm text-gray-400">
+                      {workspaceTab === 'discover'
+                        ? 'Search, filter, and launch Injective apps in a fixed left-right workspace.'
+                        : 'Conversations, invite flows, and agent controls stay in this same dashboard stage.'}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-start rounded-full border border-white/10 bg-white/[0.03] p-1">
+                    {([
+                      { id: 'discover', label: 'Discover' },
+                      { id: 'agent', label: 'Agent' },
+                    ] as const).map((tab) => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setWorkspaceTab(tab.id)}
+                        className={`rounded-full px-4 py-2 text-xs font-semibold transition-all ${
+                          workspaceTab === tab.id
+                            ? 'bg-white text-black shadow-[0_10px_24px_rgba(255,255,255,0.18)]'
+                            : 'text-gray-400 hover:bg-white/10 hover:text-white'
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
                 <div className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-black/30">
                   <div className="h-[760px] overflow-hidden rounded-[1.35rem] bg-black">
                     <DashboardSurfaceFrame
-                      src="/discover?embed=1"
-                      title="Embedded discover"
+                      src={workspaceTab === 'discover' ? '/discover?embed=1' : '/agents?embed=1'}
+                      title={workspaceTab === 'discover' ? 'Embedded discover' : 'Embedded agents'}
                     />
                   </div>
                 </div>
