@@ -914,43 +914,90 @@ export default function AgentsPage() {
   // ─── UI ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className={`flex bg-black text-white overflow-hidden ${isEmbedded ? 'h-full' : 'h-screen'}`}>
+    <div
+      className={`overflow-hidden text-white ${
+        isEmbedded
+          ? 'grid h-full min-h-0 gap-4 bg-[radial-gradient(circle_at_top,rgba(76,58,249,0.08),transparent_34%),linear-gradient(180deg,#040811,#060b14)] p-3 md:p-4 xl:grid-cols-[310px_minmax(0,1fr)]'
+          : 'flex h-screen bg-black'
+      }`}
+    >
 
       {/* Sidebar overlay (mobile) */}
-      {sidebarOpen && (
+      {sidebarOpen && !isEmbedded && (
         <div className="fixed inset-0 bg-black/60 z-20 md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Sidebar */}
-      <aside className={`
+      <aside className={isEmbedded ? 'min-h-0 h-full rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#0a101d,#090d16)] shadow-[0_20px_70px_rgba(0,0,0,0.24)] flex flex-col overflow-hidden' : `
         fixed md:relative z-30 md:z-auto top-0 left-0 h-full w-72 flex-shrink-0
         bg-[#0a0a0a] border-r border-white/10 flex flex-col
         transition-transform duration-300
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
-        <div className="p-4 border-b border-white/10 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
-              </svg>
+        <div className={`${isEmbedded ? 'p-5' : 'p-4'} border-b border-white/10`}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <span className="font-bold text-sm">Agents</span>
+                {isEmbedded && (
+                  <p className="mt-1 text-xs leading-5 text-gray-400">
+                    Wallet copilots, conversations, and invite rewards in one workspace.
+                  </p>
+                )}
+              </div>
             </div>
-            <span className="font-bold text-sm">Agents</span>
+            {!isEmbedded && (
+              <button onClick={newConversation} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors" title="New chat">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            )}
           </div>
-          <button onClick={newConversation} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors" title="New chat">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
+
+          {isEmbedded && (
+            <button
+              onClick={newConversation}
+              className="mt-4 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left transition-colors hover:bg-white/10"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-white">New chat</p>
+                  <p className="mt-1 text-xs text-gray-400">Start a fresh agent session inside this container.</p>
+                </div>
+                <div className="w-9 h-9 rounded-xl bg-white text-black flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+              </div>
+            </button>
+          )}
         </div>
 
-        <div className="flex-1 overflow-y-auto py-2 space-y-0.5 px-2">
+        <div className={`flex-1 overflow-y-auto ${isEmbedded ? 'px-3 py-3 space-y-1.5' : 'py-2 space-y-0.5 px-2'}`}>
           {conversations.length === 0 ? (
-            <div className="text-center py-10 text-gray-600 text-xs"><p>No conversations yet</p></div>
+            isEmbedded ? (
+              <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-6 text-center">
+                <p className="text-sm font-medium text-white">No conversations yet</p>
+                <p className="mt-2 text-xs leading-5 text-gray-400">Start a new agent thread to inspect balances, submit swaps, or review recent activity.</p>
+              </div>
+            ) : (
+              <div className="text-center py-10 text-gray-600 text-xs"><p>No conversations yet</p></div>
+            )
           ) : conversations.map((conv) => (
             <div
               key={conv.id}
-              className={`group flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${conv.id === activeId ? 'bg-white/10' : 'hover:bg-white/5'}`}
+              className={`group flex items-center justify-between gap-2 px-3 py-3 rounded-2xl cursor-pointer transition-colors border ${
+                conv.id === activeId
+                  ? 'bg-white/10 border-white/15'
+                  : 'border-transparent hover:bg-white/5 hover:border-white/10'
+              }`}
               onClick={() => { setActiveId(conv.id); setSidebarOpen(false); }}
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -971,7 +1018,7 @@ export default function AgentsPage() {
           ))}
         </div>
 
-        <div className="p-4 border-t border-white/10 space-y-3">
+        <div className={`border-t border-white/10 space-y-3 ${isEmbedded ? 'p-4 bg-black/20' : 'p-4'}`}>
           <button
             onClick={() => { setShowInviteManager(true); setSidebarOpen(false); }}
             className="w-full rounded-2xl border border-white/15 bg-gradient-to-r from-white/[0.06] via-white/[0.03] to-transparent hover:from-white/[0.12] hover:via-white/[0.05] hover:to-white/[0.03] transition-all px-3 py-3 text-left group"
@@ -1032,10 +1079,10 @@ export default function AgentsPage() {
       </aside>
 
       {/* Main chat area */}
-      <div className="flex-1 flex flex-col min-w-0 h-full relative">
+      <div className={`min-w-0 h-full relative overflow-hidden flex flex-col ${isEmbedded ? 'rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#090d17,#070b13)] shadow-[0_20px_70px_rgba(0,0,0,0.24)]' : 'flex-1'}`}>
 
         {/* Top bar */}
-        <header className="flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-black/50 backdrop-blur-sm flex-shrink-0">
+        <header className={`flex items-center gap-3 border-b border-white/10 flex-shrink-0 ${isEmbedded ? 'px-5 py-4 bg-white/[0.02]' : 'px-4 py-3 bg-black/50 backdrop-blur-sm'}`}>
           <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-white/10 transition-colors md:hidden">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -1048,48 +1095,133 @@ export default function AgentsPage() {
               </svg>
             </button>
           )}
-          <div className="flex-1 text-center">
-            <span className="font-semibold text-sm">{activeConv?.title ?? 'New chat'}</span>
-          </div>
-          <button onClick={newConversation} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
-            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
+          {isEmbedded ? (
+            <>
+              <div className="min-w-0 flex-1">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Agent Workspace</div>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <span className="font-semibold text-sm text-white">{activeConv?.title ?? 'New chat'}</span>
+                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-gray-400">
+                    {MODEL_OPTIONS.find((option) => option.value === model)?.label ?? model}
+                  </span>
+                </div>
+              </div>
+              <button onClick={newConversation} className="p-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors">
+                <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="flex-1 text-center">
+                <span className="font-semibold text-sm">{activeConv?.title ?? 'New chat'}</span>
+              </div>
+              <button onClick={newConversation} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            </>
+          )}
         </header>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto">
+        <div className={`flex-1 overflow-y-auto ${isEmbedded ? 'bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_36%)]' : ''}`}>
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full px-6 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-6">
-                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
-                </svg>
+            isEmbedded ? (
+              <div className="h-full p-5 md:p-6">
+                <div className="grid h-full min-h-[420px] gap-4 xl:grid-cols-[minmax(0,1.12fr)_340px]">
+                  <section className="rounded-[1.75rem] border border-white/10 bg-white/[0.03] p-6 md:p-7 flex flex-col">
+                    <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-6">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
+                      </svg>
+                    </div>
+                    <h2 className="text-2xl font-bold tracking-tight"><span className="lambda-gradient">λ</span> Agent</h2>
+                    <p className="mt-3 max-w-xl text-sm leading-6 text-gray-400">
+                      AI-powered wallet assistant. Ask it to check balances, swap tokens, send INJ, or explain anything on Injective without leaving this dashboard stage.
+                    </p>
+
+                    <div className="mt-8 grid gap-3 md:grid-cols-2">
+                      {[
+                        'What is my wallet address?',
+                        'Show my balances',
+                        'Swap all INJ to USDT',
+                        'Show my recent transactions',
+                      ].map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => { setInput(s); textareaRef.current?.focus(); }}
+                          className="text-left px-4 py-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm text-gray-300 transition-colors"
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="mt-auto pt-8 text-xs text-gray-500">
+                      AI can make mistakes. Always verify transactions before confirming.
+                    </div>
+                  </section>
+
+                  <aside className="rounded-[1.75rem] border border-white/10 bg-white/[0.03] p-5 md:p-6 flex flex-col">
+                    <div>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Session</div>
+                      <div className="mt-2 text-sm font-semibold text-white">{address?.slice(0, 8)}...{address?.slice(-6)}</div>
+                      <div className="mt-1 text-xs text-gray-400">Injective Mainnet</div>
+                    </div>
+
+                    <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <div className="text-xs uppercase tracking-[0.18em] text-gray-500">Suggested Flow</div>
+                      <div className="mt-3 space-y-3 text-sm text-gray-300">
+                        <p>1. Start a new chat.</p>
+                        <p>2. Ask the agent to inspect or simulate a wallet action.</p>
+                        <p>3. Review the transaction before confirming.</p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => { setShowInviteManager(true); setSidebarOpen(false); }}
+                      className="mt-6 rounded-2xl border border-[#6e5dff]/25 bg-gradient-to-br from-[#4c3af9]/18 via-white/[0.04] to-transparent px-4 py-4 text-left transition-all hover:border-[#8b7bff]/40 hover:bg-[#4c3af9]/20"
+                    >
+                      <div className="text-sm font-semibold text-white">Share INJ Pass with Friends</div>
+                      <div className="mt-1 text-xs text-blue-200/80">Open the referral panel and track reward activations.</div>
+                    </button>
+                  </aside>
+                </div>
               </div>
-              <h2 className="text-xl font-bold mb-2"><span className="lambda-gradient">λ</span> Agent</h2>
-              <p className="text-gray-400 text-sm max-w-sm mb-8">
-                AI-powered wallet assistant. Ask me to check balances, swap tokens, send INJ, or explain anything on Injective.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-sm">
-                {[
-                  'What is my wallet address?',
-                  'Show my balances',
-                  'Swap all INJ to USDT',
-                  'Show my recent transactions',
-                ].map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => { setInput(s); textareaRef.current?.focus(); }}
-                    className="text-left px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm text-gray-300 transition-colors"
-                  >
-                    {s}
-                  </button>
-                ))}
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full px-6 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-6">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold mb-2"><span className="lambda-gradient">λ</span> Agent</h2>
+                <p className="text-gray-400 text-sm max-w-sm mb-8">
+                  AI-powered wallet assistant. Ask me to check balances, swap tokens, send INJ, or explain anything on Injective.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-sm">
+                  {[
+                    'What is my wallet address?',
+                    'Show my balances',
+                    'Swap all INJ to USDT',
+                    'Show my recent transactions',
+                  ].map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => { setInput(s); textareaRef.current?.focus(); }}
+                      className="text-left px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm text-gray-300 transition-colors"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )
           ) : (
-            <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+            <div className={`${isEmbedded ? 'max-w-4xl' : 'max-w-3xl'} mx-auto px-4 py-6 space-y-6`}>
               {messages.filter((msg) => msg.role !== 'tool').map((msg) => (
                 <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                   <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold ${
@@ -1571,8 +1703,8 @@ export default function AgentsPage() {
         )}
 
         {/* Input area */}
-        <div className="flex-shrink-0 border-t border-white/10 bg-black/80 backdrop-blur-sm p-4">
-          <div className="max-w-3xl mx-auto">
+        <div className={`flex-shrink-0 border-t border-white/10 ${isEmbedded ? 'bg-white/[0.02] p-5' : 'bg-black/80 backdrop-blur-sm p-4'}`}>
+          <div className={`${isEmbedded ? 'max-w-4xl' : 'max-w-3xl'} mx-auto`}>
 
             {/* Sandbox / takeover address badge — click to flip card */}
             {activeConv?.sandboxAddress && (
