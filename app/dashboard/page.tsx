@@ -429,6 +429,7 @@ export default function DashboardPage() {
   const [showFaucetSheet, setShowFaucetSheet] = useState(false);
   const [flippedTokenCard, setFlippedTokenCard] = useState<string | null>(null);
   const [copiedTokenInfo, setCopiedTokenInfo] = useState<string | null>(null);
+  const tokenFlipTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     // Wait for session check to complete
@@ -471,6 +472,29 @@ export default function DashboardPage() {
       window.removeEventListener('storage', handleStorage);
     };
   }, [address]);
+
+  useEffect(() => {
+    if (tokenFlipTimerRef.current) {
+      window.clearTimeout(tokenFlipTimerRef.current);
+      tokenFlipTimerRef.current = null;
+    }
+
+    if (!flippedTokenCard) {
+      return;
+    }
+
+    tokenFlipTimerRef.current = window.setTimeout(() => {
+      setFlippedTokenCard((current) => (current === flippedTokenCard ? null : current));
+      tokenFlipTimerRef.current = null;
+    }, 5000);
+
+    return () => {
+      if (tokenFlipTimerRef.current) {
+        window.clearTimeout(tokenFlipTimerRef.current);
+        tokenFlipTimerRef.current = null;
+      }
+    };
+  }, [flippedTokenCard]);
 
   const loadData = useCallback(async () => {
     if (!address) return;
