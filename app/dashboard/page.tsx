@@ -1493,84 +1493,82 @@ export default function DashboardPage() {
                         )}
 
                         {walletPanel === 'swap' && (
-                          <div className="grid gap-4 pt-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)]">
+                          <div className="space-y-4 pt-5">
                             <div className="space-y-4">
-                              <div className="grid gap-4 sm:grid-cols-2">
-                                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">From</div>
-                                  <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
-                                    <select
-                                      value={swapFromToken}
-                                      onChange={(event) => {
-                                        const nextToken = event.target.value as SwapToken;
-                                        setSwapFromToken(nextToken);
-                                        if (nextToken === swapToToken) {
-                                          setSwapToToken(getAlternateSwapToken(nextToken));
-                                        }
-                                        setSwapError('');
-                                      }}
-                                      className="w-full bg-transparent text-sm font-semibold text-white outline-none"
-                                    >
-                                      {swapTokenOptions.map((token) => (
-                                        <option key={`from-${token.symbol}`} value={token.symbol} className="bg-[#0b0b0f] text-white">
-                                          {token.symbol} · {token.name}
-                                        </option>
-                                      ))}
-                                    </select>
+                              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">From</div>
+                                <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
+                                  <select
+                                    value={swapFromToken}
+                                    onChange={(event) => {
+                                      const nextToken = event.target.value as SwapToken;
+                                      setSwapFromToken(nextToken);
+                                      if (nextToken === swapToToken) {
+                                        setSwapToToken(getAlternateSwapToken(nextToken));
+                                      }
+                                      setSwapError('');
+                                    }}
+                                    className="w-full bg-transparent text-sm font-semibold text-white outline-none"
+                                  >
+                                    {swapTokenOptions.map((token) => (
+                                      <option key={`from-${token.symbol}`} value={token.symbol} className="bg-[#0b0b0f] text-white">
+                                        {token.symbol} · {token.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div className="mt-3 flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.03] px-3 py-2.5">
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="relative h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-white/5">
+                                      <Image src={swapFromMeta.icon} alt={swapFromMeta.symbol} fill className="object-cover" />
+                                    </div>
+                                    <div>
+                                      <div className="text-sm font-semibold text-white">{swapFromMeta.symbol}</div>
+                                      <div className="text-xs text-gray-400">{swapFromMeta.name}</div>
+                                    </div>
                                   </div>
-                                  <div className="mt-3 flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.03] px-3 py-2.5">
-                                    <div className="flex items-center gap-2.5">
-                                      <div className="relative h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-white/5">
-                                        <Image src={swapFromMeta.icon} alt={swapFromMeta.symbol} fill className="object-cover" />
-                                      </div>
-                                      <div>
-                                        <div className="text-sm font-semibold text-white">{swapFromMeta.symbol}</div>
-                                        <div className="text-xs text-gray-400">{swapFromMeta.name}</div>
-                                      </div>
-                                    </div>
-                                    <div className="text-right">
-                                      <div className="text-sm font-mono text-white">{swapFromMeta.balance}</div>
-                                      <div className="text-[11px] text-gray-500">Available</div>
-                                    </div>
+                                  <div className="text-right">
+                                    <div className="text-sm font-mono text-white">{swapFromMeta.balance}</div>
+                                    <div className="text-[11px] text-gray-500">Available</div>
                                   </div>
                                 </div>
+                              </div>
 
-                                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">To</div>
-                                  <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
-                                    <select
-                                      value={swapToToken}
-                                      onChange={(event) => {
-                                        const nextToken = event.target.value as SwapToken;
-                                        setSwapToToken(nextToken);
-                                        if (nextToken === swapFromToken) {
-                                          setSwapFromToken(getAlternateSwapToken(nextToken));
-                                        }
-                                        setSwapError('');
-                                      }}
-                                      className="w-full bg-transparent text-sm font-semibold text-white outline-none"
-                                    >
-                                      {swapTokenOptions.map((token) => (
-                                        <option key={`to-${token.symbol}`} value={token.symbol} className="bg-[#0b0b0f] text-white">
-                                          {token.symbol} · {token.name}
-                                        </option>
-                                      ))}
-                                    </select>
+                              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">To</div>
+                                <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
+                                  <select
+                                    value={swapToToken}
+                                    onChange={(event) => {
+                                      const nextToken = event.target.value as SwapToken;
+                                      setSwapToToken(nextToken);
+                                      if (nextToken === swapFromToken) {
+                                        setSwapFromToken(getAlternateSwapToken(nextToken));
+                                      }
+                                      setSwapError('');
+                                    }}
+                                    className="w-full bg-transparent text-sm font-semibold text-white outline-none"
+                                  >
+                                    {swapTokenOptions.map((token) => (
+                                      <option key={`to-${token.symbol}`} value={token.symbol} className="bg-[#0b0b0f] text-white">
+                                        {token.symbol} · {token.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div className="mt-3 flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.03] px-3 py-2.5">
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="relative h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-white/5">
+                                      <Image src={swapToMeta.icon} alt={swapToMeta.symbol} fill className="object-cover" />
+                                    </div>
+                                    <div>
+                                      <div className="text-sm font-semibold text-white">{swapToMeta.symbol}</div>
+                                      <div className="text-xs text-gray-400">{swapToMeta.name}</div>
+                                    </div>
                                   </div>
-                                  <div className="mt-3 flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.03] px-3 py-2.5">
-                                    <div className="flex items-center gap-2.5">
-                                      <div className="relative h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-white/5">
-                                        <Image src={swapToMeta.icon} alt={swapToMeta.symbol} fill className="object-cover" />
-                                      </div>
-                                      <div>
-                                        <div className="text-sm font-semibold text-white">{swapToMeta.symbol}</div>
-                                        <div className="text-xs text-gray-400">{swapToMeta.name}</div>
-                                      </div>
-                                    </div>
-                                    <div className="text-right">
-                                      <div className="text-sm font-mono text-white">{swapToMeta.balance}</div>
-                                      <div className="text-[11px] text-gray-500">Wallet</div>
-                                    </div>
+                                  <div className="text-right">
+                                    <div className="text-sm font-mono text-white">{swapToMeta.balance}</div>
+                                    <div className="text-[11px] text-gray-500">Wallet</div>
                                   </div>
                                 </div>
                               </div>
