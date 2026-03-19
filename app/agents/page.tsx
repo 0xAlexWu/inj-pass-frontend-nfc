@@ -295,12 +295,11 @@ export default function AgentsPage() {
   const totalInviteCredits = INVITED_FRIENDS.reduce((sum, friend) => sum + friend.credits, 0);
   const isLight = theme === 'light';
   const isCompactStage = isCompactEmbedded && isEmbedded;
-  const activeModelLabel = MODEL_OPTIONS.find((option) => option.value === model)?.label ?? model;
   const rootShellClass = `overflow-hidden ${isLight ? 'text-slate-900' : 'text-white'} ${
     isCompactStage
       ? isLight
-        ? 'relative h-full min-h-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_34%),linear-gradient(180deg,#f8fbff,#eef4ff)] p-3'
-        : 'relative h-full min-h-0 bg-[radial-gradient(circle_at_top,rgba(76,58,249,0.08),transparent_34%),linear-gradient(180deg,#040811,#060b14)] p-3'
+        ? 'relative h-full min-h-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_34%),linear-gradient(180deg,#f8fbff,#eef4ff)] p-2.5'
+        : 'relative h-full min-h-0 bg-[radial-gradient(circle_at_top,rgba(76,58,249,0.08),transparent_34%),linear-gradient(180deg,#040811,#060b14)] p-2.5'
       : isEmbedded
       ? isLight
         ? 'grid h-full min-h-0 gap-4 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_36%),linear-gradient(180deg,#f8fbff,#eef4ff)] p-3 md:p-4 xl:grid-cols-[310px_minmax(0,1fr)]'
@@ -337,8 +336,8 @@ export default function AgentsPage() {
   const headerShellClass = `flex items-center gap-3 border-b ${isLight ? 'border-slate-200/80' : 'border-white/10'} flex-shrink-0 ${
     isCompactEmbedded && isEmbedded
       ? isLight
-        ? 'px-4 py-4 bg-white/70'
-        : 'px-4 py-4 bg-white/[0.02]'
+        ? 'px-3 py-3 bg-white/70'
+        : 'px-3 py-3 bg-white/[0.02]'
       : isEmbedded
       ? isLight
         ? 'px-5 py-4 bg-white/70'
@@ -1166,29 +1165,52 @@ export default function AgentsPage() {
             <>
               <div className="min-w-0 flex-1">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Agent Workspace</div>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <span className={`font-semibold text-sm ${isLight ? 'text-slate-900' : 'text-white'}`}>{activeConv?.title ?? 'New chat'}</span>
-                  <span className={`rounded-full border px-2.5 py-1 text-[11px] ${
-                    isLight
-                      ? 'border-slate-200/80 bg-slate-900/[0.03] text-slate-500'
-                      : 'border-white/10 bg-white/[0.04] text-gray-400'
-                  }`}>
-                    {activeModelLabel}
-                  </span>
+                <div className={`mt-1 ${isCompactStage ? 'text-[13px]' : 'text-sm'} font-semibold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                  {activeConv?.title ?? 'New chat'}
                 </div>
               </div>
-              <button
-                onClick={newConversation}
-                className={`p-2 rounded-xl border transition-colors ${
-                  isLight
-                    ? 'border-slate-200/80 bg-slate-900/[0.03] hover:bg-slate-900/[0.06]'
-                    : 'border-white/10 bg-white/5 hover:bg-white/10'
-                }`}
-              >
-                <svg className={`w-5 h-5 ${isLight ? 'text-slate-600' : 'text-gray-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-              </button>
+              {isCompactStage ? (
+                <div className="flex items-center gap-2">
+                  <div className={`rounded-xl border px-2.5 py-2 ${
+                    isLight
+                      ? 'border-slate-200/80 bg-slate-900/[0.03]'
+                      : 'border-white/10 bg-white/5'
+                  }`}>
+                    <select
+                      value={model}
+                      onChange={(e) => setModel(e.target.value as Model)}
+                      className={`bg-transparent text-[11px] font-medium outline-none ${isLight ? 'text-slate-600' : 'text-gray-300'}`}
+                    >
+                      {MODEL_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value} className={isLight ? 'bg-white text-slate-900' : 'bg-black'}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    onClick={newConversation}
+                    className={`rounded-xl border px-3 py-2 text-[11px] font-semibold transition-colors ${
+                      isLight
+                        ? 'border-slate-200/80 bg-slate-900/[0.03] text-slate-700 hover:bg-slate-900/[0.06]'
+                        : 'border-white/10 bg-white/5 text-gray-200 hover:bg-white/10'
+                    }`}
+                  >
+                    New chat
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={newConversation}
+                  className={`p-2 rounded-xl border transition-colors ${
+                    isLight
+                      ? 'border-slate-200/80 bg-slate-900/[0.03] hover:bg-slate-900/[0.06]'
+                      : 'border-white/10 bg-white/5 hover:bg-white/10'
+                  }`}
+                >
+                  <svg className={`w-5 h-5 ${isLight ? 'text-slate-600' : 'text-gray-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
+              )}
             </>
           ) : (
             <>
@@ -1205,84 +1227,109 @@ export default function AgentsPage() {
         </header>
 
         {/* Messages */}
-          <div className={`flex-1 ${isCompactStage ? 'overflow-y-auto scrollbar-hide' : 'overflow-y-auto'} ${isEmbedded ? (isLight ? 'bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.05),transparent_36%)]' : 'bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_36%)]') : ''}`}>
+          <div className={`flex-1 ${isCompactStage ? (messages.length === 0 ? 'overflow-hidden' : 'overflow-y-auto scrollbar-hide') : 'overflow-y-auto'} ${isEmbedded ? (isLight ? 'bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.05),transparent_36%)]' : 'bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_36%)]') : ''}`}>
           {messages.length === 0 ? (
             isCompactStage ? (
-              <div className="h-full p-4">
-                <div className="grid h-full min-h-0 gap-3 xl:grid-cols-[minmax(0,1.04fr)_276px]">
-                  <section className={`min-h-0 rounded-[1.6rem] border p-5 flex flex-col ${isLight ? 'border-slate-200/80 bg-white/80 shadow-[0_18px_50px_rgba(148,163,184,0.14)]' : 'border-white/10 bg-white/[0.03]'}`}>
-                    <div className={`inline-flex w-fit items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+              <div className="h-full p-3">
+                <section className={`flex h-full min-h-0 flex-col rounded-[1.5rem] border p-4 ${isLight ? 'border-slate-200/80 bg-white/82 shadow-[0_18px_50px_rgba(148,163,184,0.14)]' : 'border-white/10 bg-white/[0.03]'}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className={`inline-flex w-fit items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                        isLight
+                          ? 'border-slate-200/80 bg-slate-900/[0.03] text-slate-500'
+                          : 'border-white/10 bg-white/[0.04] text-gray-400'
+                      }`}>
+                        No conversations yet
+                      </div>
+                      <h2 className={`mt-3 text-[25px] font-bold tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                        <span className="lambda-gradient">λ</span> Agent
+                      </h2>
+                      <p className={`mt-2 max-w-xl text-[13px] leading-5 ${isLight ? 'text-slate-500' : 'text-gray-400'}`}>
+                        AI-powered wallet assistant for balances, swaps, transfers, and quick Injective checks.
+                      </p>
+                    </div>
+                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${isLight ? 'border border-slate-200/80 bg-slate-900/[0.03]' : 'border border-white/10 bg-white/5'}`}>
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    {[
+                      'What is my wallet address?',
+                      'Show my balances',
+                      'Swap all INJ to USDT',
+                      'Show my recent transactions',
+                    ].map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => { setInput(s); textareaRef.current?.focus(); }}
+                        className={`text-left rounded-[1rem] border px-3 py-2.5 text-[12px] leading-5 transition-colors ${
+                          isLight
+                            ? 'border-slate-200/80 bg-slate-900/[0.03] text-slate-600 hover:bg-slate-900/[0.05]'
+                            : 'border-white/10 bg-white/5 text-gray-300 hover:bg-white/10'
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <div className={`rounded-full border px-3 py-2 text-[11px] ${
+                      isLight
+                        ? 'border-slate-200/80 bg-slate-900/[0.03] text-slate-600'
+                        : 'border-white/10 bg-white/[0.04] text-gray-300'
+                    }`}>
+                      {address?.slice(0, 8)}...{address?.slice(-6)}
+                    </div>
+                    <div className={`rounded-full border px-3 py-2 text-[11px] ${
                       isLight
                         ? 'border-slate-200/80 bg-slate-900/[0.03] text-slate-500'
                         : 'border-white/10 bg-white/[0.04] text-gray-400'
                     }`}>
-                      No conversations yet
+                      Injective Mainnet
                     </div>
-
-                    <div className={`mt-4 flex h-14 w-14 items-center justify-center rounded-2xl ${isLight ? 'border border-slate-200/80 bg-slate-900/[0.03]' : 'border border-white/10 bg-white/5'}`}>
-                      <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
-                      </svg>
-                    </div>
-
-                    <h2 className={`mt-4 text-[28px] font-bold tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                      <span className="lambda-gradient">λ</span> Agent
-                    </h2>
-                    <p className={`mt-2 max-w-xl text-sm leading-6 ${isLight ? 'text-slate-500' : 'text-gray-400'}`}>
-                      AI-powered wallet assistant. Ask it to check balances, swap tokens, send INJ, or explain anything on Injective without leaving this dashboard stage.
-                    </p>
-
-                    <div className="mt-5 grid gap-2.5 sm:grid-cols-2">
-                      {[
-                        'What is my wallet address?',
-                        'Show my balances',
-                        'Swap all INJ to USDT',
-                        'Show my recent transactions',
-                      ].map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => { setInput(s); textareaRef.current?.focus(); }}
-                          className={`text-left rounded-[1.2rem] border px-4 py-3 text-sm transition-colors ${
-                            isLight
-                              ? 'border-slate-200/80 bg-slate-900/[0.03] text-slate-600 hover:bg-slate-900/[0.05]'
-                              : 'border-white/10 bg-white/5 text-gray-300 hover:bg-white/10'
-                          }`}
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className={`mt-auto pt-5 text-xs ${isLight ? 'text-slate-400' : 'text-gray-500'}`}>
-                      AI can make mistakes. Always verify transactions before confirming.
-                    </div>
-                  </section>
-
-                  <aside className="grid min-h-0 content-start gap-3">
-                    <div className={`rounded-[1.5rem] border p-4 ${isLight ? 'border-slate-200/80 bg-white/80 shadow-[0_18px_50px_rgba(148,163,184,0.14)]' : 'border-white/10 bg-white/[0.03]'}`}>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Session</div>
-                      <div className={`mt-2 text-sm font-semibold ${isLight ? 'text-slate-900' : 'text-white'}`}>{address?.slice(0, 8)}...{address?.slice(-6)}</div>
-                      <div className={`mt-1 text-xs ${isLight ? 'text-slate-500' : 'text-gray-400'}`}>Injective Mainnet</div>
-                    </div>
-
-                    <div className={`rounded-[1.5rem] border p-4 ${isLight ? 'border-slate-200/80 bg-white/80 shadow-[0_18px_50px_rgba(148,163,184,0.14)]' : 'border-white/10 bg-white/[0.03]'}`}>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Suggested Flow</div>
-                      <div className={`mt-3 space-y-2 text-sm ${isLight ? 'text-slate-600' : 'text-gray-300'}`}>
-                        <p>1. Start a new chat.</p>
-                        <p>2. Ask the agent to inspect or simulate a wallet action.</p>
-                        <p>3. Review the transaction before confirming.</p>
-                      </div>
-                    </div>
-
                     <button
                       onClick={() => { setShowInviteManager(true); setSidebarOpen(false); }}
-                      className="rounded-[1.5rem] border border-[#6e5dff]/25 bg-gradient-to-br from-[#4c3af9]/18 via-white/[0.04] to-transparent px-4 py-4 text-left transition-all hover:border-[#8b7bff]/40 hover:bg-[#4c3af9]/20"
+                      className="rounded-full border border-[#6e5dff]/25 bg-gradient-to-r from-[#4c3af9]/18 via-white/[0.04] to-transparent px-3 py-2 text-[11px] font-semibold transition-all hover:border-[#8b7bff]/40 hover:bg-[#4c3af9]/20"
                     >
-                      <div className={`text-sm font-semibold ${isLight ? 'text-slate-900' : 'text-white'}`}>Share INJ Pass with Friends</div>
-                      <div className={`mt-1 text-xs ${isLight ? 'text-slate-500' : 'text-blue-200/80'}`}>Open the referral panel and track reward activations.</div>
+                      Invite +1,000
                     </button>
-                  </aside>
-                </div>
+                    {activeConv?.sandboxAddress && (
+                      <button
+                        onClick={() => setShowSandboxPanel((p) => !p)}
+                        className={`rounded-full border px-3 py-2 text-[11px] font-semibold transition-colors ${
+                          isSandboxEnabled()
+                            ? 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/20'
+                            : 'border-amber-400/25 bg-amber-400/10 text-amber-300 hover:bg-amber-400/20'
+                        }`}
+                      >
+                        {isSandboxEnabled() ? 'Sandbox' : 'Takeover'} · {activeConv.sandboxAddress.slice(0, 8)}…{activeConv.sandboxAddress.slice(-6)}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-3 gap-2">
+                    {['Start chat', 'Inspect action', 'Review tx'].map((step) => (
+                      <div
+                        key={step}
+                        className={`rounded-[0.95rem] border px-3 py-2 text-center text-[11px] font-medium ${
+                          isLight
+                            ? 'border-slate-200/80 bg-slate-900/[0.03] text-slate-500'
+                            : 'border-white/10 bg-white/[0.03] text-gray-400'
+                        }`}
+                      >
+                        {step}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className={`mt-auto pt-4 text-[11px] ${isLight ? 'text-slate-400' : 'text-gray-500'}`}>
+                    AI can make mistakes. Always verify transactions before confirming.
+                  </div>
+                </section>
               </div>
             ) : isEmbedded ? (
               <div className="h-full p-5 md:p-6">
@@ -1858,11 +1905,11 @@ export default function AgentsPage() {
         )}
 
         {/* Input area */}
-        <div className={`flex-shrink-0 border-t ${isLight ? 'border-slate-200/80' : 'border-white/10'} ${isCompactStage ? (isLight ? 'bg-white/70 p-4' : 'bg-white/[0.02] p-4') : isEmbedded ? (isLight ? 'bg-white/70 p-5' : 'bg-white/[0.02] p-5') : (isLight ? 'bg-white/72 backdrop-blur-xl p-4' : 'bg-black/80 backdrop-blur-sm p-4')}`}>
+        <div className={`flex-shrink-0 border-t ${isLight ? 'border-slate-200/80' : 'border-white/10'} ${isCompactStage ? (isLight ? 'bg-white/70 p-3' : 'bg-white/[0.02] p-3') : isEmbedded ? (isLight ? 'bg-white/70 p-5' : 'bg-white/[0.02] p-5') : (isLight ? 'bg-white/72 backdrop-blur-xl p-4' : 'bg-black/80 backdrop-blur-sm p-4')}`}>
           <div className={`${isCompactStage ? 'max-w-none' : isEmbedded ? 'max-w-4xl' : 'max-w-3xl'} mx-auto`}>
 
             {/* Sandbox / takeover address badge — click to flip card */}
-            {activeConv?.sandboxAddress && (
+            {activeConv?.sandboxAddress && !isCompactStage && (
               <div className="flex items-center gap-2 mb-2 px-1">
                 <button
                   onClick={() => setShowSandboxPanel(p => !p)}
@@ -1889,17 +1936,21 @@ export default function AgentsPage() {
               >
                 {/* ── Front face: normal input bar ── */}
                 <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' } as React.CSSProperties}>
-                  <div className={`flex items-end gap-3 rounded-2xl px-4 py-3 transition-colors ${isLight ? 'bg-white/84 border border-slate-200/80 focus-within:border-slate-300 shadow-sm' : 'bg-white/5 border border-white/15 focus-within:border-white/30'}`}>
-                    <select
-                      value={model}
-                      onChange={(e) => setModel(e.target.value as Model)}
-                      className={`bg-transparent text-xs border-none outline-none cursor-pointer transition-colors py-1 pr-1 flex-shrink-0 ${isLight ? 'text-slate-500 hover:text-slate-900' : 'text-gray-400 hover:text-white'}`}
-                    >
-                      {MODEL_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value} className={isLight ? 'bg-white text-slate-900' : 'bg-black'}>{opt.label}</option>
-                      ))}
-                    </select>
-                    <div className={`w-px h-5 flex-shrink-0 self-center ${isLight ? 'bg-slate-200/80' : 'bg-white/15'}`} />
+                  <div className={`flex items-end gap-3 rounded-2xl ${isCompactStage ? 'px-3 py-2.5' : 'px-4 py-3'} transition-colors ${isLight ? 'bg-white/84 border border-slate-200/80 focus-within:border-slate-300 shadow-sm' : 'bg-white/5 border border-white/15 focus-within:border-white/30'}`}>
+                    {!isCompactStage && (
+                      <>
+                        <select
+                          value={model}
+                          onChange={(e) => setModel(e.target.value as Model)}
+                          className={`bg-transparent text-xs border-none outline-none cursor-pointer transition-colors py-1 pr-1 flex-shrink-0 ${isLight ? 'text-slate-500 hover:text-slate-900' : 'text-gray-400 hover:text-white'}`}
+                        >
+                          {MODEL_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value} className={isLight ? 'bg-white text-slate-900' : 'bg-black'}>{opt.label}</option>
+                          ))}
+                        </select>
+                        <div className={`w-px h-5 flex-shrink-0 self-center ${isLight ? 'bg-slate-200/80' : 'bg-white/15'}`} />
+                      </>
+                    )}
                     <textarea
                       ref={textareaRef}
                       value={input}
@@ -2021,9 +2072,11 @@ export default function AgentsPage() {
               </div>
             </div>
 
-            <p className="text-center text-xs text-gray-600 mt-2">
-              AI can make mistakes. Always verify transactions before confirming.
-            </p>
+            {!isCompactStage && (
+              <p className="text-center text-xs text-gray-600 mt-2">
+                AI can make mistakes. Always verify transactions before confirming.
+              </p>
+            )}
           </div>
         </div>
       </div>
