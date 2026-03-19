@@ -459,9 +459,11 @@ export default function DashboardPage() {
   const [postAuthAction, setPostAuthAction] = useState<'send' | 'swap' | null>(null);
   const [showCardCenter, setShowCardCenter] = useState(false);
   const [showFaucetSheet, setShowFaucetSheet] = useState(false);
+  const [faucetSheetActive, setFaucetSheetActive] = useState(false);
   const [flippedTokenCard, setFlippedTokenCard] = useState<string | null>(null);
   const [copiedTokenInfo, setCopiedTokenInfo] = useState<string | null>(null);
   const tokenFlipTimerRef = useRef<number | null>(null);
+  const faucetSheetTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     // Wait for session check to complete
@@ -527,6 +529,15 @@ export default function DashboardPage() {
       }
     };
   }, [flippedTokenCard]);
+
+  useEffect(() => {
+    return () => {
+      if (faucetSheetTimerRef.current) {
+        window.clearTimeout(faucetSheetTimerRef.current);
+        faucetSheetTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const loadData = useCallback(async () => {
     if (!address) return;
@@ -1115,6 +1126,35 @@ export default function DashboardPage() {
     }, 350);
   };
 
+  const openFaucetSheet = () => {
+    if (faucetSheetTimerRef.current) {
+      window.clearTimeout(faucetSheetTimerRef.current);
+      faucetSheetTimerRef.current = null;
+    }
+
+    setShowFaucetSheet(true);
+    setFaucetSheetActive(false);
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        setFaucetSheetActive(true);
+      });
+    });
+  };
+
+  const closeFaucetSheet = () => {
+    if (faucetSheetTimerRef.current) {
+      window.clearTimeout(faucetSheetTimerRef.current);
+      faucetSheetTimerRef.current = null;
+    }
+
+    setFaucetSheetActive(false);
+    faucetSheetTimerRef.current = window.setTimeout(() => {
+      setShowFaucetSheet(false);
+      faucetSheetTimerRef.current = null;
+    }, 260);
+  };
+
   const openAiAssetSurface = () => {
     setFlippedTokenCard(null);
     setAssetSurfaceMode((current) => (current === 'ai' ? 'assets' : 'ai'));
@@ -1244,7 +1284,7 @@ export default function DashboardPage() {
               </button>
               <button
                 ref={faucetButtonRef}
-                onClick={() => setShowFaucetSheet(true)}
+                onClick={openFaucetSheet}
                 className="rounded-lg border border-white/10 bg-white/5 p-2.5 transition-all group hover:border-violet-500/40 hover:bg-violet-600/20"
                 title="Testnet Faucet"
               >
@@ -2432,9 +2472,18 @@ export default function DashboardPage() {
       />
 
       {showFaucetSheet && (
-        <div className="fixed inset-0 z-[120] bg-black/18 backdrop-blur-[2px]" onClick={() => setShowFaucetSheet(false)}>
+        <div
+          className={`fixed inset-0 z-[120] bg-black/18 backdrop-blur-[2px] transition-opacity duration-200 ${
+            faucetSheetActive ? 'opacity-100' : 'opacity-0'
+          }`}
+          onClick={closeFaucetSheet}
+        >
           <div
-            className="absolute flex flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-black/95 shadow-[0_26px_90px_rgba(0,0,0,0.42)]"
+            className={`absolute flex flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-black/95 shadow-[0_26px_90px_rgba(0,0,0,0.42)] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] origin-top ${
+              faucetSheetActive
+                ? 'translate-y-0 scale-100 opacity-100'
+                : '-translate-y-3 scale-[0.96] opacity-0'
+            }`}
             style={getFaucetPopoverStyle(faucetButtonRef.current)}
             onClick={(event) => event.stopPropagation()}
           >
@@ -2444,7 +2493,7 @@ export default function DashboardPage() {
                 <div className="mt-1 text-base font-bold text-white">Testnet faucet</div>
               </div>
               <button
-                onClick={() => setShowFaucetSheet(false)}
+                onClick={closeFaucetSheet}
                 className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 transition-all hover:bg-white/10"
                 title="Close faucet"
               >
