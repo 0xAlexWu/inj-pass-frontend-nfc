@@ -20,7 +20,6 @@ import TransactionAuthModal from '@/components/TransactionAuthModal';
 import ThemeToggleButton from '@/components/ThemeToggleButton';
 import CardCenterModal from '@/components/CardCenterModal';
 import NinjaMinerGame from '@/components/NinjaMinerGame';
-import { AGENT_CREDITS_STATS } from '@/config/agent-credits';
 import { formatAddress, privateKeyToHex } from '@/utils/wallet';
 import { getInjectiveAddress, getEthereumAddress } from '@injectivelabs/sdk-ts';
 
@@ -32,6 +31,9 @@ type DashboardTransactionType = 'send' | 'receive' | 'swap';
 type DashboardTransactionStatus = 'completed' | 'pending' | 'failed';
 type DashboardHistoryFilter = 'all' | DashboardTransactionType;
 type DashboardChainType = 'EVM' | 'Cosmos';
+
+const NINJA_STORAGE_PREFIX = 'inj-pass:ninja-miner:';
+const DEFAULT_NINJA_BALANCE = 22;
 
 interface DashboardTransaction {
   id: string;
@@ -58,6 +60,29 @@ function formatDashboardTimestamp(date: Date) {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function getNinjaStorageKey(walletAddress?: string) {
+  return `${NINJA_STORAGE_PREFIX}${walletAddress || 'guest'}`;
+}
+
+function readStoredNinjaBalance(walletAddress?: string) {
+  if (typeof window === 'undefined') {
+    return DEFAULT_NINJA_BALANCE;
+  }
+
+  try {
+    const rawState = window.localStorage.getItem(getNinjaStorageKey(walletAddress));
+    if (!rawState) {
+      return DEFAULT_NINJA_BALANCE;
+    }
+
+    const parsed = JSON.parse(rawState) as { ninjaBalance?: number };
+    return typeof parsed.ninjaBalance === 'number' ? parsed.ninjaBalance : DEFAULT_NINJA_BALANCE;
+  } catch (error) {
+    console.error('Failed to restore ninja balance:', error);
+    return DEFAULT_NINJA_BALANCE;
+  }
 }
 
 const ROLLING_DIGIT_STACK = Array.from({ length: 20 }, (_, index) => String(index % 10));
@@ -339,6 +364,7 @@ export default function DashboardPage() {
   const [usdcPriceChange24h, setUsdcPriceChange24h] = useState<number>(0);
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [ninjaBalance, setNinjaBalance] = useState(DEFAULT_NINJA_BALANCE);
   const [dashboardSurface, setDashboardSurface] = useState<DashboardSurface>('discover');
   const [assetTab, setAssetTab] = useState<AssetTab>('tokens');
   const [tokenBalances, setTokenBalances] = useState<Record<string, string>>({
@@ -414,6 +440,29 @@ export default function DashboardPage() {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isUnlocked, address, isCheckingSession]);
+
+  useEffect(() => {
+    const walletAddress = address || undefined;
+    const syncNinjaBalance = () => {
+      setNinjaBalance(readStoredNinjaBalance(walletAddress));
+    };
+
+    syncNinjaBalance();
+
+    const interval = window.setInterval(syncNinjaBalance, 1500);
+    const handleStorage = (event: StorageEvent) => {
+      if (!event.key || event.key === getNinjaStorageKey(walletAddress)) {
+        syncNinjaBalance();
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [address]);
 
   const loadData = useCallback(async () => {
     if (!address) return;
@@ -996,7 +1045,8 @@ export default function DashboardPage() {
   const assetTrendSeries = buildPixelTrendSeries(totalUsdNumeric, injPriceChange24h);
   const isWalletOverview = walletPanel === 'overview';
   const activeWalletPanelMeta = walletPanel !== 'overview' ? walletPanelMeta[walletPanel] : null;
-  const walletStageClassName = isWalletOverview ? 'min-h-[470px] md:min-h-[500px]' : 'h-[760px] md:h-[720px]';
+  const formattedNinjaBalance = ninjaBalance.toFixed(2);
+  const walletStageClassName = isWalletOverview ? 'h-[540px] md:h-[520px]' : 'h-[760px] md:h-[720px]';
 
   return (
     <LoadingSpinner ready={isDashboardReady}>
@@ -1150,10 +1200,10 @@ export default function DashboardPage() {
                               <span className="text-xl font-semibold text-gray-400">INJ</span>
                               <div className="flex items-baseline gap-2 pb-1 md:pb-1.5">
                                 <span className="text-sm md:text-base font-semibold text-white/90 font-mono tracking-tight">
-                                  {balanceVisible ? AGENT_CREDITS_STATS.available.toLocaleString() : '••••'}
+                                  {balanceVisible ? formattedNinjaBalance : '••••'}
                                 </span>
                                 <span className="text-[11px] md:text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
-                                  Passbits
+                                  NINJA
                                 </span>
                               </div>
                             </div>
@@ -1640,7 +1690,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-4 pt-5">
+                <div className="mt-auto grid grid-cols-4 gap-4 pt-5">
                   {/* Send Button */}
                   <button 
                     onClick={() => toggleWalletPanel('send')}
@@ -1719,7 +1769,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="bg-black rounded-2xl border border-white/10 relative overflow-hidden p-4 sm:p-5 h-full flex flex-col">
+            <div className={`bg-black rounded-2xl border border-white/10 relative overflow-hidden p-4 sm:p-5 h-full flex flex-col ${walletStageClassName}`}>
               <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-cyan-500/5 to-transparent rounded-full blur-2xl"></div>
               <div className="relative flex flex-1 flex-col">
         {/* Asset Tabs - Smooth Sliding Background */}
@@ -1819,7 +1869,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden">
                   <Image 
                     src="/USDC_Logo.png" 
                     alt="USDC" 
@@ -1841,7 +1891,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden">
                   <Image 
                     src="/NIJIA.png" 
                     alt="NINJA" 
@@ -1852,7 +1902,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex-1">
                   <div className="font-bold mb-1">NINJA</div>
-                  <div className="text-sm text-gray-400">{tokenBalances.NINJA} NINJA</div>
+                  <div className="text-sm text-gray-400">{formattedNinjaBalance} NINJA</div>
                 </div>
                 <div className="text-right">
                   <div className="font-bold font-mono">$0.00</div>
@@ -1863,7 +1913,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden">
                   <Image 
                     src="/USDT_Logo.png" 
                     alt="USDT" 
