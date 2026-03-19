@@ -1230,8 +1230,7 @@ export default function AgentsPage() {
           <div className={`flex-1 ${isCompactStage ? (messages.length === 0 ? 'overflow-hidden' : 'overflow-y-auto scrollbar-hide') : 'overflow-y-auto'} ${isEmbedded ? (isLight ? 'bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.05),transparent_36%)]' : 'bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_36%)]') : ''}`}>
           {messages.length === 0 ? (
             isCompactStage ? (
-              <div className="h-full p-3">
-                <section className={`flex h-full min-h-0 flex-col rounded-[1.5rem] border p-4 ${isLight ? 'border-slate-200/80 bg-white/82 shadow-[0_18px_50px_rgba(148,163,184,0.14)]' : 'border-white/10 bg-white/[0.03]'}`}>
+              <div className="flex h-full min-h-0 flex-col px-4 py-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className={`inline-flex w-fit items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
@@ -1329,7 +1328,6 @@ export default function AgentsPage() {
                   <div className={`mt-auto pt-4 text-[11px] ${isLight ? 'text-slate-400' : 'text-gray-500'}`}>
                     AI can make mistakes. Always verify transactions before confirming.
                   </div>
-                </section>
               </div>
             ) : isEmbedded ? (
               <div className="h-full p-5 md:p-6">
