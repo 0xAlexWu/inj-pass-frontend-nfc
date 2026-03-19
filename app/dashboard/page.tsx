@@ -467,9 +467,11 @@ export default function DashboardPage() {
   const [faucetSheetActive, setFaucetSheetActive] = useState(false);
   const [flippedTokenCard, setFlippedTokenCard] = useState<string | null>(null);
   const [copiedTokenInfo, setCopiedTokenInfo] = useState<string | null>(null);
+  const [sendAmountAlertActive, setSendAmountAlertActive] = useState(false);
   const tokenFlipTimerRef = useRef<number | null>(null);
   const cardCenterTimerRef = useRef<number | null>(null);
   const faucetSheetTimerRef = useRef<number | null>(null);
+  const sendAmountAlertTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     // Wait for session check to complete
@@ -545,6 +547,10 @@ export default function DashboardPage() {
       if (faucetSheetTimerRef.current) {
         window.clearTimeout(faucetSheetTimerRef.current);
         faucetSheetTimerRef.current = null;
+      }
+      if (sendAmountAlertTimerRef.current) {
+        window.clearTimeout(sendAmountAlertTimerRef.current);
+        sendAmountAlertTimerRef.current = null;
       }
     };
   }, []);
@@ -681,6 +687,9 @@ export default function DashboardPage() {
   const receiveDisplayAddress = receiveAddressType === 'evm' ? (address || '') : getCosmosAddress(address || '');
   const sendGasCost = sendGasEstimate ? formatEther(sendGasEstimate.totalCost) : '';
   const sendBalanceValue = parseFloat(tokenBalances.INJ || '0');
+  const sendAmountNumeric = Number(sendAmount);
+  const sendAmountExceedsBalance =
+    sendAmount.trim() !== '' && Number.isFinite(sendAmountNumeric) && sendAmountNumeric > sendBalanceValue;
   const swapTokenOptions = [
     { symbol: 'INJ' as const, name: 'Injective', icon: '/injswap.png', balance: tokenBalances.INJ, enabled: true },
     { symbol: 'USDT' as const, name: 'Tether', icon: '/USDT_Logo.png', balance: tokenBalances.USDT, enabled: true },
@@ -692,6 +701,21 @@ export default function DashboardPage() {
   const getAlternateSwapToken = (current: SwapToken) => (
     swapTokenOptions.find((token) => token.symbol !== current)?.symbol || 'INJ'
   );
+  const triggerSendAmountAlert = () => {
+    if (sendAmountAlertTimerRef.current) {
+      window.clearTimeout(sendAmountAlertTimerRef.current);
+      sendAmountAlertTimerRef.current = null;
+    }
+
+    setSendAmountAlertActive(false);
+    window.requestAnimationFrame(() => {
+      setSendAmountAlertActive(true);
+      sendAmountAlertTimerRef.current = window.setTimeout(() => {
+        setSendAmountAlertActive(false);
+        sendAmountAlertTimerRef.current = null;
+      }, 520);
+    });
+  };
   const filteredHistoryItems = historyFilter === 'all'
     ? historyItems
     : historyItems.filter((item) => item.type === historyFilter);
@@ -1603,30 +1627,35 @@ export default function DashboardPage() {
                                   </button>
                                 </div>
                                 <div className="flex h-full flex-col justify-between">
-                                  <div className="flex items-end gap-3">
+                                  <div className={`flex items-end gap-3 ${sendAmountAlertActive ? 'animate-send-amount-shake' : ''}`}>
                                     <input
                                       value={sendAmount}
                                       onChange={(event) => {
-                                        setSendAmount(event.target.value);
+                                        const nextValue = event.target.value;
+                                        setSendAmount(nextValue);
                                         setSendError('');
+                                        const nextNumeric = Number(nextValue);
+                                        if (nextValue.trim() !== '' && Number.isFinite(nextNumeric) && nextNumeric > sendBalanceValue) {
+                                          triggerSendAmountAlert();
+                                        }
                                       }}
                                       inputMode="decimal"
                                       placeholder="0.0000"
-                                      className="w-full bg-transparent text-3xl font-mono text-white placeholder:text-gray-600 outline-none md:text-[2.35rem]"
+                                      className={`w-full bg-transparent text-3xl font-mono outline-none transition-colors duration-200 md:text-[2.35rem] ${
+                                        sendAmountExceedsBalance
+                                          ? 'text-rose-300 placeholder:text-rose-200/40'
+                                          : 'text-white placeholder:text-gray-600'
+                                      }`}
                                     />
-                                    <span className="pb-1.5 text-sm font-semibold text-gray-400">INJ</span>
+                                    <span className={`pb-1.5 text-sm font-semibold transition-colors duration-200 ${
+                                      sendAmountExceedsBalance ? 'text-rose-300/90' : 'text-gray-400'
+                                    }`}>INJ</span>
                                   </div>
 
-                                  <div className="grid gap-3 pt-4 sm:grid-cols-2">
-                                    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">Estimated Gas</div>
-                                      <div className="mt-2 text-sm font-mono text-white">
-                                        {sendEstimating ? 'Estimating...' : sendGasEstimate ? `${Number(sendGasCost).toFixed(6)} INJ` : 'Awaiting input'}
-                                      </div>
-                                    </div>
-                                    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">Available</div>
-                                      <div className="mt-2 text-sm font-mono text-white">{tokenBalances.INJ} INJ</div>
+                                  <div className="pt-4">
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <span className="text-gray-500">Available</span>
+                                      <span className="font-mono text-white">{tokenBalances.INJ} INJ</span>
                                     </div>
                                   </div>
                                 </div>
@@ -1673,6 +1702,14 @@ export default function DashboardPage() {
                                   <p>1. Enter the recipient address.</p>
                                   <p>2. Set the amount you want to transfer.</p>
                                   <p>3. Confirm the transaction after review.</p>
+                                </div>
+                                <div className="mt-4 border-t border-white/8 pt-3">
+                                  <div className="flex items-center justify-between gap-3 text-sm">
+                                    <span className="text-gray-500">Estimated Gas</span>
+                                    <span className="font-mono text-white">
+                                      {sendEstimating ? 'Estimating...' : sendGasEstimate ? `${Number(sendGasCost).toFixed(6)} INJ` : 'Awaiting input'}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
 

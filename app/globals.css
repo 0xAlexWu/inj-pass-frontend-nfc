@@ -1325,3 +1325,28 @@ html[data-theme="light"] [class*="shadow-"] {
   -webkit-text-fill-color: transparent;
   animation: textShimmer 1.6s ease-out 0.4s 1 both;
 }
+
+@keyframes sendAmountShake {
+  0% {
+    transform: translateX(0);
+  }
+  18% {
+    transform: translateX(-5px);
+  }
+  36% {
+    transform: translateX(4px);
+  }
+  54% {
+    transform: translateX(-3px);
+  }
+  72% {
+    transform: translateX(2px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-send-amount-shake {
+  animation: sendAmountShake 0.46s cubic-bezier(0.22, 1, 0.36, 1);
+}
