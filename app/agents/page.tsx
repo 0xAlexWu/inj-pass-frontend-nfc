@@ -1363,42 +1363,44 @@ export default function AgentsPage() {
               </div>
             )
             ) : (
-            <div className={`${isCompactStage ? 'max-w-none' : isEmbedded ? 'max-w-4xl' : 'max-w-3xl'} mx-auto px-4 py-6 space-y-6`}>
-              {messages.filter((msg) => msg.role !== 'tool').map((msg) => (
-                <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold ${
-                    msg.role === 'user' ? 'bg-white text-black' : 'bg-white/10'
-                  }`}>
-                    {msg.role === 'user' ? 'U' : <span className="lambda-gradient">λ</span>}
-                  </div>
-                  <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                    msg.role === 'user' ? 'bg-white text-black rounded-tr-sm'
-                    : msg.isError ? 'bg-red-500/10 border border-red-500/20 text-red-200 rounded-tl-sm'
-                    : isLight ? 'bg-slate-900/[0.03] border border-slate-200/80 text-slate-700 rounded-tl-sm' : 'bg-white/5 border border-white/10 text-gray-100 rounded-tl-sm'
-                  }`}>
-                    {msg.role === 'user'
-                      ? <p className="text-sm">{msg.content}</p>
-                      : renderMessageContent(msg.content)
-                    }
-                  </div>
-                </div>
-              ))}
-
-              {isRunning && (
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm font-bold">
-                    <span className="lambda-gradient">λ</span>
-                  </div>
-                  <div className={`rounded-2xl rounded-tl-sm px-4 py-3 ${isLight ? 'bg-slate-900/[0.03] border border-slate-200/80' : 'bg-white/5 border border-white/10'}`}>
-                    <div className="flex gap-1 items-center h-5">
-                      {[0, 150, 300].map((d) => (
-                        <div key={d} className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: `${d}ms` }} />
-                      ))}
+            <div className={`${isCompactStage ? 'mx-auto flex min-h-full max-w-none flex-col justify-end px-4 py-4' : `${isEmbedded ? 'max-w-4xl' : 'max-w-3xl'} mx-auto px-4 py-6`}`}>
+              <div className={isCompactStage ? 'space-y-4' : 'space-y-6'}>
+                {messages.filter((msg) => msg.role !== 'tool').map((msg) => (
+                  <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold ${
+                      msg.role === 'user' ? 'bg-white text-black' : 'bg-white/10'
+                    }`}>
+                      {msg.role === 'user' ? 'U' : <span className="lambda-gradient">λ</span>}
+                    </div>
+                    <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                      msg.role === 'user' ? 'bg-white text-black rounded-tr-sm'
+                      : msg.isError ? 'bg-red-500/10 border border-red-500/20 text-red-200 rounded-tl-sm'
+                      : isLight ? 'bg-slate-900/[0.03] border border-slate-200/80 text-slate-700 rounded-tl-sm' : 'bg-white/5 border border-white/10 text-gray-100 rounded-tl-sm'
+                    }`}>
+                      {msg.role === 'user'
+                        ? <p className="text-sm">{msg.content}</p>
+                        : renderMessageContent(msg.content)
+                      }
                     </div>
                   </div>
-                </div>
-              )}
-              <div ref={bottomRef} />
+                ))}
+
+                {isRunning && (
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm font-bold">
+                      <span className="lambda-gradient">λ</span>
+                    </div>
+                    <div className={`rounded-2xl rounded-tl-sm px-4 py-3 ${isLight ? 'bg-slate-900/[0.03] border border-slate-200/80' : 'bg-white/5 border border-white/10'}`}>
+                      <div className="flex gap-1 items-center h-5">
+                        {[0, 150, 300].map((d) => (
+                          <div key={d} className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: `${d}ms` }} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={bottomRef} />
+              </div>
             </div>
           )}
         </div>
