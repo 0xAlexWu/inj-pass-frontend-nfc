@@ -216,119 +216,49 @@ export default function DiscoverPage() {
       )}
 
       {isEmbedded ? (
-        <div className="flex h-full flex-col gap-4 p-4">
-          <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-              <div className="min-w-0">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Discover</div>
-                <div className="mt-1 text-base font-bold text-white">Browse apps horizontally</div>
-                <div className="mt-1 max-w-2xl text-sm text-gray-400">
-                  Swipe through featured and filtered dApps in a horizontal rail without leaving this workspace.
-                </div>
-              </div>
-
-              <div className="flex w-full flex-col gap-3 xl:w-[420px] xl:flex-shrink-0">
-                <SearchBox value={searchQuery} onChange={setSearchQuery} onClear={() => setSearchQuery('')} />
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                  {CATEGORIES.map((category) => (
-                    <button
-                      key={category.id}
-                      onClick={() => setActiveCategory(category.id as DAppCategory)}
-                      className={`flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2.5 text-xs font-semibold transition-all ${
-                        activeCategory === category.id
-                          ? 'border-white bg-white text-black'
-                          : 'border-white/10 bg-white/[0.03] text-gray-300 hover:bg-white/10 hover:text-white'
-                      }`}
-                    >
-                      <span>{category.name}</span>
-                      <span className={`text-[10px] ${activeCategory === category.id ? 'text-black/70' : 'text-gray-500'}`}>
-                        {category.id === 'all' ? DAPPS.length : DAPPS.filter((dapp) => dapp.category === category.id).length}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+        <div className="flex h-full flex-col gap-4 px-4 py-3">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="w-full xl:max-w-[420px]">
+              <SearchBox value={searchQuery} onChange={setSearchQuery} onClear={() => setSearchQuery('')} />
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              {CATEGORIES.map((category) => (
+                <button
+                  key={category.id}
+                  onClick={() => setActiveCategory(category.id as DAppCategory)}
+                  className={`whitespace-nowrap rounded-full border px-4 py-2 text-xs font-semibold transition-all ${
+                    activeCategory === category.id
+                      ? 'border-white bg-white text-black'
+                      : 'border-white/10 bg-white/[0.03] text-gray-300 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  {category.name}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
-            {!searchQuery && (
-              <div className="mb-5">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Featured</div>
-                  <div className="text-xs text-gray-500">Horizontal rail</div>
-                </div>
-
-                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                  {featuredDapps.map((dapp) => (
-                    <button
-                      key={dapp.id}
-                      onClick={() => handleDAppClick(dapp)}
-                      className="min-w-[250px] rounded-[1.6rem] border border-white/10 bg-white/[0.04] p-5 text-left transition-all hover:bg-white/10 hover:translate-y-[-1px]"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-white p-2 shadow-lg">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={dapp.icon} alt={dapp.name} className="h-full w-full object-contain" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="truncate text-sm font-bold text-white">{dapp.name}</div>
-                          <div className="mt-1 text-xs uppercase tracking-[0.18em] text-gray-500">{dapp.category}</div>
-                        </div>
-                      </div>
-                      <div className="mt-4 line-clamp-2 text-sm leading-6 text-gray-400">{dapp.description}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="mb-3 flex items-center justify-between">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">
-                {activeCategory === 'all' ? 'App rail' : `${CATEGORIES.find((item) => item.id === activeCategory)?.name} rail`}
-              </div>
-              <div className="text-xs text-gray-500">{filteredDapps.length} results</div>
+          {filteredDapps.length === 0 ? (
+            <div className="flex min-h-0 flex-1 items-center justify-center px-6 text-center text-sm text-gray-400">
+              Try adjusting your search or filters.
             </div>
-
-            {filteredDapps.length === 0 ? (
-              <div className="flex min-h-[220px] flex-1 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-6 text-center text-sm text-gray-400">
-                Try adjusting your search or filters.
-              </div>
-            ) : (
-              <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                {filteredDapps.map((dapp) => (
-                  <button
-                    key={dapp.id}
-                    onClick={() => handleDAppClick(dapp)}
-                    className="flex min-h-[230px] min-w-[250px] flex-col justify-between rounded-[1.6rem] border border-white/10 bg-white/[0.04] p-5 text-left transition-all hover:bg-white/10 hover:translate-y-[-1px]"
-                  >
-                    <div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-white p-2 shadow-lg">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={dapp.icon} alt={dapp.name} className="h-full w-full object-contain" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="truncate text-sm font-bold text-white">{dapp.name}</div>
-                          <div className="mt-1 text-xs uppercase tracking-[0.18em] text-gray-500">{dapp.category}</div>
-                        </div>
-                      </div>
-                      <div className="mt-4 line-clamp-3 text-sm leading-6 text-gray-400">{dapp.description}</div>
-                    </div>
-
-                    <div className="mt-6 flex items-center justify-between gap-3">
-                      <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[11px] text-gray-400">
-                        Launch app
-                      </span>
-                      <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M17 7H8m9 0v9" />
-                      </svg>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          ) : (
+            <div className="flex min-h-0 flex-1 gap-4 overflow-x-auto pb-2 scrollbar-hide">
+              {filteredDapps.map((dapp) => (
+                <button
+                  key={dapp.id}
+                  onClick={() => handleDAppClick(dapp)}
+                  className="flex min-w-[128px] flex-col items-center justify-center gap-3 rounded-[1.6rem] border border-white/10 bg-white/[0.04] px-4 py-5 text-center transition-all hover:bg-white/10 hover:-translate-y-[1px]"
+                >
+                  <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-white p-2 shadow-lg">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={dapp.icon} alt={dapp.name} className="h-full w-full object-contain" />
+                  </div>
+                  <div className="w-full truncate text-sm font-bold text-white">{dapp.name}</div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       ) : (
         <div className="max-w-7xl mx-auto px-4 py-6">
