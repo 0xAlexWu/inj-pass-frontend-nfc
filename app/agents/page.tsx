@@ -346,8 +346,8 @@ export default function AgentsPage() {
     ? 'bg-[linear-gradient(180deg,#ffffff,#f5f8ff)] border border-slate-200/80 rounded-2xl w-full max-w-sm shadow-[0_20px_60px_rgba(148,163,184,0.24)] overflow-hidden'
     : 'bg-[#111] border border-white/15 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden';
   const inviteModalClass = isLight
-    ? 'w-full max-w-4xl max-h-[88vh] overflow-y-auto rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff,#f6f9ff)] shadow-[0_24px_80px_rgba(148,163,184,0.24)]'
-    : 'w-full max-w-4xl max-h-[88vh] overflow-y-auto rounded-3xl border border-white/15 bg-[#090909] shadow-2xl';
+    ? 'flex h-[min(700px,84vh)] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff,#f6f9ff)] shadow-[0_24px_80px_rgba(148,163,184,0.24)]'
+    : 'flex h-[min(700px,84vh)] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-white/15 bg-[#090909] shadow-2xl';
   const settingsModalClass = isLight
     ? 'w-full max-w-5xl h-[88vh] rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff,#f6f9ff)] shadow-[0_24px_80px_rgba(148,163,184,0.24)] overflow-hidden flex'
     : 'w-full max-w-5xl h-[88vh] rounded-3xl border border-white/15 bg-[#090909] shadow-2xl overflow-hidden flex';
@@ -1623,56 +1623,109 @@ export default function AgentsPage() {
                 </button>
               </div>
 
-              <div className="p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <section className="space-y-4">
-                  <div className="rounded-2xl border border-blue-400/30 bg-gradient-to-br from-[#4c3af9]/25 via-[#4c3af9]/8 to-transparent p-5">
-                    <div className="text-xs uppercase tracking-[0.2em] text-blue-200/80">Your Invite Code</div>
-                    <div className="mt-2 text-2xl font-bold tracking-[0.12em]">{inviteCode}</div>
-                    <div className="mt-4 flex items-center gap-2">
+              <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 p-6 sm:p-7 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
+                <section className="flex min-h-0 flex-col gap-4">
+                  <div className={`flex min-h-0 flex-1 flex-col rounded-[2rem] border p-6 ${
+                    isLight
+                      ? 'border-violet-200/70 bg-[linear-gradient(135deg,rgba(139,92,246,0.12),rgba(59,130,246,0.05)_52%,rgba(255,255,255,0.78))]'
+                      : 'border-[#6e5dff]/25 bg-[linear-gradient(135deg,rgba(76,58,249,0.24),rgba(255,255,255,0.04)_55%,rgba(0,0,0,0.05))]'
+                  }`}>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-200/80">Your Invite Code</div>
+                    <div className={`mt-3 text-[2rem] font-bold tracking-[0.16em] ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                      {inviteCode}
+                    </div>
+
+                    <div className="mt-5 flex flex-wrap gap-2">
                       <button
                         onClick={copyInviteCode}
-                        className="px-3 py-2 rounded-xl bg-white text-black text-sm font-semibold hover:bg-gray-100 transition-colors"
+                        className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${
+                          isLight
+                            ? 'bg-slate-900 text-white hover:bg-slate-800'
+                            : 'bg-white text-black hover:bg-gray-100'
+                        }`}
                       >
                         {inviteCopied ? 'Copied' : 'Copy Code'}
                       </button>
                       <button
                         onClick={copyInviteLink}
-                        className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm font-semibold hover:bg-white/10 transition-colors"
+                        className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors ${
+                          isLight
+                            ? 'border-slate-200/80 bg-white/70 text-slate-700 hover:bg-white'
+                            : 'border-white/10 bg-white/5 text-white hover:bg-white/10'
+                        }`}
                       >
                         {inviteLinkCopied ? 'Link Copied' : 'Copy Link'}
                       </button>
                     </div>
-                    <p className="mt-3 text-xs text-gray-300 break-all">{inviteLink}</p>
-                  </div>
 
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-widest">Invited</p>
-                        <p className="mt-1 text-2xl font-semibold">{INVITED_FRIENDS.length}</p>
+                    <div className={`mt-5 rounded-2xl border px-4 py-4 ${isLight ? 'border-slate-200/80 bg-white/72' : 'border-white/10 bg-black/20'}`}>
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-500">Invite Link</div>
+                      <p className={`mt-2 break-all text-sm leading-6 ${isLight ? 'text-slate-600' : 'text-gray-300'}`}>{inviteLink}</p>
+                    </div>
+
+                    <div className={`mt-auto grid grid-cols-2 gap-3 pt-5`}>
+                      <div className={`rounded-2xl border px-4 py-4 ${isLight ? 'border-slate-200/80 bg-white/72' : 'border-white/10 bg-white/[0.03]'}`}>
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">Invited</p>
+                        <p className={`mt-2 text-3xl font-semibold ${isLight ? 'text-slate-900' : 'text-white'}`}>{INVITED_FRIENDS.length}</p>
+                        <p className="mt-1 text-xs text-gray-400">Activated and pending friends</p>
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-widest">Passbits Earned</p>
-                        <p className="mt-1 text-2xl font-semibold text-blue-300">{totalInviteCredits.toLocaleString()}</p>
+                      <div className={`rounded-2xl border px-4 py-4 ${isLight ? 'border-slate-200/80 bg-white/72' : 'border-white/10 bg-white/[0.03]'}`}>
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">Passbits Earned</p>
+                        <p className={`mt-2 text-3xl font-semibold ${isLight ? 'text-violet-700' : 'text-blue-300'}`}>{totalInviteCredits.toLocaleString()}</p>
+                        <p className="mt-1 text-xs text-gray-400">Rewards unlocked from referrals</p>
                       </div>
                     </div>
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                  <h4 className="text-sm font-semibold text-white mb-4">Invited Friends</h4>
-                  <div className="space-y-3">
+                <section className={`flex min-h-0 flex-col rounded-[2rem] border p-5 ${isLight ? 'border-slate-200/80 bg-white/70' : 'border-white/10 bg-white/[0.03]'}`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h4 className={`text-base font-semibold ${isLight ? 'text-slate-900' : 'text-white'}`}>Invited Friends</h4>
+                      <p className="mt-1 text-xs text-gray-400">Track activations and rewards without leaving this panel.</p>
+                    </div>
+                    <div className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${isLight ? 'border-slate-200/80 bg-slate-900/[0.03] text-slate-500' : 'border-white/10 bg-white/[0.04] text-gray-300'}`}>
+                      {INVITED_FRIENDS.length} total
+                    </div>
+                  </div>
+
+                  <div className="mt-5 grid min-h-0 flex-1 grid-rows-3 gap-3">
                     {INVITED_FRIENDS.map((friend) => (
-                      <div key={`${friend.wallet}-${friend.joinedAt}`} className="rounded-xl border border-white/10 bg-black/30 px-4 py-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="font-mono text-xs text-gray-200">{friend.wallet}</p>
-                          <span className={`text-[11px] px-2 py-1 rounded-full border ${friend.status === 'Active' ? 'border-emerald-400/40 text-emerald-300 bg-emerald-500/10' : 'border-amber-400/40 text-amber-300 bg-amber-500/10'}`}>
-                            {friend.status}
-                          </span>
+                      <div
+                        key={`${friend.wallet}-${friend.joinedAt}`}
+                        className={`flex items-center gap-4 rounded-[1.4rem] border px-4 py-4 ${isLight ? 'border-slate-200/80 bg-slate-900/[0.03]' : 'border-white/10 bg-black/25'}`}
+                      >
+                        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${friend.status === 'Active'
+                          ? isLight ? 'bg-emerald-500/12 text-emerald-600' : 'bg-emerald-500/12 text-emerald-300'
+                          : isLight ? 'bg-amber-500/12 text-amber-600' : 'bg-amber-500/12 text-amber-300'
+                        }`}>
+                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0ZM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7Z" />
+                          </svg>
                         </div>
-                        <div className="mt-2 flex items-center justify-between text-xs text-gray-400">
-                          <span>Joined {friend.joinedAt}</span>
-                          <span>+{friend.credits.toLocaleString()} Passbits</span>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className={`truncate font-mono text-sm ${isLight ? 'text-slate-700' : 'text-gray-100'}`}>{friend.wallet}</p>
+                            <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                              friend.status === 'Active'
+                                ? isLight
+                                  ? 'border-emerald-400/35 bg-emerald-500/8 text-emerald-600'
+                                  : 'border-emerald-400/40 bg-emerald-500/10 text-emerald-300'
+                                : isLight
+                                  ? 'border-amber-400/35 bg-amber-500/8 text-amber-600'
+                                  : 'border-amber-400/40 bg-amber-500/10 text-amber-300'
+                            }`}>
+                              {friend.status}
+                            </span>
+                          </div>
+
+                          <div className="mt-2 flex items-center justify-between gap-3 text-xs">
+                            <span className="text-gray-400">Joined {friend.joinedAt}</span>
+                            <span className={`font-semibold ${friend.credits > 0 ? (isLight ? 'text-violet-700' : 'text-blue-300') : 'text-gray-400'}`}>
+                              +{friend.credits.toLocaleString()} Passbits
+                            </span>
+                          </div>
                         </div>
                       </div>
                     ))}
