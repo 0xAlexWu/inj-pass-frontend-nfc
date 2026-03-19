@@ -1072,67 +1072,43 @@ export default function DashboardPage() {
   const dashboardTokenCards = [
     {
       symbol: 'INJ',
-      name: 'Injective',
       icon: '/injswap.png',
       balance: `${tokenBalances.INJ} INJ`,
       usdValue: `$${(parseFloat(tokenBalances.INJ) * injPrice).toFixed(2)}`,
       change: `${injPriceChange24h >= 0 ? '+' : ''}${injPriceChange24h.toFixed(2)}%`,
       changeClass: injPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400',
       copyValue: TOKENS_MAINNET.WINJ.address,
-      infoRows: [
-        { label: 'Type', value: 'Native asset' },
-        { label: 'Network', value: 'Injective EVM' },
-        { label: 'Wrapped', value: truncateMiddle(TOKENS_MAINNET.WINJ.address, 8, 6) },
-        { label: 'Decimals', value: '18' },
-      ],
+      contractValue: truncateMiddle(TOKENS_MAINNET.WINJ.address, 8, 6),
     },
     {
       symbol: 'USDC',
-      name: 'USD Coin',
       icon: '/USDC_Logo.png',
       balance: `${tokenBalances.USDC} USDC`,
       usdValue: `$${tokenBalances.USDC}`,
       change: `${usdcPriceChange24h >= 0 ? '+' : ''}${usdcPriceChange24h.toFixed(2)}%`,
       changeClass: usdcPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400',
       copyValue: TOKENS_MAINNET.USDC.address,
-      infoRows: [
-        { label: 'Type', value: 'ERC-20 stablecoin' },
-        { label: 'Network', value: 'Injective EVM' },
-        { label: 'Contract', value: truncateMiddle(TOKENS_MAINNET.USDC.address, 8, 6) },
-        { label: 'Decimals', value: String(TOKENS_MAINNET.USDC.decimals) },
-      ],
+      contractValue: truncateMiddle(TOKENS_MAINNET.USDC.address, 8, 6),
     },
     {
       symbol: 'NINJA',
-      name: 'Ninja',
       icon: '/NIJIA.png',
       balance: `${formattedNinjaBalance} NINJA`,
       usdValue: '$0.00',
       change: '+0.00%',
       changeClass: 'text-gray-500',
       copyValue: null,
-      infoRows: [
-        { label: 'Type', value: 'Game reward' },
-        { label: 'Network', value: 'INJ Pass' },
-        { label: 'Contract', value: 'Not deployed yet' },
-        { label: 'Storage', value: 'Local game state' },
-      ],
+      contractValue: 'No contract yet',
     },
     {
       symbol: 'USDT',
-      name: 'Tether',
       icon: '/USDT_Logo.png',
       balance: `${tokenBalances.USDT} USDT`,
       usdValue: `$${tokenBalances.USDT}`,
       change: `${usdtPriceChange24h >= 0 ? '+' : ''}${usdtPriceChange24h.toFixed(2)}%`,
       changeClass: usdtPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400',
       copyValue: TOKENS_MAINNET.USDT.address,
-      infoRows: [
-        { label: 'Type', value: 'ERC-20 stablecoin' },
-        { label: 'Network', value: 'Injective EVM' },
-        { label: 'Contract', value: truncateMiddle(TOKENS_MAINNET.USDT.address, 8, 6) },
-        { label: 'Decimals', value: String(TOKENS_MAINNET.USDT.decimals) },
-      ],
+      contractValue: truncateMiddle(TOKENS_MAINNET.USDT.address, 8, 6),
     },
   ] as const;
 
@@ -2028,9 +2004,8 @@ export default function DashboardPage() {
                     >
                       <div className="flex h-full flex-col justify-between">
                         <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="text-sm font-bold text-white">{token.symbol}</div>
-                            <div className="mt-1 text-xs text-gray-400">{token.name}</div>
+                          <div className="rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
+                            {token.symbol}
                           </div>
                           <button
                             onClick={(event) => {
@@ -2055,13 +2030,11 @@ export default function DashboardPage() {
                           </button>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                          {token.infoRows.map((row) => (
-                            <div key={`${token.symbol}-${row.label}`}>
-                              <div className="uppercase tracking-[0.16em] text-[10px] text-gray-500">{row.label}</div>
-                              <div className="mt-1 font-mono text-white">{row.value}</div>
-                            </div>
-                          ))}
+                        <div className="flex flex-1 flex-col justify-center">
+                          <div className="uppercase tracking-[0.16em] text-[10px] text-gray-500">Contract</div>
+                          <div className="mt-2 font-mono text-sm text-white break-all">
+                            {token.contractValue}
+                          </div>
                         </div>
                       </div>
                     </div>
