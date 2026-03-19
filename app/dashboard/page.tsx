@@ -20,6 +20,7 @@ import TransactionAuthModal from '@/components/TransactionAuthModal';
 import ThemeToggleButton from '@/components/ThemeToggleButton';
 import CardCenterModal from '@/components/CardCenterModal';
 import NinjaMinerGame from '@/components/NinjaMinerGame';
+import SettingsPage from '../settings/page';
 import { formatAddress, privateKeyToHex } from '@/utils/wallet';
 import { getInjectiveAddress, getEthereumAddress } from '@injectivelabs/sdk-ts';
 
@@ -1266,7 +1267,7 @@ export default function DashboardPage() {
                         </button>
                       </div>
 
-                      <div className={`min-h-0 flex-1 ${walletPanel === 'settings' ? 'overflow-hidden pr-0 pt-5' : 'overflow-y-auto pr-1'}`}>
+                      <div className={`min-h-0 flex-1 ${walletPanel === 'settings' ? 'overflow-hidden pr-0 pt-3' : 'overflow-y-auto pr-1'}`}>
                         {walletPanel === 'send' && (
                           <div className="grid gap-4 pt-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(260px,0.8fr)]">
                             <div className="space-y-4">
@@ -1679,10 +1680,7 @@ export default function DashboardPage() {
 
                         {walletPanel === 'settings' && (
                           <div className="h-full overflow-hidden rounded-[1.35rem] border border-white/10 bg-black/30">
-                            <DashboardSurfaceFrame
-                              src="/settings?embed=1"
-                              title="Embedded settings"
-                            />
+                            <SettingsPage embeddedOverride />
                           </div>
                         )}
                       </div>
@@ -1690,6 +1688,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
+                {walletPanel !== 'settings' && (
                 <div className="mt-auto grid grid-cols-4 gap-4 pt-5">
                   {/* Send Button */}
                   <button 
@@ -1766,6 +1765,7 @@ export default function DashboardPage() {
                     <span className={`text-xs font-semibold transition-colors ${walletPanel === 'history' ? 'text-white' : 'text-gray-300'}`}>History</span>
                   </button>
                 </div>
+                )}
               </div>
             </div>
 

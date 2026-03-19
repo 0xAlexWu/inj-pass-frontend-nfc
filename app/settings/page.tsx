@@ -8,7 +8,11 @@ import { toHex } from '@/wallet/key-management';
 import AccountHeader from '../components/AccountHeader';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
-export default function SettingsPage() {
+interface SettingsPageProps {
+  embeddedOverride?: boolean;
+}
+
+export default function SettingsPage({ embeddedOverride }: SettingsPageProps = {}) {
   const router = useRouter();
   const { isUnlocked, address, privateKey, keystore, lock, isCheckingSession } = useWallet();
   const { hasPin, autoLockMinutes, defaultAuthMethod, setPin, changePin, lockWallet, setAutoLockMinutes, setDefaultAuthMethod } = usePin();
@@ -18,9 +22,10 @@ export default function SettingsPage() {
   const [showSecurityModal, setShowSecurityModal] = useState(false);
   const [verifyingPasskey, setVerifyingPasskey] = useState(false);
   const [passkeyError, setPasskeyError] = useState('');
-  const [isEmbedded] = useState(
+  const [detectedEmbedded] = useState(
     () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('embed') === '1'
   );
+  const embedded = embeddedOverride ?? detectedEmbedded;
   
   // PIN-Free warning
   const [showPinFreeWarning, setShowPinFreeWarning] = useState(false);
@@ -49,7 +54,7 @@ export default function SettingsPage() {
   const [pinResetSuccess, setPinResetSuccess] = useState(false);
 
   const navigateApp = (path: string) => {
-    if (typeof window !== 'undefined' && isEmbedded && window.top) {
+    if (typeof window !== 'undefined' && embedded && window.top) {
       window.top.location.assign(path);
       return;
     }
@@ -256,8 +261,8 @@ export default function SettingsPage() {
   return (
     <LoadingSpinner ready={isSettingsReady}>
       {isSettingsReady ? (
-        <div className={isEmbedded ? 'h-full bg-transparent' : 'min-h-screen bg-black'}>
-          {!isEmbedded && (
+        <div className={embedded ? 'h-full bg-transparent' : 'min-h-screen bg-black'}>
+          {!embedded && (
             <div className="bg-gradient-to-b from-white/5 to-transparent border-b border-white/5 backdrop-blur-sm">
               <div className="max-w-7xl mx-auto px-4 py-6">
                 <div className="mb-6">
@@ -268,7 +273,7 @@ export default function SettingsPage() {
           )}
 
       {/* Main Content */}
-      <div className={isEmbedded ? 'h-full overflow-y-auto px-1 py-1' : 'max-w-7xl mx-auto px-4 py-6'}>
+      <div className={embedded ? 'h-full overflow-y-auto px-1 py-1' : 'max-w-7xl mx-auto px-4 py-6'}>
         {/* PIN Reset Success Message */}
         {pinResetSuccess && (
           <div className="mb-6 p-4 rounded-2xl bg-green-500/10 border border-green-500/30 text-green-400 flex items-center gap-3 animate-fade-in">
