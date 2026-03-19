@@ -1739,24 +1739,20 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {walletPanel !== 'settings' && (
+                {isWalletOverview && (
                 <div className="mt-auto grid grid-cols-4 gap-4 pt-5">
                   {/* Send Button */}
                   <button 
                     onClick={() => toggleWalletPanel('send')}
                     className="flex flex-col items-center gap-2 group"
                   >
-                    <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all ${
-                      walletPanel === 'send'
-                        ? 'bg-white scale-105 ring-4 ring-white/10'
-                        : 'bg-white hover:bg-gray-100 group-hover:scale-105'
-                    }`}>
+                    <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white shadow-lg transition-all hover:bg-gray-100 group-hover:scale-105">
                       <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <line x1="12" y1="19" x2="12" y2="5" strokeWidth={2.5} strokeLinecap="round" />
                         <polyline points="5 12 12 5 19 12" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </div>
-                    <span className={`text-xs font-semibold transition-colors ${walletPanel === 'send' ? 'text-white' : 'text-gray-300'}`}>Send</span>
+                    <span className="text-xs font-semibold text-gray-300 transition-colors group-hover:text-white">Send</span>
                   </button>
 
                   {/* Receive Button */}
@@ -1764,17 +1760,13 @@ export default function DashboardPage() {
                     onClick={() => toggleWalletPanel('receive')}
                     className="flex flex-col items-center gap-2 group"
                   >
-                    <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all ${
-                      walletPanel === 'receive'
-                        ? 'bg-white scale-105 ring-4 ring-white/10'
-                        : 'bg-white hover:bg-gray-100 group-hover:scale-105'
-                    }`}>
+                    <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white shadow-lg transition-all hover:bg-gray-100 group-hover:scale-105">
                       <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <line x1="12" y1="5" x2="12" y2="19" strokeWidth={2.5} strokeLinecap="round" />
                         <polyline points="19 12 12 19 5 12" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </div>
-                    <span className={`text-xs font-semibold transition-colors ${walletPanel === 'receive' ? 'text-white' : 'text-gray-300'}`}>Receive</span>
+                    <span className="text-xs font-semibold text-gray-300 transition-colors group-hover:text-white">Receive</span>
                   </button>
 
                   {/* Swap Button */}
@@ -1782,11 +1774,7 @@ export default function DashboardPage() {
                     onClick={() => toggleWalletPanel('swap')}
                     className="flex flex-col items-center gap-2 group"
                   >
-                    <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all ${
-                      walletPanel === 'swap'
-                        ? 'bg-white scale-105 ring-4 ring-white/10'
-                        : 'bg-white hover:bg-gray-100 group-hover:scale-105'
-                    }`}>
+                    <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white shadow-lg transition-all hover:bg-gray-100 group-hover:scale-105">
                       <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <polyline points="16 3 21 3 21 8" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                         <line x1="4" y1="20" x2="21" y2="3" strokeWidth={2.5} strokeLinecap="round" />
@@ -1795,7 +1783,7 @@ export default function DashboardPage() {
                         <line x1="4" y1="4" x2="9" y2="9" strokeWidth={2.5} strokeLinecap="round" />
                       </svg>
                     </div>
-                    <span className={`text-xs font-semibold transition-colors ${walletPanel === 'swap' ? 'text-white' : 'text-gray-300'}`}>Swap</span>
+                    <span className="text-xs font-semibold text-gray-300 transition-colors group-hover:text-white">Swap</span>
                   </button>
 
                   {/* History Button */}
@@ -1803,17 +1791,13 @@ export default function DashboardPage() {
                     onClick={() => toggleWalletPanel('history')}
                     className="flex flex-col items-center gap-2 group"
                   >
-                    <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all ${
-                      walletPanel === 'history'
-                        ? 'bg-white scale-105 ring-4 ring-white/10'
-                        : 'bg-white hover:bg-gray-100 group-hover:scale-105'
-                    }`}>
+                    <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white shadow-lg transition-all hover:bg-gray-100 group-hover:scale-105">
                       <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <circle cx="12" cy="12" r="10" strokeWidth={2.5} strokeLinecap="round" />
                         <polyline points="12 6 12 12 16 14" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </div>
-                    <span className={`text-xs font-semibold transition-colors ${walletPanel === 'history' ? 'text-white' : 'text-gray-300'}`}>History</span>
+                    <span className="text-xs font-semibold text-gray-300 transition-colors group-hover:text-white">History</span>
                   </button>
                 </div>
                 )}
