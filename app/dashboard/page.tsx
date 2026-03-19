@@ -1053,7 +1053,7 @@ export default function DashboardPage() {
               <button
                 onClick={() => setShowCardCenter(true)}
                 className="rounded-lg border border-white/10 bg-white/5 p-2.5 transition-all hover:bg-white/10"
-                title="Open Card Center"
+                title="Open Card Pay"
               >
                 <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h5M5 6h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" />
@@ -2042,6 +2042,13 @@ export default function DashboardPage() {
       <CardCenterModal
         isOpen={showCardCenter}
         onClose={() => setShowCardCenter(false)}
+        onUseCardAddress={(nextAddress) => {
+          setShowCardCenter(false);
+          setDashboardSurface('wallet');
+          setWalletPanel('send');
+          setSendRecipient(nextAddress);
+          setSendError('');
+        }}
       />
 
       {/* NFT Detail Modal */}
