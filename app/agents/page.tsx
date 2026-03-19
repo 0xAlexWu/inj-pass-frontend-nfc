@@ -249,6 +249,9 @@ export default function AgentsPage() {
   const [isEmbedded] = useState(
     () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('embed') === '1'
   );
+  const [isCompactEmbedded] = useState(
+    () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('compact') === '1'
+  );
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState('');
@@ -292,7 +295,11 @@ export default function AgentsPage() {
   const totalInviteCredits = INVITED_FRIENDS.reduce((sum, friend) => sum + friend.credits, 0);
   const isLight = theme === 'light';
   const rootShellClass = `overflow-hidden ${isLight ? 'text-slate-900' : 'text-white'} ${
-    isEmbedded
+    isCompactEmbedded && isEmbedded
+      ? isLight
+        ? 'relative h-full min-h-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_34%),linear-gradient(180deg,#f8fbff,#eef4ff)] p-3'
+        : 'relative h-full min-h-0 bg-[radial-gradient(circle_at_top,rgba(76,58,249,0.08),transparent_34%),linear-gradient(180deg,#040811,#060b14)] p-3'
+      : isEmbedded
       ? isLight
         ? 'grid h-full min-h-0 gap-4 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_36%),linear-gradient(180deg,#f8fbff,#eef4ff)] p-3 md:p-4 xl:grid-cols-[310px_minmax(0,1fr)]'
         : 'grid h-full min-h-0 gap-4 bg-[radial-gradient(circle_at_top,rgba(76,58,249,0.08),transparent_34%),linear-gradient(180deg,#040811,#060b14)] p-3 md:p-4 xl:grid-cols-[310px_minmax(0,1fr)]'
@@ -300,7 +307,12 @@ export default function AgentsPage() {
         ? 'flex h-screen bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_32%),linear-gradient(180deg,#f8fbff,#eef4ff)]'
         : 'flex h-screen bg-black'
   }`;
-  const sidebarShellClass = isEmbedded
+  const sidebarShellClass = isCompactEmbedded && isEmbedded
+    ? `${isLight
+      ? 'absolute inset-y-3 left-3 z-30 w-[290px] rounded-[1.75rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(240,246,255,0.94))] shadow-[0_20px_70px_rgba(148,163,184,0.2)] flex flex-col overflow-hidden'
+      : 'absolute inset-y-3 left-3 z-30 w-[290px] rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#0a101d,#090d16)] shadow-[0_20px_70px_rgba(0,0,0,0.28)] flex flex-col overflow-hidden'
+    } transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-[115%]'}`
+    : isEmbedded
     ? isLight
       ? 'min-h-0 h-full rounded-[1.75rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(240,246,255,0.92))] shadow-[0_20px_70px_rgba(148,163,184,0.18)] flex flex-col overflow-hidden'
       : 'min-h-0 h-full rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#0a101d,#090d16)] shadow-[0_20px_70px_rgba(0,0,0,0.24)] flex flex-col overflow-hidden'
@@ -310,14 +322,22 @@ export default function AgentsPage() {
           : 'bg-[#0a0a0a] border-r border-white/10 flex flex-col'
       } transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`;
   const mainShellClass = `min-w-0 h-full relative overflow-hidden flex flex-col ${
-    isEmbedded
+    isCompactEmbedded && isEmbedded
+      ? isLight
+        ? 'rounded-[1.75rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(241,245,255,0.92))] shadow-[0_20px_70px_rgba(148,163,184,0.18)]'
+        : 'rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#090d17,#070b13)] shadow-[0_20px_70px_rgba(0,0,0,0.24)]'
+      : isEmbedded
       ? isLight
         ? 'rounded-[1.75rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(241,245,255,0.92))] shadow-[0_20px_70px_rgba(148,163,184,0.18)]'
         : 'rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#090d17,#070b13)] shadow-[0_20px_70px_rgba(0,0,0,0.24)]'
       : 'flex-1'
   }`;
   const headerShellClass = `flex items-center gap-3 border-b ${isLight ? 'border-slate-200/80' : 'border-white/10'} flex-shrink-0 ${
-    isEmbedded
+    isCompactEmbedded && isEmbedded
+      ? isLight
+        ? 'px-4 py-4 bg-white/70'
+        : 'px-4 py-4 bg-white/[0.02]'
+      : isEmbedded
       ? isLight
         ? 'px-5 py-4 bg-white/70'
         : 'px-5 py-4 bg-white/[0.02]'
@@ -963,8 +983,11 @@ export default function AgentsPage() {
     <div className={rootShellClass}>
 
       {/* Sidebar overlay (mobile) */}
-      {sidebarOpen && !isEmbedded && (
-        <div className="fixed inset-0 bg-black/60 z-20 md:hidden" onClick={() => setSidebarOpen(false)} />
+      {sidebarOpen && (!isEmbedded || isCompactEmbedded) && (
+        <div
+          className={`${isCompactEmbedded ? 'absolute' : 'fixed'} inset-0 bg-black/60 z-20 md:hidden`}
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
 
       {/* Sidebar */}
@@ -1118,7 +1141,10 @@ export default function AgentsPage() {
 
         {/* Top bar */}
         <header className={headerShellClass}>
-          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-white/10 transition-colors md:hidden">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className={`p-2 rounded-lg hover:bg-white/10 transition-colors ${isCompactEmbedded ? '' : 'md:hidden'}`}
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>

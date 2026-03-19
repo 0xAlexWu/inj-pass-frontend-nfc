@@ -34,6 +34,7 @@ type DashboardHistoryFilter = 'all' | DashboardTransactionType;
 type DashboardChainType = 'EVM' | 'Cosmos';
 type SwapToken = 'INJ' | 'USDT' | 'USDC' | 'NINJA';
 type DashboardWorkspaceTab = 'discover' | 'agent';
+type AssetSurfaceMode = 'assets' | 'ai-loading' | 'ai';
 
 const NINJA_STORAGE_PREFIX = 'inj-pass:ninja-miner:';
 const DEFAULT_NINJA_BALANCE = 22;
@@ -369,6 +370,7 @@ export default function DashboardPage() {
   const [copied, setCopied] = useState(false);
   const [ninjaBalance, setNinjaBalance] = useState(DEFAULT_NINJA_BALANCE);
   const [assetTab, setAssetTab] = useState<AssetTab>('tokens');
+  const [assetSurfaceMode, setAssetSurfaceMode] = useState<AssetSurfaceMode>('assets');
   const [workspaceTab, setWorkspaceTab] = useState<DashboardWorkspaceTab>('discover');
   const [tokenBalances, setTokenBalances] = useState<Record<string, string>>({
     INJ: '0.0000',
@@ -376,6 +378,7 @@ export default function DashboardPage() {
     NINJA: '0.00',
     USDT: '0.00',
   });
+  const aiTransitionTimerRef = useRef<number | null>(null);
   
   // QR Scanner states
   const [showQRScanner, setShowQRScanner] = useState(false);
@@ -1057,6 +1060,40 @@ export default function DashboardPage() {
     }, 350);
   };
 
+  const openAiAssetSurface = () => {
+    if (assetSurfaceMode === 'ai' || assetSurfaceMode === 'ai-loading') {
+      return;
+    }
+
+    setFlippedTokenCard(null);
+    setAssetSurfaceMode('ai-loading');
+
+    if (aiTransitionTimerRef.current) {
+      window.clearTimeout(aiTransitionTimerRef.current);
+    }
+
+    aiTransitionTimerRef.current = window.setTimeout(() => {
+      setAssetSurfaceMode('ai');
+      aiTransitionTimerRef.current = null;
+    }, 1400);
+  };
+
+  const closeAiAssetSurface = () => {
+    if (aiTransitionTimerRef.current) {
+      window.clearTimeout(aiTransitionTimerRef.current);
+      aiTransitionTimerRef.current = null;
+    }
+    setAssetSurfaceMode('assets');
+  };
+
+  useEffect(() => {
+    return () => {
+      if (aiTransitionTimerRef.current) {
+        window.clearTimeout(aiTransitionTimerRef.current);
+      }
+    };
+  }, []);
+
   const isDashboardReady = !isCheckingSession && !loading && isUnlocked && !!address;
   const formattedBalance = balance ? parseFloat(balance.formatted).toFixed(4) : '0.0000';
   const injUsdValue = balance ? (parseFloat(balance.formatted) * injPrice) : 0;
@@ -1167,6 +1204,17 @@ export default function DashboardPage() {
             {/* Scan QR Code Button */}
             <div className="flex items-center gap-2">
               <ThemeToggleButton compact />
+              <button
+                onClick={openAiAssetSurface}
+                className={`rounded-lg border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] transition-all ${
+                  assetSurfaceMode === 'assets'
+                    ? 'border-white/10 bg-white/5 text-gray-300 hover:border-violet-500/40 hover:bg-violet-600/15 hover:text-white'
+                    : 'border-fuchsia-400/35 bg-[linear-gradient(135deg,rgba(139,92,246,0.24),rgba(59,130,246,0.14))] text-white shadow-[0_10px_30px_rgba(99,102,241,0.22)]'
+                }`}
+                title="Open AI workspace"
+              >
+                AI
+              </button>
               <button
                 onClick={() => setShowFaucetSheet(true)}
                 className="rounded-lg border border-white/10 bg-white/5 p-2.5 transition-all group hover:border-violet-500/40 hover:bg-violet-600/20"
@@ -1867,7 +1915,9 @@ export default function DashboardPage() {
 
             <div className={`bg-black rounded-2xl border border-white/10 relative overflow-hidden p-4 sm:p-5 h-full flex flex-col ${walletStageClassName}`}>
               <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-cyan-500/5 to-transparent rounded-full blur-2xl"></div>
-              <div className="relative flex flex-1 flex-col">
+              <div className={`relative flex flex-1 flex-col transition-all duration-500 ${assetSurfaceMode === 'ai-loading' ? 'scale-[0.985] opacity-90' : 'opacity-100'}`}>
+        {assetSurfaceMode !== 'ai' && (
+        <>
         {/* Asset Tabs - Smooth Sliding Background */}
         <div className="relative mb-6 p-1 bg-white/5 rounded-xl">
           {/* Sliding Background */}
@@ -2174,6 +2224,65 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+        </>
+        )}
+
+        {assetSurfaceMode === 'ai' && (
+          <div className="relative flex min-h-0 flex-1 flex-col">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">AI Workspace</div>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <span className="text-lg font-bold text-white">Lambda Agent</span>
+                  <span className="rounded-full border border-fuchsia-400/20 bg-fuchsia-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-fuchsia-200">
+                    Embedded
+                  </span>
+                </div>
+                <div className="mt-1 max-w-md text-sm text-gray-400">
+                  Chat, transaction guidance, invite flows, and agent controls now live inside this asset-stage container.
+                </div>
+              </div>
+
+              <button
+                onClick={closeAiAssetSurface}
+                className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-semibold text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                Back to assets
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-hidden rounded-[1.6rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-1.5 shadow-[0_20px_70px_rgba(99,102,241,0.14)]">
+              <div className="h-full overflow-hidden rounded-[1.4rem] bg-black">
+                <DashboardSurfaceFrame
+                  src="/agents?embed=1&compact=1"
+                  title="Embedded asset agent"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {assetSurfaceMode === 'ai-loading' && (
+          <>
+            <div className="absolute inset-0 z-20 rounded-2xl bg-black/72 backdrop-blur-md" />
+            <div className="pointer-events-none absolute inset-0 z-30 rounded-2xl p-[1.5px]">
+              <div className="h-full w-full rounded-[15px] bg-[conic-gradient(from_0deg,#4ade80,#38bdf8,#818cf8,#f472b6,#f59e0b,#4ade80)] animate-[spin_2.8s_linear_infinite] p-[1.5px]">
+                <div className="h-full w-full rounded-[14px] bg-black/92" />
+              </div>
+            </div>
+            <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center px-6">
+              <div className="w-full max-w-xs rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] px-5 py-6 text-center shadow-[0_24px_80px_rgba(99,102,241,0.16)]">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-xl font-bold text-white shadow-[0_12px_32px_rgba(129,140,248,0.24)]">
+                  AI
+                </div>
+                <div className="mt-4 text-sm font-semibold text-white">Opening Lambda Agent</div>
+                <div className="mt-2 text-xs leading-6 text-gray-400">
+                  Syncing wallet context, prompts, and agent controls into this surface.
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
             </div>
           </div>
