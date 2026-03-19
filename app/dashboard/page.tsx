@@ -20,6 +20,7 @@ import TransactionAuthModal from '@/components/TransactionAuthModal';
 import ThemeToggleButton from '@/components/ThemeToggleButton';
 import CardCenterModal from '@/components/CardCenterModal';
 import NinjaMinerGame from '@/components/NinjaMinerGame';
+import { useTheme } from '@/contexts/ThemeContext';
 import { TOKENS_MAINNET } from '@/services/tokens';
 import SettingsPage from '../settings/page';
 import { formatAddress, privateKeyToHex } from '@/utils/wallet';
@@ -342,15 +343,17 @@ function PixelTrendChart({
 function DashboardSurfaceFrame({
   src,
   title,
+  className,
 }: {
   src: string;
   title: string;
+  className?: string;
 }) {
   return (
     <iframe
       src={src}
       title={title}
-      className="h-full w-full border-0 bg-black"
+      className={`h-full w-full border-0 ${className ?? 'bg-black'}`}
       loading="lazy"
     />
   );
@@ -389,6 +392,7 @@ function getFaucetPopoverStyle(button: HTMLButtonElement | null): CSSProperties 
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { theme } = useTheme();
   const { isUnlocked, address, privateKey, resetTxAuth, isCheckingSession } = useWallet();
   const { autoLockMinutes, isPinLocked } = usePin();
   const faucetButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -468,6 +472,7 @@ export default function DashboardPage() {
   const [sendAmountAlertActive, setSendAmountAlertActive] = useState(false);
   const tokenFlipTimerRef = useRef<number | null>(null);
   const cardCenterTimerRef = useRef<number | null>(null);
+  const isLight = theme === 'light';
   const faucetSheetTimerRef = useRef<number | null>(null);
   const sendAmountAlertTimerRef = useRef<number | null>(null);
 
@@ -2560,16 +2565,17 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="mt-6">
-            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black p-4 sm:p-5">
+            <div className={`relative overflow-hidden rounded-2xl border p-4 sm:p-5 ${isLight ? 'border-slate-200/80 bg-slate-100/80 shadow-[0_18px_48px_rgba(148,163,184,0.12)]' : 'border-white/10 bg-black'}`}>
               <div className="absolute bottom-0 left-0 h-32 w-32 rounded-full bg-gradient-to-tr from-cyan-500/5 to-transparent blur-2xl" />
               <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-gradient-to-bl from-violet-500/5 to-transparent blur-2xl" />
 
               <div className="relative">
-                <div className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-black/30">
-                  <div className="h-[248px] overflow-hidden rounded-[1.35rem] bg-black sm:h-[228px] lg:h-[210px]">
+                <div className={`overflow-hidden rounded-[1.5rem] border ${isLight ? 'border-slate-200/80 bg-white/88' : 'border-white/10 bg-black/30'}`}>
+                  <div className={`h-[248px] overflow-hidden rounded-[1.35rem] sm:h-[228px] lg:h-[210px] ${isLight ? 'bg-white/95' : 'bg-black'}`}>
                     <DashboardSurfaceFrame
                       src={isAiStage ? '/discover?embed=1&mode=ai' : '/discover?embed=1'}
                       title="Embedded discover"
+                      className={isLight ? 'bg-white' : 'bg-black'}
                     />
                   </div>
                 </div>

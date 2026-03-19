@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/contexts/WalletContext';
 import { useEffect, useState } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
 import AccountHeader from '../components/AccountHeader';
 
 type DAppCategory = 'all' | 'defi' | 'nft' | 'game' | 'social' | 'dao';
@@ -122,10 +123,12 @@ function SearchBox({
   value,
   onChange,
   onClear,
+  isLight,
 }: {
   value: string;
   onChange: (next: string) => void;
   onClear: () => void;
+  isLight: boolean;
 }) {
   return (
     <div className="relative">
@@ -134,16 +137,20 @@ function SearchBox({
         placeholder="Search dApps..."
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-11 pr-11 text-sm text-white placeholder-gray-500 outline-none transition-all focus:border-white/20"
+        className={`w-full rounded-xl border py-3 pl-11 pr-11 text-sm outline-none transition-all ${
+          isLight
+            ? 'border-slate-200/80 bg-white/90 text-slate-900 placeholder:text-slate-400 focus:border-slate-300'
+            : 'border-white/10 bg-white/5 text-white placeholder-gray-500 focus:border-white/20'
+        }`}
       />
-      <svg className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className={`absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 ${isLight ? 'text-slate-400' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <circle cx="11" cy="11" r="8" strokeWidth={2} />
         <path d="m21 21-4.35-4.35" strokeWidth={2} strokeLinecap="round" />
       </svg>
       {value && (
         <button
           onClick={onClear}
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 transition-colors hover:text-white"
+          className={`absolute right-4 top-1/2 -translate-y-1/2 transition-colors ${isLight ? 'text-slate-400 hover:text-slate-900' : 'text-gray-400 hover:text-white'}`}
           title="Clear search"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -158,6 +165,7 @@ function SearchBox({
 export default function DiscoverPage() {
   const router = useRouter();
   const { isUnlocked, address, isCheckingSession } = useWallet();
+  const { theme } = useTheme();
   const [routeContext] = useState(() => {
     if (typeof window === 'undefined') {
       return { embedded: false, aiMode: false };
@@ -171,6 +179,7 @@ export default function DiscoverPage() {
   });
   const isEmbedded = routeContext.embedded;
   const isAiMode = routeContext.aiMode;
+  const isLight = theme === 'light';
   const [activeCategory, setActiveCategory] = useState<DiscoverCategory>(isAiMode ? 'ai' : 'all');
   const [searchQuery, setSearchQuery] = useState('');
   const [surfaceReady, setSurfaceReady] = useState(false);
@@ -195,8 +204,8 @@ export default function DiscoverPage() {
 
   if (isCheckingSession) {
     return (
-      <div className={`flex items-center justify-center ${isEmbedded ? 'h-full bg-black' : 'min-h-screen bg-black'}`}>
-        <div className="h-8 w-8 rounded-full border-2 border-white/15 border-t-white animate-spin" />
+      <div className={`flex items-center justify-center ${isEmbedded ? 'h-full' : 'min-h-screen'} ${isLight ? 'bg-[#eef4fb]' : 'bg-black'}`}>
+        <div className={`h-8 w-8 rounded-full border-2 animate-spin ${isLight ? 'border-slate-300 border-t-slate-700' : 'border-white/15 border-t-white'}`} />
       </div>
     );
   }
@@ -223,9 +232,9 @@ export default function DiscoverPage() {
   );
 
   return (
-    <div className={isEmbedded ? 'h-full bg-black' : 'min-h-screen bg-black'}>
+    <div className={`${isEmbedded ? 'h-full' : 'min-h-screen'} ${isLight ? 'bg-[#eef4fb] text-slate-900' : 'bg-black text-white'}`}>
       {!isEmbedded && (
-        <div className="bg-gradient-to-b from-white/5 to-transparent border-b border-white/5 backdrop-blur-sm">
+        <div className={isLight ? 'border-b border-slate-200/80 bg-gradient-to-b from-white/90 to-transparent backdrop-blur-sm' : 'bg-gradient-to-b from-white/5 to-transparent border-b border-white/5 backdrop-blur-sm'}>
           <div className="max-w-7xl mx-auto px-4 py-6">
             <div className="mb-6">
               <AccountHeader
@@ -236,8 +245,8 @@ export default function DiscoverPage() {
                 onScanClick={() => {}}
               />
             </div>
-            <div className="rounded-2xl border border-white/10 bg-black p-4">
-              <SearchBox value={searchQuery} onChange={setSearchQuery} onClear={() => setSearchQuery('')} />
+            <div className={`rounded-2xl border p-4 ${isLight ? 'border-slate-200/80 bg-white/78' : 'border-white/10 bg-black'}`}>
+              <SearchBox value={searchQuery} onChange={setSearchQuery} onClear={() => setSearchQuery('')} isLight={isLight} />
             </div>
           </div>
         </div>
@@ -250,9 +259,9 @@ export default function DiscoverPage() {
               surfaceReady ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
             }`}
           >
-            <div className="relative min-w-0 flex-1 max-w-[560px] rounded-xl bg-white/5 p-1">
+            <div className={`relative min-w-0 flex-1 max-w-[560px] rounded-xl p-1 ${isLight ? 'border border-slate-200/80 bg-white/90 shadow-[0_10px_32px_rgba(148,163,184,0.10)]' : 'bg-white/5'}`}>
               <div
-                className="pointer-events-none absolute bottom-1 top-1 rounded-lg bg-white shadow-lg transition-all duration-300 ease-out"
+                className={`pointer-events-none absolute bottom-1 top-1 rounded-lg transition-all duration-300 ease-out ${isLight ? 'bg-slate-900 shadow-[0_12px_28px_rgba(15,23,42,0.14)]' : 'bg-white shadow-lg'}`}
                 style={{
                   width: `calc((100% - ${(categoryTabs.length - 1) * 0.5}rem) / ${categoryTabs.length})`,
                   left: `calc(0.25rem + ${activeCategoryIndex} * ((100% - ${(categoryTabs.length - 1) * 0.5}rem) / ${categoryTabs.length} + 0.5rem))`,
@@ -265,8 +274,8 @@ export default function DiscoverPage() {
                     onClick={() => setActiveCategory(category.id as DiscoverCategory)}
                     className={`flex-1 whitespace-nowrap rounded-lg px-3 py-2.5 text-xs font-bold transition-all duration-300 ${
                       activeCategory === category.id
-                        ? 'text-black'
-                        : 'text-gray-400 hover:text-white'
+                        ? isLight ? 'text-white' : 'text-black'
+                        : isLight ? 'text-slate-500 hover:text-slate-900' : 'text-gray-400 hover:text-white'
                     }`}
                   >
                     {category.name}
@@ -275,12 +284,12 @@ export default function DiscoverPage() {
               </div>
             </div>
             <div className="ml-auto w-[168px] flex-shrink-0 sm:w-[196px] md:w-[220px]">
-              <SearchBox value={searchQuery} onChange={setSearchQuery} onClear={() => setSearchQuery('')} />
+              <SearchBox value={searchQuery} onChange={setSearchQuery} onClear={() => setSearchQuery('')} isLight={isLight} />
             </div>
           </div>
 
           {filteredDapps.length === 0 ? (
-            <div className="flex min-h-0 flex-1 items-center justify-center px-6 text-center text-sm text-gray-400">
+            <div className={`flex min-h-0 flex-1 items-center justify-center px-6 text-center text-sm ${isLight ? 'text-slate-400' : 'text-gray-400'}`}>
               Try adjusting your search or filters.
             </div>
           ) : (
@@ -293,13 +302,17 @@ export default function DiscoverPage() {
                 <button
                   key={dapp.id}
                   onClick={() => handleDAppClick(dapp)}
-                  className="flex min-w-[112px] flex-col items-center justify-center gap-2 rounded-[1.45rem] border border-white/10 bg-white/[0.04] px-3 py-4 text-center transition-all hover:bg-white/10 hover:-translate-y-[1px]"
+                  className={`flex min-w-[112px] flex-col items-center justify-center gap-2 rounded-[1.45rem] border px-3 py-4 text-center transition-all hover:-translate-y-[1px] ${
+                    isLight
+                      ? 'border-slate-200/80 bg-white/92 hover:bg-slate-50 shadow-[0_8px_24px_rgba(148,163,184,0.12)]'
+                      : 'border-white/10 bg-white/[0.04] hover:bg-white/10'
+                  }`}
                 >
-                  <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-white p-2 shadow-lg">
+                  <div className={`flex h-11 w-11 items-center justify-center overflow-hidden rounded-full p-2 ${isLight ? 'border border-slate-200/80 bg-slate-50 shadow-[0_8px_18px_rgba(148,163,184,0.16)]' : 'bg-white shadow-lg'}`}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={dapp.icon} alt={dapp.name} className="h-full w-full object-contain" />
                   </div>
-                  <div className="w-full truncate text-xs font-bold text-white">{dapp.name}</div>
+                  <div className={`w-full truncate text-xs font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>{dapp.name}</div>
                 </button>
               ))}
             </div>
