@@ -264,10 +264,8 @@ export default function SettingsPage({ embeddedOverride }: SettingsPageProps = {
     }
   };
 
-  return (
-    <LoadingSpinner ready={isSettingsReady} progress={settingsLoadProgress} statusLabel={settingsLoadStatus}>
-      {isSettingsReady ? (
-        <div className={embedded ? 'h-full bg-transparent' : 'min-h-screen bg-black'}>
+  const settingsContent = isSettingsReady ? (
+    <div className={embedded ? 'h-full bg-transparent' : 'min-h-screen bg-black'}>
           {!embedded && (
             <div className="bg-gradient-to-b from-white/5 to-transparent border-b border-white/5 backdrop-blur-sm">
               <div className="max-w-7xl mx-auto px-4 py-6">
@@ -1154,7 +1152,15 @@ export default function SettingsPage({ embeddedOverride }: SettingsPageProps = {
       )}
 
       </div>
-      ) : null}
+  ) : null;
+
+  if (embedded) {
+    return settingsContent;
+  }
+
+  return (
+    <LoadingSpinner ready={isSettingsReady} progress={settingsLoadProgress} statusLabel={settingsLoadStatus}>
+      {settingsContent}
     </LoadingSpinner>
   );
 }
