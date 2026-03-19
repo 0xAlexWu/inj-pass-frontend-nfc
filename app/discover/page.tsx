@@ -216,48 +216,55 @@ export default function DiscoverPage() {
       )}
 
       {isEmbedded ? (
-        <div className="grid h-full gap-4 p-4 lg:grid-cols-[260px_minmax(0,1fr)]">
-          <div className="flex min-h-0 flex-col rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Discover</div>
-            <div className="mt-1 text-base font-bold text-white">Browse apps</div>
-            <div className="mt-1 text-sm text-gray-400">Filter apps on the left and launch them from the right stage.</div>
+        <div className="flex h-full flex-col gap-4 p-4">
+          <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+              <div className="min-w-0">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Discover</div>
+                <div className="mt-1 text-base font-bold text-white">Browse apps horizontally</div>
+                <div className="mt-1 max-w-2xl text-sm text-gray-400">
+                  Swipe through featured and filtered dApps in a horizontal rail without leaving this workspace.
+                </div>
+              </div>
 
-            <div className="mt-4">
-              <SearchBox value={searchQuery} onChange={setSearchQuery} onClear={() => setSearchQuery('')} />
-            </div>
-
-            <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
-              <div className="space-y-2">
-                {CATEGORIES.map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() => setActiveCategory(category.id as DAppCategory)}
-                    className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition-all ${
-                      activeCategory === category.id
-                        ? 'border-white bg-white text-black'
-                        : 'border-white/10 bg-white/[0.03] text-gray-300 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    <span>{category.name}</span>
-                    <span className={`text-[11px] ${activeCategory === category.id ? 'text-black/70' : 'text-gray-500'}`}>
-                      {category.id === 'all' ? DAPPS.length : DAPPS.filter((dapp) => dapp.category === category.id).length}
-                    </span>
-                  </button>
-                ))}
+              <div className="flex w-full flex-col gap-3 xl:w-[420px] xl:flex-shrink-0">
+                <SearchBox value={searchQuery} onChange={setSearchQuery} onClear={() => setSearchQuery('')} />
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                  {CATEGORIES.map((category) => (
+                    <button
+                      key={category.id}
+                      onClick={() => setActiveCategory(category.id as DAppCategory)}
+                      className={`flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2.5 text-xs font-semibold transition-all ${
+                        activeCategory === category.id
+                          ? 'border-white bg-white text-black'
+                          : 'border-white/10 bg-white/[0.03] text-gray-300 hover:bg-white/10 hover:text-white'
+                      }`}
+                    >
+                      <span>{category.name}</span>
+                      <span className={`text-[10px] ${activeCategory === category.id ? 'text-black/70' : 'text-gray-500'}`}>
+                        {category.id === 'all' ? DAPPS.length : DAPPS.filter((dapp) => dapp.category === category.id).length}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="flex min-h-0 flex-col rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
+          <div className="flex min-h-0 flex-1 flex-col rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
             {!searchQuery && (
               <div className="mb-5">
-                <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Featured</div>
-                <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Featured</div>
+                  <div className="text-xs text-gray-500">Horizontal rail</div>
+                </div>
+
+                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                   {featuredDapps.map((dapp) => (
                     <button
                       key={dapp.id}
                       onClick={() => handleDAppClick(dapp)}
-                      className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition-all hover:bg-white/10"
+                      className="min-w-[250px] rounded-[1.6rem] border border-white/10 bg-white/[0.04] p-5 text-left transition-all hover:bg-white/10 hover:translate-y-[-1px]"
                     >
                       <div className="flex items-center gap-3">
                         <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-white p-2 shadow-lg">
@@ -266,9 +273,10 @@ export default function DiscoverPage() {
                         </div>
                         <div className="min-w-0">
                           <div className="truncate text-sm font-bold text-white">{dapp.name}</div>
-                          <div className="mt-1 line-clamp-2 text-xs text-gray-400">{dapp.description}</div>
+                          <div className="mt-1 text-xs uppercase tracking-[0.18em] text-gray-500">{dapp.category}</div>
                         </div>
                       </div>
+                      <div className="mt-4 line-clamp-2 text-sm leading-6 text-gray-400">{dapp.description}</div>
                     </button>
                   ))}
                 </div>
@@ -277,24 +285,24 @@ export default function DiscoverPage() {
 
             <div className="mb-3 flex items-center justify-between">
               <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">
-                {activeCategory === 'all' ? 'All dApps' : `${CATEGORIES.find((item) => item.id === activeCategory)?.name} dApps`}
+                {activeCategory === 'all' ? 'App rail' : `${CATEGORIES.find((item) => item.id === activeCategory)?.name} rail`}
               </div>
               <div className="text-xs text-gray-500">{filteredDapps.length} results</div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-              {filteredDapps.length === 0 ? (
-                <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-6 text-center text-sm text-gray-400">
-                  Try adjusting your search or filters.
-                </div>
-              ) : (
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {filteredDapps.map((dapp) => (
-                    <button
-                      key={dapp.id}
-                      onClick={() => handleDAppClick(dapp)}
-                      className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition-all hover:bg-white/10"
-                    >
+            {filteredDapps.length === 0 ? (
+              <div className="flex min-h-[220px] flex-1 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-6 text-center text-sm text-gray-400">
+                Try adjusting your search or filters.
+              </div>
+            ) : (
+              <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                {filteredDapps.map((dapp) => (
+                  <button
+                    key={dapp.id}
+                    onClick={() => handleDAppClick(dapp)}
+                    className="flex min-h-[230px] min-w-[250px] flex-col justify-between rounded-[1.6rem] border border-white/10 bg-white/[0.04] p-5 text-left transition-all hover:bg-white/10 hover:translate-y-[-1px]"
+                  >
+                    <div>
                       <div className="flex items-center gap-3">
                         <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-white p-2 shadow-lg">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -302,14 +310,24 @@ export default function DiscoverPage() {
                         </div>
                         <div className="min-w-0">
                           <div className="truncate text-sm font-bold text-white">{dapp.name}</div>
-                          <div className="mt-1 line-clamp-2 text-xs text-gray-400">{dapp.description}</div>
+                          <div className="mt-1 text-xs uppercase tracking-[0.18em] text-gray-500">{dapp.category}</div>
                         </div>
                       </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+                      <div className="mt-4 line-clamp-3 text-sm leading-6 text-gray-400">{dapp.description}</div>
+                    </div>
+
+                    <div className="mt-6 flex items-center justify-between gap-3">
+                      <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[11px] text-gray-400">
+                        Launch app
+                      </span>
+                      <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M17 7H8m9 0v9" />
+                      </svg>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       ) : (

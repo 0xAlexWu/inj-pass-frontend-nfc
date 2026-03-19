@@ -2297,7 +2297,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="mt-1 text-sm text-gray-400">
                       {workspaceTab === 'discover'
-                        ? 'Search, filter, and launch Injective apps in a fixed left-right workspace.'
+                        ? 'Browse Injective apps in a horizontal rail without leaving this workspace.'
                         : 'Conversations, invite flows, and agent controls stay in this same dashboard stage.'}
                     </div>
                   </div>
