@@ -1729,12 +1729,13 @@ export default function DashboardPage() {
                         )}
 
                         {walletPanel === 'swap' && (
-                          <div className="grid h-full gap-4 md:grid-cols-[minmax(0,1.14fr)_292px]">
+                          <div className="grid h-full gap-4 md:grid-cols-[minmax(0,1fr)_272px]">
                             <div className="flex min-h-0 flex-col gap-4">
-                              <div className="grid gap-4 lg:grid-cols-2">
-                                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">From</div>
-                                  <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
+                              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                                <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">Pair</div>
+                                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_52px_minmax(0,1fr)] lg:items-center">
+                                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">From</div>
                                     <select
                                       value={swapFromToken}
                                       onChange={(event) => {
@@ -1753,27 +1754,33 @@ export default function DashboardPage() {
                                         </option>
                                       ))}
                                     </select>
-                                  </div>
-                                  <div className="mt-3 flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.03] px-3 py-2.5">
-                                    <div className="flex items-center gap-2.5">
-                                      <div className="relative h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-white/5">
-                                        <Image src={swapFromMeta.icon} alt={swapFromMeta.symbol} fill className="object-cover" />
+                                    <div className="mt-3 flex items-center justify-between gap-3">
+                                      <div className="flex items-center gap-2.5">
+                                        <div className="relative h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-white/5">
+                                          <Image src={swapFromMeta.icon} alt={swapFromMeta.symbol} fill className="object-cover" />
+                                        </div>
+                                        <div>
+                                          <div className="text-sm font-semibold text-white">{swapFromMeta.symbol}</div>
+                                          <div className="text-xs text-gray-400">{swapFromMeta.name}</div>
+                                        </div>
                                       </div>
-                                      <div>
-                                        <div className="text-sm font-semibold text-white">{swapFromMeta.symbol}</div>
-                                        <div className="text-xs text-gray-400">{swapFromMeta.name}</div>
+                                      <div className="text-right">
+                                        <div className="text-sm font-mono text-white">{swapFromMeta.balance}</div>
+                                        <div className="text-[11px] text-gray-500">Available</div>
                                       </div>
                                     </div>
-                                    <div className="text-right">
-                                      <div className="text-sm font-mono text-white">{swapFromMeta.balance}</div>
-                                      <div className="text-[11px] text-gray-500">Available</div>
-                                    </div>
                                   </div>
-                                </div>
 
-                                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">To</div>
-                                  <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
+                                  <div className="flex items-center justify-center">
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/[0.04]">
+                                      <svg className="h-5 w-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h11m0 0-3-3m3 3-3 3M17 17H6m0 0 3 3m-3-3 3-3" />
+                                      </svg>
+                                    </div>
+                                  </div>
+
+                                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">To</div>
                                     <select
                                       value={swapToToken}
                                       onChange={(event) => {
@@ -1792,20 +1799,20 @@ export default function DashboardPage() {
                                         </option>
                                       ))}
                                     </select>
-                                  </div>
-                                  <div className="mt-3 flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.03] px-3 py-2.5">
-                                    <div className="flex items-center gap-2.5">
-                                      <div className="relative h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-white/5">
-                                        <Image src={swapToMeta.icon} alt={swapToMeta.symbol} fill className="object-cover" />
+                                    <div className="mt-3 flex items-center justify-between gap-3">
+                                      <div className="flex items-center gap-2.5">
+                                        <div className="relative h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-white/5">
+                                          <Image src={swapToMeta.icon} alt={swapToMeta.symbol} fill className="object-cover" />
+                                        </div>
+                                        <div>
+                                          <div className="text-sm font-semibold text-white">{swapToMeta.symbol}</div>
+                                          <div className="text-xs text-gray-400">{swapToMeta.name}</div>
+                                        </div>
                                       </div>
-                                      <div>
-                                        <div className="text-sm font-semibold text-white">{swapToMeta.symbol}</div>
-                                        <div className="text-xs text-gray-400">{swapToMeta.name}</div>
+                                      <div className="text-right">
+                                        <div className="text-sm font-mono text-white">{swapToMeta.balance}</div>
+                                        <div className="text-[11px] text-gray-500">Wallet</div>
                                       </div>
-                                    </div>
-                                    <div className="text-right">
-                                      <div className="text-sm font-mono text-white">{swapToMeta.balance}</div>
-                                      <div className="text-[11px] text-gray-500">Wallet</div>
                                     </div>
                                   </div>
                                 </div>
@@ -1834,7 +1841,7 @@ export default function DashboardPage() {
                                       }}
                                       inputMode="decimal"
                                       placeholder="0.0000"
-                                      className="w-full bg-transparent text-3xl font-mono text-white placeholder:text-gray-600 outline-none md:text-[2.35rem]"
+                                      className="w-full bg-transparent text-4xl font-mono text-white placeholder:text-gray-600 outline-none md:text-[2.7rem]"
                                     />
                                     <span className="pb-1.5 text-sm font-semibold text-gray-400">{swapFromToken}</span>
                                   </div>
@@ -1860,22 +1867,6 @@ export default function DashboardPage() {
                                 </div>
                               </div>
 
-                              <div className="min-h-[56px]">
-                                {swapError ? (
-                                  <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-                                    {swapError}
-                                  </div>
-                                ) : swapTxHash ? (
-                                  <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3">
-                                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-200">Latest Swap</div>
-                                    <div className="mt-2 text-sm font-mono text-white">{truncateMiddle(swapTxHash, 10, 8)}</div>
-                                  </div>
-                                ) : (
-                                  <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm text-gray-500">
-                                    Set the pair and amount, then review the quote before confirming the swap.
-                                  </div>
-                                )}
-                              </div>
                             </div>
 
                             <div className="flex min-h-0 flex-col rounded-2xl border border-white/10 bg-black/25 p-4">
@@ -1914,6 +1905,23 @@ export default function DashboardPage() {
                                   <p>Slippage: {swapSlippage}%</p>
                                   <p>Network: Injective EVM</p>
                                 </div>
+                              </div>
+
+                              <div className="mt-4 min-h-[76px]">
+                                {swapError ? (
+                                  <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                                    {swapError}
+                                  </div>
+                                ) : swapTxHash ? (
+                                  <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3">
+                                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-200">Latest Swap</div>
+                                    <div className="mt-2 text-sm font-mono text-white">{truncateMiddle(swapTxHash, 10, 8)}</div>
+                                  </div>
+                                ) : (
+                                  <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm text-gray-500">
+                                    Set the pair and amount, then review the quote before confirming the swap.
+                                  </div>
+                                )}
                               </div>
 
                               <div className="mt-auto pt-4">
