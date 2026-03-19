@@ -20,6 +20,7 @@ import TransactionAuthModal from '@/components/TransactionAuthModal';
 import ThemeToggleButton from '@/components/ThemeToggleButton';
 import CardCenterModal from '@/components/CardCenterModal';
 import NinjaMinerGame from '@/components/NinjaMinerGame';
+import { TOKENS_MAINNET } from '@/services/tokens';
 import SettingsPage from '../settings/page';
 import { formatAddress, privateKeyToHex } from '@/utils/wallet';
 import { getInjectiveAddress, getEthereumAddress } from '@injectivelabs/sdk-ts';
@@ -422,6 +423,8 @@ export default function DashboardPage() {
   const [postAuthAction, setPostAuthAction] = useState<'send' | 'swap' | null>(null);
   const [showCardCenter, setShowCardCenter] = useState(false);
   const [showFaucetSheet, setShowFaucetSheet] = useState(false);
+  const [flippedTokenCard, setFlippedTokenCard] = useState<string | null>(null);
+  const [copiedTokenInfo, setCopiedTokenInfo] = useState<string | null>(null);
 
   useEffect(() => {
     // Wait for session check to complete
@@ -1064,6 +1067,72 @@ export default function DashboardPage() {
   const activeWalletPanelMeta = walletPanel !== 'overview' ? walletPanelMeta[walletPanel] : null;
   const formattedNinjaBalance = ninjaBalance.toFixed(2);
   const walletStageClassName = 'h-[540px] md:h-[520px]';
+  const dashboardTokenCards = [
+    {
+      symbol: 'INJ',
+      name: 'Injective',
+      icon: '/injswap.png',
+      balance: `${tokenBalances.INJ} INJ`,
+      usdValue: `$${(parseFloat(tokenBalances.INJ) * injPrice).toFixed(2)}`,
+      change: `${injPriceChange24h >= 0 ? '+' : ''}${injPriceChange24h.toFixed(2)}%`,
+      changeClass: injPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400',
+      copyValue: TOKENS_MAINNET.WINJ.address,
+      infoRows: [
+        { label: 'Type', value: 'Native asset' },
+        { label: 'Network', value: 'Injective EVM' },
+        { label: 'Wrapped', value: truncateMiddle(TOKENS_MAINNET.WINJ.address, 8, 6) },
+        { label: 'Decimals', value: '18' },
+      ],
+    },
+    {
+      symbol: 'USDC',
+      name: 'USD Coin',
+      icon: '/USDC_Logo.png',
+      balance: `${tokenBalances.USDC} USDC`,
+      usdValue: `$${tokenBalances.USDC}`,
+      change: `${usdcPriceChange24h >= 0 ? '+' : ''}${usdcPriceChange24h.toFixed(2)}%`,
+      changeClass: usdcPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400',
+      copyValue: TOKENS_MAINNET.USDC.address,
+      infoRows: [
+        { label: 'Type', value: 'ERC-20 stablecoin' },
+        { label: 'Network', value: 'Injective EVM' },
+        { label: 'Contract', value: truncateMiddle(TOKENS_MAINNET.USDC.address, 8, 6) },
+        { label: 'Decimals', value: String(TOKENS_MAINNET.USDC.decimals) },
+      ],
+    },
+    {
+      symbol: 'NINJA',
+      name: 'Ninja',
+      icon: '/NIJIA.png',
+      balance: `${formattedNinjaBalance} NINJA`,
+      usdValue: '$0.00',
+      change: '+0.00%',
+      changeClass: 'text-gray-500',
+      copyValue: null,
+      infoRows: [
+        { label: 'Type', value: 'Game reward' },
+        { label: 'Network', value: 'INJ Pass' },
+        { label: 'Contract', value: 'Not deployed yet' },
+        { label: 'Storage', value: 'Local game state' },
+      ],
+    },
+    {
+      symbol: 'USDT',
+      name: 'Tether',
+      icon: '/USDT_Logo.png',
+      balance: `${tokenBalances.USDT} USDT`,
+      usdValue: `$${tokenBalances.USDT}`,
+      change: `${usdtPriceChange24h >= 0 ? '+' : ''}${usdtPriceChange24h.toFixed(2)}%`,
+      changeClass: usdtPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400',
+      copyValue: TOKENS_MAINNET.USDT.address,
+      infoRows: [
+        { label: 'Type', value: 'ERC-20 stablecoin' },
+        { label: 'Network', value: 'Injective EVM' },
+        { label: 'Contract', value: truncateMiddle(TOKENS_MAINNET.USDT.address, 8, 6) },
+        { label: 'Decimals', value: String(TOKENS_MAINNET.USDT.decimals) },
+      ],
+    },
+  ] as const;
 
   return (
     <LoadingSpinner ready={isDashboardReady}>
@@ -1895,93 +1964,108 @@ export default function DashboardPage() {
         <div className="min-h-0 flex-1 overflow-y-auto pr-1">
           {assetTab === 'tokens' && (
             <div className="space-y-3">
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden">
-                  <Image 
-                    src="/injswap.png" 
-                    alt="INJ" 
-                    width={48} 
-                    height={48}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-                <div className="flex-1">
-                  <div className="font-bold mb-1">INJ</div>
-                  <div className="text-sm text-gray-400">{tokenBalances.INJ} INJ</div>
-                </div>
-                <div className="text-right">
-                  <div className="font-bold font-mono">${(parseFloat(tokenBalances.INJ) * injPrice).toFixed(2)}</div>
-                  <div className={`text-sm ${injPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {injPriceChange24h >= 0 ? '+' : ''}{injPriceChange24h.toFixed(2)}%
-                  </div>
-                </div>
-              </div>
+              {dashboardTokenCards.map((token) => (
+                <div key={token.symbol} className="relative" style={{ perspective: '1400px' }}>
+                  <div
+                    onClick={() => setFlippedTokenCard((current) => (current === token.symbol ? null : token.symbol))}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setFlippedTokenCard((current) => (current === token.symbol ? null : token.symbol));
+                      }
+                    }}
+                    className="relative h-[104px] w-full cursor-pointer text-left"
+                    role="button"
+                    tabIndex={0}
+                    style={{ transformStyle: 'preserve-3d' }}
+                  >
+                    <div
+                      className={`absolute inset-0 rounded-2xl border border-white/10 bg-white/5 p-4 transition-all duration-500 [backface-visibility:hidden] ${
+                        flippedTokenCard === token.symbol ? 'pointer-events-none opacity-0' : 'opacity-100'
+                      }`}
+                      style={{
+                        transform: flippedTokenCard === token.symbol ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden',
+                      }}
+                    >
+                      <div className="flex h-full items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full">
+                          <Image
+                            src={token.icon}
+                            alt={token.symbol}
+                            width={48}
+                            height={48}
+                            className="h-full w-full object-contain"
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-1 flex items-center gap-2">
+                            <div className="font-bold">{token.symbol}</div>
+                            <span className="text-[10px] uppercase tracking-[0.18em] text-gray-500">Tap for info</span>
+                          </div>
+                          <div className="text-sm text-gray-400">{token.balance}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold font-mono">{token.usdValue}</div>
+                          <div className={`text-sm ${token.changeClass}`}>{token.change}</div>
+                        </div>
+                      </div>
+                    </div>
 
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden">
-                  <Image 
-                    src="/USDC_Logo.png" 
-                    alt="USDC" 
-                    width={48} 
-                    height={48}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-                <div className="flex-1">
-                  <div className="font-bold mb-1">USDC</div>
-                  <div className="text-sm text-gray-400">{tokenBalances.USDC} USDC</div>
-                </div>
-                <div className="text-right">
-                  <div className="font-bold font-mono">${tokenBalances.USDC}</div>
-                  <div className={`text-sm ${usdcPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {usdcPriceChange24h >= 0 ? '+' : ''}{usdcPriceChange24h.toFixed(2)}%
-                  </div>
-                </div>
-              </div>
+                    <div
+                      className={`absolute inset-0 rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 transition-all duration-500 ${
+                        flippedTokenCard === token.symbol ? 'opacity-100' : 'pointer-events-none opacity-0'
+                      }`}
+                      style={{
+                        transform: flippedTokenCard === token.symbol ? 'rotateY(0deg)' : 'rotateY(-180deg)',
+                        transformStyle: 'preserve-3d',
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden',
+                      }}
+                    >
+                      <div className="flex h-full flex-col justify-between">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="text-sm font-bold text-white">{token.symbol}</div>
+                            <div className="mt-1 text-xs text-gray-400">{token.name}</div>
+                          </div>
+                          <button
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              if (!token.copyValue) return;
+                              navigator.clipboard.writeText(token.copyValue);
+                              setCopiedTokenInfo(token.symbol);
+                              setTimeout(() => {
+                                setCopiedTokenInfo((current) => (current === token.symbol ? null : current));
+                              }, 1600);
+                            }}
+                            disabled={!token.copyValue}
+                            className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-all ${
+                              token.copyValue
+                                ? copiedTokenInfo === token.symbol
+                                  ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
+                                  : 'border-white/10 bg-white/5 text-white hover:bg-white/10'
+                                : 'border-white/5 bg-white/[0.03] text-gray-600 cursor-default'
+                            }`}
+                          >
+                            {!token.copyValue ? 'No Contract' : copiedTokenInfo === token.symbol ? 'Copied' : 'Copy'}
+                          </button>
+                        </div>
 
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden">
-                  <Image 
-                    src="/NIJIA.png" 
-                    alt="NINJA" 
-                    width={48} 
-                    height={48}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-                <div className="flex-1">
-                  <div className="font-bold mb-1">NINJA</div>
-                  <div className="text-sm text-gray-400">{formattedNinjaBalance} NINJA</div>
-                </div>
-                <div className="text-right">
-                  <div className="font-bold font-mono">$0.00</div>
-                  <div className="text-sm text-gray-500">
-                    +0.00%
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                          {token.infoRows.map((row) => (
+                            <div key={`${token.symbol}-${row.label}`}>
+                              <div className="uppercase tracking-[0.16em] text-[10px] text-gray-500">{row.label}</div>
+                              <div className="mt-1 font-mono text-white">{row.value}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden">
-                  <Image 
-                    src="/USDT_Logo.png" 
-                    alt="USDT" 
-                    width={48} 
-                    height={48}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-                <div className="flex-1">
-                  <div className="font-bold mb-1">USDT</div>
-                  <div className="text-sm text-gray-400">{tokenBalances.USDT} USDT</div>
-                </div>
-                <div className="text-right">
-                  <div className="font-bold font-mono">${tokenBalances.USDT}</div>
-                  <div className={`text-sm ${usdtPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {usdtPriceChange24h >= 0 ? '+' : ''}{usdtPriceChange24h.toFixed(2)}%
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
           )}
 
