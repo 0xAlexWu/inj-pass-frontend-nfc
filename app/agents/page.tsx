@@ -1847,7 +1847,7 @@ export default function AgentsPage() {
         )}
 
         {/* Input area */}
-        <div className={`flex-shrink-0 border-t ${isLight ? 'border-slate-200/80' : 'border-white/10'} ${isCompactStage ? 'bg-transparent p-3' : isEmbedded ? (isLight ? 'bg-white/70 p-5' : 'bg-white/[0.02] p-5') : (isLight ? 'bg-white/72 backdrop-blur-xl p-4' : 'bg-black/80 backdrop-blur-sm p-4')}`}>
+        <div className={`flex-shrink-0 border-t ${isLight ? 'border-slate-200/80' : 'border-white/10'} ${isCompactStage ? 'bg-transparent px-3 pt-2.5 pb-1.5' : isEmbedded ? (isLight ? 'bg-white/70 p-5' : 'bg-white/[0.02] p-5') : (isLight ? 'bg-white/72 backdrop-blur-xl p-4' : 'bg-black/80 backdrop-blur-sm p-4')}`}>
           <div className={`${isCompactStage ? 'max-w-none' : isEmbedded ? 'max-w-4xl' : 'max-w-3xl'} mx-auto`}>
             {isCompactStage && (
               <div className="mb-2.5 flex flex-wrap items-center justify-center gap-1.5">
@@ -2054,7 +2054,7 @@ export default function AgentsPage() {
               </div>
             </div>
 
-            <p className={`mt-2 text-center ${isCompactStage ? 'text-[10px]' : 'text-xs'} ${isLight ? 'text-slate-400' : 'text-gray-600'}`}>
+            <p className={`mt-1.5 text-center ${isCompactStage ? 'text-[10px]' : 'text-xs'} ${isLight ? 'text-slate-400' : 'text-gray-600'}`}>
                 AI can make mistakes. Always verify transactions before confirming.
             </p>
           </div>
