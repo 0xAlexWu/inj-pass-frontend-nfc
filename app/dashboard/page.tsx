@@ -34,7 +34,7 @@ type DashboardHistoryFilter = 'all' | DashboardTransactionType;
 type DashboardChainType = 'EVM' | 'Cosmos';
 type SwapToken = 'INJ' | 'USDT' | 'USDC' | 'NINJA';
 type DashboardWorkspaceTab = 'discover' | 'agent';
-type AssetSurfaceMode = 'assets' | 'ai-loading' | 'ai';
+type AssetSurfaceMode = 'assets' | 'ai';
 
 const NINJA_STORAGE_PREFIX = 'inj-pass:ninja-miner:';
 const DEFAULT_NINJA_BALANCE = 22;
@@ -378,7 +378,6 @@ export default function DashboardPage() {
     NINJA: '0.00',
     USDT: '0.00',
   });
-  const aiTransitionTimerRef = useRef<number | null>(null);
   
   // QR Scanner states
   const [showQRScanner, setShowQRScanner] = useState(false);
@@ -1061,38 +1060,17 @@ export default function DashboardPage() {
   };
 
   const openAiAssetSurface = () => {
-    if (assetSurfaceMode === 'ai' || assetSurfaceMode === 'ai-loading') {
+    if (assetSurfaceMode === 'ai') {
       return;
     }
 
     setFlippedTokenCard(null);
-    setAssetSurfaceMode('ai-loading');
-
-    if (aiTransitionTimerRef.current) {
-      window.clearTimeout(aiTransitionTimerRef.current);
-    }
-
-    aiTransitionTimerRef.current = window.setTimeout(() => {
-      setAssetSurfaceMode('ai');
-      aiTransitionTimerRef.current = null;
-    }, 1400);
+    setAssetSurfaceMode('ai');
   };
 
   const closeAiAssetSurface = () => {
-    if (aiTransitionTimerRef.current) {
-      window.clearTimeout(aiTransitionTimerRef.current);
-      aiTransitionTimerRef.current = null;
-    }
     setAssetSurfaceMode('assets');
   };
-
-  useEffect(() => {
-    return () => {
-      if (aiTransitionTimerRef.current) {
-        window.clearTimeout(aiTransitionTimerRef.current);
-      }
-    };
-  }, []);
 
   const isDashboardReady = !isCheckingSession && !loading && isUnlocked && !!address;
   const formattedBalance = balance ? parseFloat(balance.formatted).toFixed(4) : '0.0000';
@@ -1103,6 +1081,7 @@ export default function DashboardPage() {
   const totalUsdValue = totalUsdNumeric.toFixed(2);
   const assetTrendSeries = buildPixelTrendSeries(totalUsdNumeric, injPriceChange24h);
   const isWalletOverview = walletPanel === 'overview';
+  const isAiStage = assetSurfaceMode === 'ai';
   const activeWalletPanelMeta = walletPanel !== 'overview' ? walletPanelMeta[walletPanel] : null;
   const formattedNinjaBalance = ninjaBalance.toFixed(2);
   const walletStageClassName = 'h-[540px] md:h-[520px]';
@@ -1265,8 +1244,16 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1.18fr)_minmax(360px,0.82fr)]">
+            <div className={`relative ${walletStageClassName}`}>
+              <div
+                className={`absolute inset-0 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                  isAiStage
+                    ? 'pointer-events-none -translate-x-6 scale-[0.96] opacity-0'
+                    : 'translate-x-0 scale-100 opacity-100'
+                }`}
+              >
             {/* Total Balance Card - OKX Style */}
-            <div className={`bg-black rounded-2xl p-6 border border-white/10 relative overflow-hidden flex flex-col ${walletStageClassName}`}>
+            <div className="bg-black rounded-2xl p-6 border border-white/10 relative overflow-hidden flex h-full flex-col">
               {/* Subtle gradient accent */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-500/5 to-transparent rounded-full blur-2xl"></div>
               
@@ -1912,12 +1899,58 @@ export default function DashboardPage() {
                 )}
               </div>
             </div>
+              </div>
 
-            <div className={`bg-black rounded-2xl border border-white/10 relative overflow-hidden p-4 sm:p-5 h-full flex flex-col ${walletStageClassName}`}>
+              <div
+                className={`absolute inset-0 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                  isAiStage
+                    ? 'translate-x-0 scale-100 opacity-100'
+                    : 'pointer-events-none translate-x-[calc(100%+1.25rem)] scale-[0.94] opacity-0'
+                }`}
+              >
+                <div className="bg-black rounded-2xl border border-white/10 relative overflow-hidden p-4 sm:p-5 h-full flex flex-col">
+                  <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full bg-gradient-to-tr from-cyan-500/5 to-transparent blur-2xl" />
+                  <div className="relative flex min-h-0 flex-1 flex-col">
+                    <div className="mb-4">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Assets</div>
+                      <div className="mt-1 text-base font-bold text-white">Compact balances</div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {dashboardTokenCards.map((token) => (
+                        <div
+                          key={`compact-${token.symbol}`}
+                          className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3"
+                          >
+                          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white/[0.04]">
+                            <Image
+                              src={token.icon}
+                              alt={token.symbol}
+                              width={40}
+                              height={40}
+                              className="h-full w-full object-contain"
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1 text-[13px] font-mono text-gray-300">{token.balance}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className={`relative ${walletStageClassName}`}>
+              <div
+                className={`absolute inset-0 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                  isAiStage
+                    ? 'pointer-events-none translate-x-10 scale-[0.96] opacity-0'
+                    : 'translate-x-0 scale-100 opacity-100'
+                }`}
+              >
+            <div className="bg-black rounded-2xl border border-white/10 relative overflow-hidden p-4 sm:p-5 h-full flex flex-col">
               <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-cyan-500/5 to-transparent rounded-full blur-2xl"></div>
-              <div className={`relative flex flex-1 flex-col transition-all duration-500 ${assetSurfaceMode === 'ai-loading' ? 'scale-[0.985] opacity-90' : 'opacity-100'}`}>
-        {assetSurfaceMode !== 'ai' && (
-        <>
+              <div className="relative flex flex-1 flex-col">
         {/* Asset Tabs - Smooth Sliding Background */}
         <div className="relative mb-6 p-1 bg-white/5 rounded-xl">
           {/* Sliding Background */}
@@ -2009,7 +2042,7 @@ export default function DashboardPage() {
                   >
                     <div
                       className={`absolute inset-0 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition-all duration-500 [backface-visibility:hidden] ${
-                        flippedTokenCard === token.symbol ? 'pointer-events-none opacity-0' : 'opacity-100'
+                        flippedTokenCard === token.symbol ? 'pointer-events-none invisible z-0 opacity-0' : 'visible z-10 opacity-100'
                       }`}
                       style={{
                         transform: flippedTokenCard === token.symbol ? 'rotateY(180deg)' : 'rotateY(0deg)',
@@ -2042,8 +2075,8 @@ export default function DashboardPage() {
                     </div>
 
                     <div
-                      className={`absolute inset-0 rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] px-4 py-3 transition-all duration-500 ${
-                        flippedTokenCard === token.symbol ? 'opacity-100' : 'pointer-events-none opacity-0'
+                      className={`absolute inset-0 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(8,10,18,0.98),rgba(10,13,20,0.96))] px-4 py-3 transition-all duration-500 ${
+                        flippedTokenCard === token.symbol ? 'visible z-20 opacity-100' : 'pointer-events-none invisible z-0 opacity-0'
                       }`}
                       style={{
                         transform: flippedTokenCard === token.symbol ? 'rotateY(0deg)' : 'rotateY(-180deg)',
@@ -2062,27 +2095,25 @@ export default function DashboardPage() {
                             {token.contractValue}
                           </div>
                         </div>
-                          <button
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              if (!token.copyValue) return;
-                              navigator.clipboard.writeText(token.copyValue);
-                              setCopiedTokenInfo(token.symbol);
-                              setTimeout(() => {
-                                setCopiedTokenInfo((current) => (current === token.symbol ? null : current));
-                              }, 1600);
-                            }}
-                            disabled={!token.copyValue}
-                            className={`rounded-lg border px-2 py-1 text-[10px] font-semibold transition-all ${
-                              token.copyValue
-                                ? copiedTokenInfo === token.symbol
+                          {token.copyValue && (
+                            <button
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                navigator.clipboard.writeText(token.copyValue);
+                                setCopiedTokenInfo(token.symbol);
+                                setTimeout(() => {
+                                  setCopiedTokenInfo((current) => (current === token.symbol ? null : current));
+                                }, 1600);
+                              }}
+                              className={`rounded-lg border px-2 py-1 text-[10px] font-semibold transition-all ${
+                                copiedTokenInfo === token.symbol
                                   ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
                                   : 'border-white/10 bg-white/5 text-white hover:bg-white/10'
-                                : 'border-white/5 bg-white/[0.03] text-gray-600 cursor-default'
-                            }`}
-                          >
-                            {!token.copyValue ? 'No Contract' : copiedTokenInfo === token.symbol ? 'Copied' : 'Copy'}
-                          </button>
+                              }`}
+                            >
+                              {copiedTokenInfo === token.symbol ? 'Copied' : 'Copy'}
+                            </button>
+                          )}
                       </div>
                     </div>
                   </div>
@@ -2221,66 +2252,55 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-        </>
-        )}
-
-        {assetSurfaceMode === 'ai' && (
-          <div className="relative flex min-h-0 flex-1 flex-col">
-            <div className="mb-4 flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">AI Workspace</div>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <span className="text-lg font-bold text-white">Lambda Agent</span>
-                  <span className="rounded-full border border-fuchsia-400/20 bg-fuchsia-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-fuchsia-200">
-                    Embedded
-                  </span>
-                </div>
-                <div className="mt-1 max-w-md text-sm text-gray-400">
-                  Chat, transaction guidance, invite flows, and agent controls now live inside this asset-stage container.
-                </div>
-              </div>
-
-              <button
-                onClick={closeAiAssetSurface}
-                className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-semibold text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                Back to assets
-              </button>
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-hidden rounded-[1.6rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-1.5 shadow-[0_20px_70px_rgba(99,102,241,0.14)]">
-              <div className="h-full overflow-hidden rounded-[1.4rem] bg-black">
-                <DashboardSurfaceFrame
-                  src="/agents?embed=1&compact=1"
-                  title="Embedded asset agent"
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {assetSurfaceMode === 'ai-loading' && (
-          <>
-            <div className="absolute inset-0 z-20 rounded-2xl bg-black/72 backdrop-blur-md" />
-            <div className="pointer-events-none absolute inset-0 z-30 rounded-2xl p-[1.5px]">
-              <div className="h-full w-full rounded-[15px] bg-[conic-gradient(from_0deg,#4ade80,#38bdf8,#818cf8,#f472b6,#f59e0b,#4ade80)] animate-[spin_2.8s_linear_infinite] p-[1.5px]">
-                <div className="h-full w-full rounded-[14px] bg-black/92" />
-              </div>
-            </div>
-            <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center px-6">
-              <div className="w-full max-w-xs rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] px-5 py-6 text-center shadow-[0_24px_80px_rgba(99,102,241,0.16)]">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-xl font-bold text-white shadow-[0_12px_32px_rgba(129,140,248,0.24)]">
-                  AI
-                </div>
-                <div className="mt-4 text-sm font-semibold text-white">Opening Lambda Agent</div>
-                <div className="mt-2 text-xs leading-6 text-gray-400">
-                  Syncing wallet context, prompts, and agent controls into this surface.
-                </div>
-              </div>
-            </div>
-          </>
-        )}
       </div>
+            </div>
+              </div>
+
+              <div
+                className={`absolute inset-0 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                  isAiStage
+                    ? 'translate-x-0 scale-100 opacity-100'
+                    : 'pointer-events-none translate-x-10 scale-[0.98] opacity-0'
+                }`}
+              >
+                <div className="bg-black rounded-2xl border border-white/10 relative overflow-hidden p-4 sm:p-5 h-full flex flex-col">
+                  <div className="absolute bottom-0 right-0 h-32 w-32 rounded-full bg-gradient-to-tl from-fuchsia-500/10 to-transparent blur-2xl" />
+                  <div className="absolute top-0 left-0 h-32 w-32 rounded-full bg-gradient-to-br from-cyan-500/8 to-transparent blur-2xl" />
+
+                  <div className="relative flex min-h-0 flex-1 flex-col">
+                    <div className="mb-4 flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">AI Workspace</div>
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                          <span className="text-lg font-bold text-white">Lambda Agent</span>
+                          <span className="rounded-full border border-fuchsia-400/20 bg-fuchsia-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-fuchsia-200">
+                            Embedded
+                          </span>
+                        </div>
+                        <div className="mt-1 max-w-md text-sm text-gray-400">
+                          Wallet copilot, transactions, invite flows, and settings now live in this stage.
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={closeAiAssetSurface}
+                        className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-semibold text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
+                      >
+                        Back to assets
+                      </button>
+                    </div>
+
+                    <div className="min-h-0 flex-1 overflow-hidden rounded-[1.6rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-1.5 shadow-[0_20px_70px_rgba(99,102,241,0.14)]">
+                      <div className="h-full overflow-hidden rounded-[1.4rem] bg-black">
+                        <DashboardSurfaceFrame
+                          src="/agents?embed=1&compact=1"
+                          title="Embedded asset agent"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           <div className="mt-6">
