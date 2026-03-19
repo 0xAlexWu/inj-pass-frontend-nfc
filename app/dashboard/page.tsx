@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePin } from '@/contexts/PinContext';
 import { useWallet } from '@/contexts/WalletContext';
@@ -355,10 +355,42 @@ function DashboardSurfaceFrame({
   );
 }
 
+function getFaucetPopoverStyle(button: HTMLButtonElement | null): CSSProperties {
+  const defaultWidth = 384;
+  const defaultHeight = 540;
+
+  if (typeof window === 'undefined' || !button) {
+    return {
+      width: defaultWidth,
+      height: defaultHeight,
+      top: 88,
+      left: '50%',
+      transform: 'translateX(-50%)',
+    };
+  }
+
+  const rect = button.getBoundingClientRect();
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const width = Math.min(defaultWidth, viewportWidth - 32);
+  const centeredLeft = rect.left + rect.width / 2 - width / 2;
+  const left = Math.max(16, Math.min(centeredLeft, viewportWidth - width - 16));
+  const top = Math.max(20, rect.top + rect.height / 2 - 18);
+  const height = Math.min(defaultHeight, viewportHeight - top - 24);
+
+  return {
+    width,
+    height,
+    top,
+    left,
+  };
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const { isUnlocked, address, privateKey, resetTxAuth, isCheckingSession } = useWallet();
   const { autoLockMinutes, isPinLocked } = usePin();
+  const faucetButtonRef = useRef<HTMLButtonElement | null>(null);
   const [balance, setBalance] = useState<Balance | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -1219,6 +1251,7 @@ export default function DashboardPage() {
                 AI
               </button>
               <button
+                ref={faucetButtonRef}
                 onClick={() => setShowFaucetSheet(true)}
                 className="rounded-lg border border-white/10 bg-white/5 p-2.5 transition-all group hover:border-violet-500/40 hover:bg-violet-600/20"
                 title="Testnet Faucet"
@@ -2407,12 +2440,13 @@ export default function DashboardPage() {
       />
 
       {showFaucetSheet && (
-        <div className="fixed inset-0 z-[120] flex items-end bg-black/45 backdrop-blur-sm" onClick={() => setShowFaucetSheet(false)}>
+        <div className="fixed inset-0 z-[120] bg-black/18 backdrop-blur-[2px]" onClick={() => setShowFaucetSheet(false)}>
           <div
-            className="w-full rounded-t-[2rem] border-t border-white/10 bg-black/95 shadow-[0_-20px_60px_rgba(0,0,0,0.45)]"
+            className="absolute flex flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-black/95 shadow-[0_26px_90px_rgba(0,0,0,0.42)]"
+            style={getFaucetPopoverStyle(faucetButtonRef.current)}
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4">
+            <div className="flex items-center justify-between gap-3 px-4 py-4">
               <div>
                 <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Faucet</div>
                 <div className="mt-1 text-base font-bold text-white">Testnet faucet</div>
@@ -2427,9 +2461,9 @@ export default function DashboardPage() {
                 </svg>
               </button>
             </div>
-            <div className="mx-auto max-w-7xl px-4 pb-4">
-              <div className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-black/70">
-                <div className="h-[58vh] min-h-[420px] overflow-hidden rounded-[1.55rem] bg-black">
+            <div className="min-h-0 flex-1 px-4 pb-4">
+              <div className="h-full overflow-hidden rounded-[1.75rem] border border-white/10 bg-black/70">
+                <div className="h-full overflow-hidden rounded-[1.55rem] bg-black">
                   <DashboardSurfaceFrame src="/faucet?embed=1" title="Embedded faucet" />
                 </div>
               </div>
