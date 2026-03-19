@@ -996,6 +996,7 @@ export default function DashboardPage() {
   const assetTrendSeries = buildPixelTrendSeries(totalUsdNumeric, injPriceChange24h);
   const isWalletOverview = walletPanel === 'overview';
   const activeWalletPanelMeta = walletPanel !== 'overview' ? walletPanelMeta[walletPanel] : null;
+  const walletStageClassName = isWalletOverview ? 'min-h-[470px] md:min-h-[500px]' : 'h-[760px] md:h-[720px]';
 
   return (
     <LoadingSpinner ready={isDashboardReady}>
@@ -1080,13 +1081,13 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.18fr)_minmax(360px,0.82fr)] xl:items-start">
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.18fr)_minmax(360px,0.82fr)]">
             {/* Total Balance Card - OKX Style */}
-            <div className="bg-black rounded-2xl p-6 border border-white/10 relative overflow-hidden flex flex-col h-[760px] md:h-[720px]">
+            <div className={`bg-black rounded-2xl p-6 border border-white/10 relative overflow-hidden flex flex-col ${walletStageClassName}`}>
               {/* Subtle gradient accent */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-500/5 to-transparent rounded-full blur-2xl"></div>
               
-              <div className="relative">
+              <div className="relative flex flex-1 flex-col">
                 {/* Header with Balance Label */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
@@ -1718,9 +1719,9 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="bg-black rounded-2xl border border-white/10 relative overflow-hidden p-4 sm:p-5">
+            <div className="bg-black rounded-2xl border border-white/10 relative overflow-hidden p-4 sm:p-5 h-full flex flex-col">
               <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-cyan-500/5 to-transparent rounded-full blur-2xl"></div>
-              <div className="relative">
+              <div className="relative flex flex-1 flex-col">
         {/* Asset Tabs - Smooth Sliding Background */}
         <div className="relative mb-6 p-1 bg-white/5 rounded-xl">
           {/* Sliding Background */}
@@ -1792,7 +1793,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Asset List */}
-        <div className="space-y-3 xl:max-h-[540px] xl:overflow-y-auto xl:pr-1">
+        <div className="space-y-3 xl:flex-1 xl:overflow-y-auto xl:pr-1">
           {assetTab === 'tokens' && (
             <>
               <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
@@ -2016,9 +2017,10 @@ export default function DashboardPage() {
       </div>
             </div>
           </div>
-          <div className="mt-6 overflow-hidden rounded-[1.75rem] border border-white/10 bg-black/90 shadow-[0_24px_80px_rgba(0,0,0,0.34)]">
-            <div className="border-b border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0))] px-5 py-4 sm:px-6">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="mt-6 bg-black rounded-2xl border border-white/10 relative overflow-hidden p-4 sm:p-5">
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-cyan-500/5 to-transparent rounded-full blur-2xl"></div>
+            <div className="relative">
+              <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Explore</div>
                   <div className="mt-1 text-lg font-bold text-white">
@@ -2048,14 +2050,14 @@ export default function DashboardPage() {
                   ))}
                 </div>
               </div>
-            </div>
 
-            <div className="h-[760px] bg-[#050913] p-2 sm:p-3 md:h-[820px]">
-              <div className="h-full overflow-hidden rounded-[1.5rem] border border-white/8 bg-black">
+              <div className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-black/30">
+                <div className="h-[720px] overflow-hidden rounded-[1.35rem] bg-black md:h-[780px]">
                 <DashboardSurfaceFrame
                   src={dashboardSurface === 'discover' ? '/discover?embed=1' : '/agents?embed=1'}
                   title={dashboardSurface === 'discover' ? 'Embedded discover' : 'Embedded agents'}
                 />
+                </div>
               </div>
             </div>
           </div>
