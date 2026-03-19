@@ -2005,7 +2005,11 @@ export default function DashboardPage() {
           )}
 
           {assetTab === 'earn' && (
-            <NinjaMinerGame walletAddress={address} />
+            <div className="mx-auto w-full max-w-[760px]">
+              <div className="max-h-[560px] overflow-y-auto rounded-[30px] border border-white/8 bg-black/20 p-2">
+                <NinjaMinerGame walletAddress={address} />
+              </div>
+            </div>
           )}
         </div>
       </div>
