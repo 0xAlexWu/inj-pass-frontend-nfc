@@ -344,17 +344,19 @@ function DashboardSurfaceFrame({
   src,
   title,
   className,
+  loadingStrategy = 'lazy',
 }: {
   src: string;
   title: string;
   className?: string;
+  loadingStrategy?: 'lazy' | 'eager';
 }) {
   return (
     <iframe
       src={src}
       title={title}
       className={`h-full w-full border-0 ${className ?? 'bg-black'}`}
-      loading="lazy"
+      loading={loadingStrategy}
     />
   );
 }
@@ -2581,12 +2583,36 @@ export default function DashboardPage() {
 
               <div className="relative">
                 <div className={`overflow-hidden rounded-[1.5rem] border ${isLight ? 'border-slate-200/80 bg-white/88' : 'border-white/10 bg-black/30'}`}>
-                  <div className={`h-[248px] overflow-hidden rounded-[1.35rem] sm:h-[228px] lg:h-[210px] ${isLight ? 'bg-white/95' : 'bg-black'}`}>
-                    <DashboardSurfaceFrame
-                      src={isAiStage ? '/discover?embed=1&mode=ai' : '/discover?embed=1'}
-                      title="Embedded discover"
-                      className={isLight ? 'bg-white' : 'bg-black'}
-                    />
+                  <div className={`relative h-[248px] overflow-hidden rounded-[1.35rem] sm:h-[228px] lg:h-[210px] ${isLight ? 'bg-white/95' : 'bg-black'}`}>
+                    <div
+                      className={`absolute inset-0 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                        isAiStage
+                          ? 'pointer-events-none -translate-x-10 scale-[0.98] opacity-0'
+                          : 'translate-x-0 scale-100 opacity-100'
+                      }`}
+                    >
+                      <DashboardSurfaceFrame
+                        src="/discover?embed=1"
+                        title="Embedded discover"
+                        className={isLight ? 'bg-white' : 'bg-black'}
+                        loadingStrategy="eager"
+                      />
+                    </div>
+
+                    <div
+                      className={`absolute inset-0 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                        isAiStage
+                          ? 'translate-x-0 scale-100 opacity-100'
+                          : 'pointer-events-none translate-x-10 scale-[0.98] opacity-0'
+                      }`}
+                    >
+                      <DashboardSurfaceFrame
+                        src="/discover?embed=1&mode=ai"
+                        title="Embedded AI discover"
+                        className={isLight ? 'bg-white' : 'bg-black'}
+                        loadingStrategy="eager"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
