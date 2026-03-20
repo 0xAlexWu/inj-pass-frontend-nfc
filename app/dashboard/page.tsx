@@ -2096,73 +2096,75 @@ export default function DashboardPage() {
                         )}
 
                         {walletPanel === 'receive' && (
-                          <div className="grid h-full min-h-0 gap-5 pt-5 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-stretch">
-                            <div className="flex h-full items-center justify-center">
-                              <div className="rounded-[2rem] bg-white p-4 shadow-2xl">
-                                <QRCodeSVG
-                                  value={receiveDisplayAddress || address || ''}
-                                  size={180}
-                                  level="H"
-                                  bgColor="#FFFFFF"
-                                  fgColor="#000000"
-                                  includeMargin={false}
-                                />
-                              </div>
-                            </div>
-
-                            <div className="flex h-full min-h-0 flex-col">
-                              <div className="relative p-1 bg-white/5 rounded-2xl border border-white/10">
-                                <div
-                                  className={`absolute top-1 bottom-1 w-[calc(50%-0.25rem)] rounded-[0.85rem] bg-white transition-all duration-300 ${
-                                    receiveAddressType === 'evm' ? 'left-1' : 'left-[calc(50%+0rem)]'
-                                  }`}
-                                />
-                                <div className="relative grid grid-cols-2 gap-2">
-                                  <button
-                                    onClick={() => setReceiveAddressType('evm')}
-                                    className={`rounded-[0.85rem] px-3 py-2.5 text-sm font-bold transition-all ${receiveAddressType === 'evm' ? 'text-black' : 'text-gray-400 hover:text-white'}`}
-                                  >
-                                    EVM
-                                  </button>
-                                  <button
-                                    onClick={() => setReceiveAddressType('cosmos')}
-                                    className={`rounded-[0.85rem] px-3 py-2.5 text-sm font-bold transition-all ${receiveAddressType === 'cosmos' ? 'text-black' : 'text-gray-400 hover:text-white'}`}
-                                  >
-                                    Cosmos
-                                  </button>
+                          <div className="flex h-full min-h-0 flex-col pt-5">
+                            <div className="grid min-h-0 flex-1 gap-5 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-stretch">
+                              <div className="flex h-full items-center justify-center">
+                                <div className="rounded-[2rem] bg-white p-4 shadow-2xl">
+                                  <QRCodeSVG
+                                    value={receiveDisplayAddress || address || ''}
+                                    size={180}
+                                    level="H"
+                                    bgColor="#FFFFFF"
+                                    fgColor="#000000"
+                                    includeMargin={false}
+                                  />
                                 </div>
                               </div>
 
-                              <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
-                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">Wallet Address</div>
-                                <div className="mt-3 flex items-center gap-3">
-                                  <div className="flex-1 overflow-x-auto scrollbar-hide font-mono text-sm text-white whitespace-nowrap">
-                                    {receiveDisplayAddress}
-                                  </div>
-                                  <button
-                                    onClick={() => {
-                                      if (!receiveDisplayAddress) return;
-                                      navigator.clipboard.writeText(receiveDisplayAddress);
-                                      setReceiveCopied(true);
-                                      setTimeout(() => setReceiveCopied(false), 2000);
-                                    }}
-                                    className={`flex-shrink-0 rounded-xl border px-3 py-2 text-xs font-bold transition-all ${
-                                      receiveCopied
-                                        ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
-                                        : 'border-white/10 bg-white/5 text-white hover:bg-white/10'
+                              <div className="flex h-full min-h-0 flex-col">
+                                <div className="relative p-1 bg-white/5 rounded-2xl border border-white/10">
+                                  <div
+                                    className={`absolute top-1 bottom-1 w-[calc(50%-0.25rem)] rounded-[0.85rem] bg-white transition-all duration-300 ${
+                                      receiveAddressType === 'evm' ? 'left-1' : 'left-[calc(50%+0rem)]'
                                     }`}
-                                  >
-                                    {receiveCopied ? 'Copied' : 'Copy'}
-                                  </button>
+                                  />
+                                  <div className="relative grid grid-cols-2 gap-2">
+                                    <button
+                                      onClick={() => setReceiveAddressType('evm')}
+                                      className={`rounded-[0.85rem] px-3 py-2.5 text-sm font-bold transition-all ${receiveAddressType === 'evm' ? 'text-black' : 'text-gray-400 hover:text-white'}`}
+                                    >
+                                      EVM
+                                    </button>
+                                    <button
+                                      onClick={() => setReceiveAddressType('cosmos')}
+                                      className={`rounded-[0.85rem] px-3 py-2.5 text-sm font-bold transition-all ${receiveAddressType === 'cosmos' ? 'text-black' : 'text-gray-400 hover:text-white'}`}
+                                    >
+                                      Cosmos
+                                    </button>
+                                  </div>
                                 </div>
-                              </div>
 
-                              <div className="mt-auto grid gap-3 pt-4 sm:grid-cols-2">
-                                <div className="rounded-2xl border border-emerald-500/15 bg-emerald-500/5 px-4 py-3 text-sm text-gray-300">
-                                  Use <span className="text-white">{receiveAddressType === 'evm' ? 'EVM' : 'Cosmos'}</span> format depending on the sender you are receiving from.
+                                <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+                                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">Wallet Address</div>
+                                  <div className="mt-3 flex items-center gap-3">
+                                    <div className="flex-1 overflow-x-auto scrollbar-hide font-mono text-sm text-white whitespace-nowrap">
+                                      {receiveDisplayAddress}
+                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        if (!receiveDisplayAddress) return;
+                                        navigator.clipboard.writeText(receiveDisplayAddress);
+                                        setReceiveCopied(true);
+                                        setTimeout(() => setReceiveCopied(false), 2000);
+                                      }}
+                                      className={`flex-shrink-0 rounded-xl border px-3 py-2 text-xs font-bold transition-all ${
+                                        receiveCopied
+                                          ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
+                                          : 'border-white/10 bg-white/5 text-white hover:bg-white/10'
+                                      }`}
+                                    >
+                                      {receiveCopied ? 'Copied' : 'Copy'}
+                                    </button>
+                                  </div>
                                 </div>
-                                <div className="rounded-2xl border border-yellow-500/15 bg-yellow-500/5 px-4 py-3 text-sm text-gray-300">
-                                  Double-check the network before sending assets in. Wrong network deposits may not be recoverable.
+
+                                <div className="mt-auto grid gap-3 pt-4 sm:grid-cols-2">
+                                  <div className="rounded-2xl border border-emerald-500/15 bg-emerald-500/5 px-4 py-3 text-sm text-gray-300">
+                                    Use <span className="text-white">{receiveAddressType === 'evm' ? 'EVM' : 'Cosmos'}</span> format depending on the sender you are receiving from.
+                                  </div>
+                                  <div className="rounded-2xl border border-yellow-500/15 bg-yellow-500/5 px-4 py-3 text-sm text-gray-300">
+                                    Double-check the network before sending assets in. Wrong network deposits may not be recoverable.
+                                  </div>
                                 </div>
                               </div>
                             </div>
