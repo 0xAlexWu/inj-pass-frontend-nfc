@@ -3093,10 +3093,8 @@ export default function DashboardPage() {
 
           {assetTab === 'earn' && (
             <div className="flex h-full items-start justify-center">
-              <div className="h-full w-full max-w-[760px] overflow-hidden rounded-[30px] border border-white/8 bg-black/20 p-2">
-                <div className="h-full overflow-y-auto rounded-[26px]">
+              <div className="h-full w-full max-w-[760px]">
                 <NinjaMinerGame walletAddress={address} />
-                </div>
               </div>
             </div>
           )}

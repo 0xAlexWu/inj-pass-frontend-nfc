@@ -198,8 +198,8 @@ export default function NinjaMinerGame({ walletAddress }: NinjaMinerGameProps) {
   if (!hydrated) {
     return (
       <div
-        className={`flex h-full items-center justify-center rounded-[28px] border px-6 py-6 ${
-          isLight ? 'border-slate-300/70 bg-white/75 text-slate-500' : 'border-white/10 bg-black/30 text-gray-500'
+        className={`flex h-full items-center justify-center px-6 py-6 ${
+          isLight ? 'text-slate-500' : 'text-gray-500'
         }`}
       >
         Preparing NINJA...
@@ -209,9 +209,7 @@ export default function NinjaMinerGame({ walletAddress }: NinjaMinerGameProps) {
 
   return (
     <div
-      className={`flex h-full flex-col items-center justify-center rounded-[28px] border px-6 py-7 ${
-        isLight ? 'border-slate-300/70 bg-white/72' : 'border-white/10 bg-black/30'
-      }`}
+      className="flex h-full flex-col items-center justify-center px-6 py-7"
     >
       <div className="mb-4 flex w-full justify-end">
         <div className={`rounded-full border px-3 py-1.5 text-[12px] font-mono font-semibold ${
