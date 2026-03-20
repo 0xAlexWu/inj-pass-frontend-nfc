@@ -21,6 +21,11 @@ interface DApp {
   aiDriven?: boolean;
 }
 
+const AI_DAPP_MENTIONS: Record<string, string> = {
+  Omisper: '@Omisper',
+  'Hash Mahjong': '@HashMahjong',
+};
+
 const DAPPS: DApp[] = [
   {
     id: '9',
@@ -203,6 +208,14 @@ export default function DiscoverPage() {
     window.open(dapp.url, '_blank', 'noopener,noreferrer');
   };
 
+  const handleDAppDragStart = (event: React.DragEvent<HTMLButtonElement>, dapp: DApp) => {
+    const mention = AI_DAPP_MENTIONS[dapp.name];
+    if (!mention) return;
+    event.dataTransfer.effectAllowed = 'copy';
+    event.dataTransfer.setData('application/x-injpass-dapp', dapp.name);
+    event.dataTransfer.setData('text/plain', mention);
+  };
+
   if (isCheckingSession) {
     return (
       <LoadingSpinner
@@ -303,12 +316,14 @@ export default function DiscoverPage() {
               {filteredDapps.map((dapp) => (
                 <button
                   key={dapp.id}
+                  draggable={isAiMode && !!AI_DAPP_MENTIONS[dapp.name]}
+                  onDragStart={(event) => handleDAppDragStart(event, dapp)}
                   onClick={() => handleDAppClick(dapp)}
                   className={`flex min-w-[112px] flex-col items-center justify-center gap-2 rounded-[1.45rem] border px-3 py-4 text-center transition-all hover:-translate-y-[1px] ${
                     isLight
                       ? 'border-slate-200/80 bg-white/92 hover:bg-slate-50 shadow-[0_8px_24px_rgba(148,163,184,0.12)]'
                       : 'border-white/10 bg-white/[0.04] hover:bg-white/10'
-                  }`}
+                  } ${isAiMode && AI_DAPP_MENTIONS[dapp.name] ? 'cursor-grab active:cursor-grabbing' : ''}`}
                 >
                   <div className={`flex h-11 w-11 items-center justify-center overflow-hidden rounded-full p-2 ${isLight ? 'border border-slate-200/80 bg-slate-50 shadow-[0_8px_18px_rgba(148,163,184,0.16)]' : 'bg-white shadow-lg'}`}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}

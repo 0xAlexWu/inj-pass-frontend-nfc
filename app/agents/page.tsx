@@ -80,6 +80,7 @@ interface InviteFriend {
 }
 
 type AssetMentionSymbol = 'INJ' | 'USDC' | 'NINJA' | 'USDT';
+type DAppMentionName = 'Omisper' | 'Hash Mahjong';
 
 const MODEL_OPTIONS: { value: Model; label: string }[] = [
   { value: 'claude-sonnet-4-6',    label: 'Claude Sonnet 4.6' },
@@ -103,6 +104,24 @@ const INVITED_FRIENDS: InviteFriend[] = [
   { wallet: '0xB944...9e11', joinedAt: '2026-03-05', credits: 250, status: 'Active' },
   { wallet: '0x13c2...7f90', joinedAt: '2026-03-02', credits: 0, status: 'Pending' },
 ];
+
+const DAPP_MENTION_META: Record<
+  DAppMentionName,
+  { prompt: string; label: string; lightTone: string; darkTone: string }
+> = {
+  Omisper: {
+    prompt: '@Omisper',
+    label: '@Omisper',
+    lightTone: 'border-fuchsia-200/90 bg-fuchsia-500/10 text-fuchsia-700',
+    darkTone: 'border-fuchsia-400/30 bg-fuchsia-500/12 text-fuchsia-200',
+  },
+  'Hash Mahjong': {
+    prompt: '@HashMahjong',
+    label: '@HashMahjong',
+    lightTone: 'border-cyan-200/90 bg-cyan-500/10 text-cyan-700',
+    darkTone: 'border-cyan-400/30 bg-cyan-500/12 text-cyan-200',
+  },
+};
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -258,6 +277,7 @@ export default function AgentsPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [assetMentions, setAssetMentions] = useState<AssetMentionSymbol[]>([]);
+  const [dappMentions, setDappMentions] = useState<DAppMentionName[]>([]);
   const [isAssetDropActive, setIsAssetDropActive] = useState(false);
   const [model, setModel] = useState<Model>('claude-sonnet-4-6');
   const [isRunning, setIsRunning] = useState(false);
@@ -312,6 +332,10 @@ export default function AgentsPage() {
         NINJA: 'border-amber-400/30 bg-amber-500/12 text-amber-200',
         USDT: 'border-emerald-400/30 bg-emerald-500/12 text-emerald-200',
       };
+  const dappMentionTone: Record<DAppMentionName, string> = {
+    Omisper: isLight ? DAPP_MENTION_META.Omisper.lightTone : DAPP_MENTION_META.Omisper.darkTone,
+    'Hash Mahjong': isLight ? DAPP_MENTION_META['Hash Mahjong'].lightTone : DAPP_MENTION_META['Hash Mahjong'].darkTone,
+  };
   const rootShellClass = `overflow-hidden ${isLight ? 'text-slate-900' : 'text-white'} ${
     isCompactStage
       ? 'relative h-full min-h-0 bg-transparent p-0'
@@ -401,9 +425,14 @@ export default function AgentsPage() {
 
   useEffect(() => {
     const handleAssetMentionMessage = (event: MessageEvent) => {
-      const data = event.data as { type?: string; symbol?: AssetMentionSymbol } | undefined;
-      if (!data || data.type !== 'injpass:add-asset-mention' || !data.symbol) return;
-      setAssetMentions((current) => current.includes(data.symbol!) ? current : [...current, data.symbol!]);
+      const data = event.data as { type?: string; symbol?: AssetMentionSymbol; dapp?: DAppMentionName } | undefined;
+      if (!data) return;
+      if (data.type === 'injpass:add-asset-mention' && data.symbol) {
+        setAssetMentions((current) => current.includes(data.symbol!) ? current : [...current, data.symbol!]);
+      }
+      if (data.type === 'injpass:add-dapp-mention' && data.dapp && data.dapp in DAPP_MENTION_META) {
+        setDappMentions((current) => current.includes(data.dapp!) ? current : [...current, data.dapp!]);
+      }
       textareaRef.current?.focus();
     };
 
@@ -887,11 +916,15 @@ export default function AgentsPage() {
   // ─── Send message ────────────────────────────────────────────────────────
 
   async function handleSend() {
-    const mentionText = assetMentions.map((symbol) => `$${symbol}`).join(' ');
+    const mentionText = [
+      ...dappMentions.map((dapp) => DAPP_MENTION_META[dapp].prompt),
+      ...assetMentions.map((symbol) => `$${symbol}`),
+    ].join(' ');
     const text = [mentionText, input.trim()].filter(Boolean).join(' ').trim();
     if (!text || isRunning) return;
     setInput('');
     setAssetMentions([]);
+    setDappMentions([]);
 
     let convId = activeId;
     let currentHistory: ApiMessage[] = [];
@@ -928,18 +961,28 @@ export default function AgentsPage() {
   function handleAssetDrop(event: React.DragEvent<HTMLDivElement>) {
     event.preventDefault();
     const symbol = event.dataTransfer.getData('application/x-injpass-asset') as AssetMentionSymbol;
-    if (!symbol) {
-      setIsAssetDropActive(false);
-      return;
+    const rawDapp = event.dataTransfer.getData('application/x-injpass-dapp');
+    const dapp = rawDapp in DAPP_MENTION_META ? (rawDapp as DAppMentionName) : null;
+
+    if (symbol) {
+      setAssetMentions((current) => current.includes(symbol) ? current : [...current, symbol]);
     }
 
-    setAssetMentions((current) => current.includes(symbol) ? current : [...current, symbol]);
+    if (dapp) {
+      setDappMentions((current) => current.includes(dapp) ? current : [...current, dapp]);
+    }
+
     setIsAssetDropActive(false);
     textareaRef.current?.focus();
   }
 
   function removeAssetMention(symbol: AssetMentionSymbol) {
     setAssetMentions((current) => current.filter((item) => item !== symbol));
+    textareaRef.current?.focus();
+  }
+
+  function removeDAppMention(dapp: DAppMentionName) {
+    setDappMentions((current) => current.filter((item) => item !== dapp));
     textareaRef.current?.focus();
   }
 
@@ -2024,7 +2067,10 @@ export default function AgentsPage() {
                 <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' } as React.CSSProperties}>
                   <div
                     onDragOver={(event) => {
-                      if (event.dataTransfer.types.includes('application/x-injpass-asset')) {
+                      if (
+                        event.dataTransfer.types.includes('application/x-injpass-asset') ||
+                        event.dataTransfer.types.includes('application/x-injpass-dapp')
+                      ) {
                         event.preventDefault();
                         event.dataTransfer.dropEffect = 'copy';
                         setIsAssetDropActive(true);
@@ -2056,8 +2102,22 @@ export default function AgentsPage() {
                         </>
                       )}
                       <div className="min-w-0 flex-1">
-                        {assetMentions.length > 0 && (
+                        {(dappMentions.length > 0 || assetMentions.length > 0) && (
                           <div className="mb-2 flex flex-wrap gap-1.5">
+                            {dappMentions.map((dapp) => (
+                              <button
+                                key={dapp}
+                                type="button"
+                                onClick={() => removeDAppMention(dapp)}
+                                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-all ${dappMentionTone[dapp]}`}
+                                title={`Remove ${DAPP_MENTION_META[dapp].label}`}
+                              >
+                                <span>{DAPP_MENTION_META[dapp].label}</span>
+                                <svg className="h-3 w-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            ))}
                             {assetMentions.map((symbol) => (
                               <button
                                 key={symbol}
@@ -2079,7 +2139,7 @@ export default function AgentsPage() {
                           value={input}
                           onChange={(e) => setInput(e.target.value)}
                           onKeyDown={handleKeyDown}
-                          placeholder={isAssetDropActive ? 'Drop asset here to mention it…' : 'Ask anything about your wallet…'}
+                          placeholder={isAssetDropActive ? 'Drop asset or dApp here to mention it…' : 'Ask anything about your wallet…'}
                           rows={1}
                           disabled={isRunning || !!pendingConfirm}
                           className={`w-full bg-transparent text-sm resize-none outline-none min-h-[24px] max-h-40 py-1 disabled:opacity-50 ${isLight ? 'text-slate-900 placeholder:text-slate-400' : 'text-white placeholder-gray-500'}`}
@@ -2087,7 +2147,7 @@ export default function AgentsPage() {
                       </div>
                       <button
                         onClick={handleSend}
-                        disabled={(!input.trim() && assetMentions.length === 0) || isRunning || !!pendingConfirm}
+                        disabled={(!input.trim() && assetMentions.length === 0 && dappMentions.length === 0) || isRunning || !!pendingConfirm}
                         className="w-8 h-8 rounded-xl bg-white hover:bg-gray-100 disabled:bg-white/20 disabled:cursor-not-allowed text-black flex items-center justify-center transition-all flex-shrink-0 self-end"
                       >
                         {isRunning
