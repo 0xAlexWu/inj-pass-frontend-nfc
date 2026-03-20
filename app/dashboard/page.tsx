@@ -1297,8 +1297,11 @@ export default function DashboardPage() {
 
   const openFaucetAssetSurface = () => {
     setFlippedTokenCard(null);
-    setWalletNetworkMode('testnet');
-    setAssetSurfaceMode((current) => (current === 'faucet' ? 'assets' : 'faucet'));
+    setAssetSurfaceMode((current) => {
+      const nextMode = current === 'faucet' ? 'assets' : 'faucet';
+      setWalletNetworkMode(nextMode === 'faucet' ? 'testnet' : 'mainnet');
+      return nextMode;
+    });
     setWalletSurfaceMotionKey((value) => value + 1);
     setAssetSurfaceMotionKey((value) => value + 1);
     setAssetTrendReplayKey((value) => value + 1);
@@ -1337,6 +1340,7 @@ export default function DashboardPage() {
   const isWalletOverview = walletPanel === 'overview';
   const isAiStage = assetSurfaceMode === 'ai';
   const isFaucetStage = assetSurfaceMode === 'faucet';
+  const isTestnet = walletNetworkMode === 'testnet';
   const activeWalletPanelMeta = walletPanel !== 'overview' ? walletPanelMeta[walletPanel] : null;
   const formattedNinjaBalance = walletNetworkMode === 'mainnet' ? ninjaBalance.toFixed(2) : '0.00';
   const overviewStageClassName = 'h-[510px] md:h-[482px]';
@@ -1513,13 +1517,11 @@ export default function DashboardPage() {
                   <div className="mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Total Balance</span>
-                      <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${
-                        walletNetworkMode === 'testnet'
-                          ? 'border-[#5d7690] bg-[#1d2432] text-slate-100'
-                          : 'border-slate-700 bg-[#161b24] text-slate-300'
-                      }`}>
-                        {currentNetworkShortLabel}
-                      </span>
+                      {isTestnet && (
+                        <span className="rounded-full border border-[#5d7690] bg-[#1d2432] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-100">
+                          {currentNetworkShortLabel}
+                        </span>
+                      )}
                       <button 
                         onClick={() => setBalanceVisible(!balanceVisible)}
                         className="p-1 rounded hover:bg-white/5 transition-colors"
@@ -2258,13 +2260,11 @@ export default function DashboardPage() {
                   <div key={`compact-assets-${walletNetworkMode}-${assetSurfaceMotionKey}`} className="dashboard-surface-enter relative flex min-h-0 flex-1 flex-col">
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Assets</div>
-                      <div className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${
-                        walletNetworkMode === 'testnet'
-                          ? 'border-[#5d7690] bg-[#1d2432] text-slate-100'
-                          : 'border-slate-700 bg-[#161b24] text-slate-300'
-                      }`}>
-                        {currentNetworkShortLabel}
-                      </div>
+                      {isTestnet && (
+                        <div className="rounded-full border border-[#5d7690] bg-[#1d2432] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-100">
+                          {currentNetworkShortLabel}
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-3">
