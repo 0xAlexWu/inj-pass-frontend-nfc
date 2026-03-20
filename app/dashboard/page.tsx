@@ -1991,7 +1991,7 @@ export default function DashboardPage() {
                                     Max
                                   </button>
                                 </div>
-                                <div className="flex h-full flex-col justify-between">
+                                <div className="flex h-full flex-col">
                                   <div className={`flex items-end gap-3 ${sendAmountAlertActive ? 'animate-send-amount-shake' : ''}`}>
                                     <input
                                       type="text"
@@ -2020,7 +2020,7 @@ export default function DashboardPage() {
                                     }`}>INJ</span>
                                   </div>
 
-                                  <div className="pt-4">
+                                  <div className="mt-auto pt-3">
                                     <div className="flex items-center gap-2 text-sm">
                                       <span className="text-gray-500">Available</span>
                                       <span className="font-mono text-white">{tokenBalances.INJ} INJ</span>
