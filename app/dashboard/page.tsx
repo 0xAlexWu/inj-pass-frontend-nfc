@@ -2792,14 +2792,17 @@ export default function DashboardPage() {
                       }}
                     >
                       <div className="flex h-full items-center gap-3">
-                        <div className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
-                          isLight
-                            ? 'border-slate-200/80 bg-slate-900/[0.03] text-slate-700'
-                            : 'border-white/10 bg-white/[0.05] text-white'
-                        }`}>
-                            {token.symbol}
+                        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full">
+                          <Image
+                            src={token.icon}
+                            alt={token.symbol}
+                            width={40}
+                            height={40}
+                            className="h-full w-full object-contain"
+                          />
                         </div>
                         <div className="min-w-0 flex-1">
+                          <div className={`mb-0.5 font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>{token.symbol}</div>
                           <div className={`mb-0.5 text-[9px] uppercase tracking-[0.14em] ${isLight ? 'text-slate-400' : 'text-gray-500'}`}>Contract</div>
                           <div className={`truncate font-mono text-[13px] ${isLight ? 'text-slate-900' : 'text-white'}`}>
                             {token.contractValue}
