@@ -321,11 +321,11 @@ export default function DiscoverPage() {
                   onClick={() => handleDAppClick(dapp)}
                   className={`flex min-w-[112px] flex-col items-center justify-center gap-2 rounded-[1.45rem] border px-3 py-4 text-center transition-all hover:-translate-y-[1px] ${
                     isLight
-                      ? 'border-slate-200/80 bg-white/92 hover:bg-slate-50 shadow-[0_8px_24px_rgba(148,163,184,0.12)]'
-                      : 'border-white/10 bg-white/[0.04] hover:bg-white/10'
+                      ? 'border-slate-200/80 bg-transparent hover:bg-slate-50/55 shadow-[0_8px_24px_rgba(148,163,184,0.08)]'
+                      : 'border-white/10 bg-transparent hover:bg-white/[0.06]'
                   } ${isAiMode && AI_DAPP_MENTIONS[dapp.name] ? 'cursor-grab active:cursor-grabbing' : ''}`}
                 >
-                  <div className={`flex h-11 w-11 items-center justify-center overflow-hidden rounded-full p-2 ${isLight ? 'border border-slate-200/80 bg-slate-50 shadow-[0_8px_18px_rgba(148,163,184,0.16)]' : 'bg-white shadow-lg'}`}>
+                  <div className={`flex h-11 w-11 items-center justify-center overflow-hidden rounded-full p-2 ${isLight ? 'border border-slate-200/80 bg-transparent shadow-[0_8px_18px_rgba(148,163,184,0.10)]' : 'border border-white/10 bg-transparent shadow-[0_8px_18px_rgba(0,0,0,0.18)]'}`}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={dapp.icon} alt={dapp.name} className="h-full w-full object-contain" />
                   </div>
@@ -345,12 +345,16 @@ export default function DiscoverPage() {
               <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
                 {featuredDapps.map((dapp) => (
                   <div key={dapp.id} onClick={() => handleDAppClick(dapp)} className="group flex cursor-pointer flex-col items-center gap-2">
-                    <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-white p-2 shadow-lg transition-all group-hover:scale-110 hover:bg-gray-100">
+                    <div className={`flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border p-2 shadow-lg transition-all group-hover:scale-110 ${
+                      isLight
+                        ? 'border-slate-200/80 bg-transparent shadow-[0_10px_24px_rgba(148,163,184,0.10)]'
+                        : 'border-white/10 bg-transparent shadow-[0_10px_24px_rgba(0,0,0,0.22)]'
+                    }`}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={dapp.icon} alt={dapp.name} className="h-full w-full object-contain" />
                     </div>
                     <div className="w-full text-center">
-                      <h3 className="truncate text-sm font-bold text-white">{dapp.name}</h3>
+                      <h3 className={`truncate text-sm font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>{dapp.name}</h3>
                     </div>
                   </div>
                 ))}
@@ -412,12 +416,16 @@ export default function DiscoverPage() {
               <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
                 {filteredDapps.map((dapp) => (
                   <div key={dapp.id} onClick={() => handleDAppClick(dapp)} className="group flex cursor-pointer flex-col items-center gap-2">
-                    <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-white p-2 shadow-lg transition-all group-hover:scale-110 hover:bg-gray-100">
+                    <div className={`flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border p-2 shadow-lg transition-all group-hover:scale-110 ${
+                      isLight
+                        ? 'border-slate-200/80 bg-transparent shadow-[0_10px_24px_rgba(148,163,184,0.10)]'
+                        : 'border-white/10 bg-transparent shadow-[0_10px_24px_rgba(0,0,0,0.22)]'
+                    }`}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={dapp.icon} alt={dapp.name} className="h-full w-full object-contain" />
                     </div>
                     <div className="w-full text-center">
-                      <h3 className="truncate text-sm font-bold text-white">{dapp.name}</h3>
+                      <h3 className={`truncate text-sm font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>{dapp.name}</h3>
                     </div>
                   </div>
                 ))}
