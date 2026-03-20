@@ -1606,7 +1606,7 @@ export default function DashboardPage() {
                 ? 'minmax(232px,0.38fr) minmax(0,1.62fr)'
                 : isCardPanel
                   ? 'minmax(0,1.42fr) minmax(320px,0.58fr)'
-                : 'minmax(0,1.18fr) minmax(360px,0.82fr)',
+                : 'minmax(0,1.62fr) minmax(232px,0.38fr)',
             }}
           >
             <div className={`relative ${walletStageClassName}`}>
