@@ -423,7 +423,7 @@ function DashboardSurfaceFrame({
 export default function DashboardPage() {
   const router = useRouter();
   const { theme } = useTheme();
-  const { isUnlocked, address, privateKey, resetTxAuth, isCheckingSession } = useWallet();
+  const { isUnlocked, address, privateKey, resetTxAuth, isCheckingSession, keystore } = useWallet();
   const { autoLockMinutes, isPinLocked } = usePin();
   const [balance, setBalance] = useState<Balance | null>(null);
   const [loading, setLoading] = useState(true);
@@ -505,10 +505,16 @@ export default function DashboardPage() {
   const cardCenterTimerRef = useRef<number | null>(null);
   const isLight = theme === 'light';
   const sendAmountAlertTimerRef = useRef<number | null>(null);
+  const redirectTimerRef = useRef<number | null>(null);
   const hasLoadedOnceRef = useRef(false);
   const currentNetworkMeta = NETWORK_META[walletNetworkMode];
 
   useEffect(() => {
+    if (redirectTimerRef.current) {
+      window.clearTimeout(redirectTimerRef.current);
+      redirectTimerRef.current = null;
+    }
+
     // Wait for session check to complete
     if (isCheckingSession) {
       console.log('[Dashboard] Still checking session, waiting...');
@@ -517,16 +523,26 @@ export default function DashboardPage() {
 
     console.log('[Dashboard] isUnlocked:', isUnlocked, 'address:', address);
     if (!isUnlocked || !address) {
-      console.log('[Dashboard] Not unlocked, redirecting to /welcome');
-      router.push('/welcome');
+      redirectTimerRef.current = window.setTimeout(() => {
+        const fallbackRoute = keystore || address ? '/unlock' : '/welcome';
+        console.log(`[Dashboard] Wallet state not ready, redirecting to ${fallbackRoute}`);
+        router.replace(fallbackRoute);
+        redirectTimerRef.current = null;
+      }, 320);
       return;
     }
 
     console.log('[Dashboard] Unlocked, loading data...');
     void loadData({ background: hasLoadedOnceRef.current });
     hasLoadedOnceRef.current = true;
+    return () => {
+      if (redirectTimerRef.current) {
+        window.clearTimeout(redirectTimerRef.current);
+        redirectTimerRef.current = null;
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isUnlocked, address, isCheckingSession, walletNetworkMode]);
+  }, [isUnlocked, address, isCheckingSession, keystore, router, walletNetworkMode]);
 
   useEffect(() => {
     const walletAddress = address || undefined;
@@ -590,6 +606,10 @@ export default function DashboardPage() {
       if (sendAmountAlertTimerRef.current) {
         window.clearTimeout(sendAmountAlertTimerRef.current);
         sendAmountAlertTimerRef.current = null;
+      }
+      if (redirectTimerRef.current) {
+        window.clearTimeout(redirectTimerRef.current);
+        redirectTimerRef.current = null;
       }
     };
   }, []);

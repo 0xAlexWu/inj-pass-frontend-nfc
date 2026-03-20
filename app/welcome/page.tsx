@@ -175,7 +175,7 @@ export default function WelcomePage() {
       saveWallet(keystore);
       setWalletExists(true);
       unlock(privateKey, keystore);
-      router.push('/dashboard');
+      router.replace('/dashboard');
     } catch (err) {
       setImportError(err instanceof Error ? err.message : 'Failed to import wallet');
     } finally {
@@ -219,7 +219,7 @@ export default function WelcomePage() {
       setWalletExists(true);
       closeCreatePanel();
       unlock(privateKey, keystore);
-      router.push('/dashboard');
+      router.replace('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create wallet');
     } finally {
@@ -248,7 +248,7 @@ export default function WelcomePage() {
 
       setWalletExists(true);
       unlock(privateKey, keystore);
-      router.push('/dashboard');
+      router.replace('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to recover wallet');
     } finally {
