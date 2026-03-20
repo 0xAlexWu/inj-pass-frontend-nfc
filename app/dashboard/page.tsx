@@ -256,12 +256,14 @@ function PixelTrendChart({
   hidden,
   changePct,
   currentValueLabel,
+  networkMode,
   replayKey = 0,
 }: {
   values: number[];
   hidden: boolean;
   changePct: number;
   currentValueLabel: string;
+  networkMode: WalletNetworkMode;
   replayKey?: number;
 }) {
   const width = 320;
@@ -275,9 +277,9 @@ function PixelTrendChart({
   const minValue = values.length > 0 ? Math.min(...values) : 0;
   const maxValue = values.length > 0 ? Math.max(...values) : 0;
   const range = maxValue - minValue;
-  const accentClass = changePct >= 0 ? 'text-emerald-300' : 'text-orange-300';
-  const accentColor = changePct >= 0 ? '#6ee7b7' : '#fb923c';
-  const accentFill = changePct >= 0 ? 'rgba(110,231,183,0.16)' : 'rgba(251,146,60,0.16)';
+  const accentClass = networkMode === 'testnet' ? 'text-emerald-300' : 'text-amber-300';
+  const accentColor = networkMode === 'testnet' ? '#6ee7b7' : '#fbbf24';
+  const accentFill = networkMode === 'testnet' ? 'rgba(110,231,183,0.16)' : 'rgba(251,191,36,0.16)';
   const chartAnimationKey = `${hidden ? 'hidden' : 'visible'}-${currentValueLabel}-${changePct.toFixed(2)}-${replayKey}`;
   const gridDots = Array.from({ length: 11 }, (_, column) =>
     Array.from({ length: 6 }, (_, row) => ({
@@ -1605,6 +1607,7 @@ export default function DashboardPage() {
                             hidden={!balanceVisible}
                             changePct={injPriceChange24h}
                             currentValueLabel={totalUsdValue}
+                            networkMode={walletNetworkMode}
                             replayKey={assetTrendReplayKey}
                           />
                         </div>
