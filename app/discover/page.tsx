@@ -274,7 +274,7 @@ export default function DiscoverPage() {
               surfaceReady ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
             }`}
           >
-            <div className={`relative min-w-0 flex-1 max-w-[560px] rounded-xl p-1 ${isLight ? 'border border-slate-200/80 bg-slate-100/80 shadow-[0_10px_32px_rgba(148,163,184,0.10)]' : 'bg-white/5'}`}>
+            <div className={`relative rounded-xl p-1 ${isAiMode ? 'w-[118px] flex-none' : 'min-w-0 flex-1 max-w-[560px]'} ${isLight ? 'border border-slate-200/80 bg-slate-100/80 shadow-[0_10px_32px_rgba(148,163,184,0.10)]' : 'bg-white/5'}`}>
               <div
                 className={`pointer-events-none absolute bottom-1 top-1 rounded-lg transition-all duration-300 ease-out ${isLight ? 'border border-slate-200/80 bg-white shadow-[0_10px_24px_rgba(148,163,184,0.18)]' : 'bg-white shadow-lg'}`}
                 style={{
