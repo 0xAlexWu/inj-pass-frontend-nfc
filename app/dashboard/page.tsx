@@ -1416,7 +1416,7 @@ export default function DashboardPage() {
                 className={`rounded-lg border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] transition-all ${
                   walletNetworkMode === 'testnet'
                     ? 'border-[#5c7899] bg-[linear-gradient(135deg,#1b2230,#2b435e)] text-slate-100 shadow-[0_8px_20px_rgba(35,74,118,0.18)]'
-                    : 'border-slate-600 bg-[#151922] text-slate-200 hover:border-slate-500 hover:bg-[#1a2030] hover:text-white'
+                    : 'border-white/10 bg-white/5 text-gray-300 hover:border-cyan-500/40 hover:bg-cyan-500/12 hover:text-white'
                 } ${networkSwitching ? 'cursor-wait opacity-80' : ''}`}
                 title={walletNetworkMode === 'testnet' ? 'Switch to mainnet wallet' : 'Switch to testnet wallet'}
               >
