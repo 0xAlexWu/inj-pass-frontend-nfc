@@ -1415,8 +1415,8 @@ export default function DashboardPage() {
                 disabled={networkSwitching}
                 className={`rounded-lg border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] transition-all ${
                   walletNetworkMode === 'testnet'
-                    ? 'border-cyan-300 bg-[linear-gradient(135deg,#0f8fb0,#2157d6)] text-white shadow-[0_10px_26px_rgba(34,211,238,0.22)]'
-                    : 'border-slate-600 bg-slate-900 text-slate-200 hover:border-cyan-400 hover:bg-slate-800 hover:text-white'
+                    ? 'border-[#5c7899] bg-[linear-gradient(135deg,#1b2230,#2b435e)] text-slate-100 shadow-[0_8px_20px_rgba(35,74,118,0.18)]'
+                    : 'border-slate-600 bg-[#151922] text-slate-200 hover:border-slate-500 hover:bg-[#1a2030] hover:text-white'
                 } ${networkSwitching ? 'cursor-wait opacity-80' : ''}`}
                 title={walletNetworkMode === 'testnet' ? 'Switch to mainnet wallet' : 'Switch to testnet wallet'}
               >
@@ -1515,8 +1515,8 @@ export default function DashboardPage() {
                       <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Total Balance</span>
                       <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${
                         walletNetworkMode === 'testnet'
-                          ? 'border-cyan-300 bg-cyan-900 text-cyan-100'
-                          : 'border-slate-700 bg-slate-900 text-slate-300'
+                          ? 'border-[#5d7690] bg-[#1d2432] text-slate-100'
+                          : 'border-slate-700 bg-[#161b24] text-slate-300'
                       }`}>
                         {currentNetworkShortLabel}
                       </span>
@@ -2260,8 +2260,8 @@ export default function DashboardPage() {
                       <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Assets</div>
                       <div className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${
                         walletNetworkMode === 'testnet'
-                          ? 'border-cyan-300 bg-cyan-900 text-cyan-100'
-                          : 'border-slate-700 bg-slate-900 text-slate-300'
+                          ? 'border-[#5d7690] bg-[#1d2432] text-slate-100'
+                          : 'border-slate-700 bg-[#161b24] text-slate-300'
                       }`}>
                         {currentNetworkShortLabel}
                       </div>
@@ -2641,7 +2641,7 @@ export default function DashboardPage() {
                       <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Faucet</div>
                       <div className="mt-1 flex items-center gap-2">
                         <div className="text-base font-bold text-white">Testnet faucet</div>
-                        <span className="rounded-full border border-cyan-300 bg-cyan-900 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-100">
+                        <span className="rounded-full border border-[#5d7690] bg-[#1d2432] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-100">
                           {currentNetworkShortLabel}
                         </span>
                       </div>

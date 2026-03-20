@@ -567,23 +567,23 @@ html[data-theme="light"] [class*="shadow-"] {
   position: absolute;
   inset: -22% auto -22% -45%;
   width: 44%;
-  background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.08) 18%, rgba(255, 255, 255, 0.75) 50%, rgba(255, 255, 255, 0.14) 82%, transparent 100%);
+  background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.05) 18%, rgba(255, 255, 255, 0.42) 50%, rgba(255, 255, 255, 0.1) 82%, transparent 100%);
   transform: translateX(-150%);
   animation: injpassNameplateSheen 5.6s cubic-bezier(0.19, 1, 0.22, 1) infinite;
 }
 
 .injpass-nameplate-gold {
-  border-color: #d4a615;
-  background: linear-gradient(135deg, #7c5400, #d4a615 52%, #f3cd55 100%);
-  color: #fef3c7;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 6px 18px rgba(161, 98, 7, 0.24);
+  border-color: #9d7a29;
+  background: linear-gradient(135deg, #4f3b17, #8f6b24 54%, #c8a35c 100%);
+  color: #f8ecd2;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 4px 12px rgba(120, 84, 24, 0.18);
 }
 
 .injpass-nameplate-silver {
-  border-color: #aeb8c7;
-  background: linear-gradient(135deg, #5d6673, #aab4c3 54%, #e8edf4 100%);
-  color: #f8fafc;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 6px 18px rgba(148, 163, 184, 0.22);
+  border-color: #7e8794;
+  background: linear-gradient(135deg, #4f5661, #838d9b 54%, #c3ccd6 100%);
+  color: #f5f7fb;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 4px 12px rgba(100, 111, 128, 0.16);
 }
 
 .dashboard-surface-enter {
