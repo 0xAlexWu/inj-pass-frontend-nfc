@@ -24,6 +24,7 @@ import EditableAccountIdentity from '@/components/EditableAccountIdentity';
 import { useTheme } from '@/contexts/ThemeContext';
 import { TOKENS_MAINNET, TOKENS_TESTNET } from '@/services/tokens';
 import { ERC20_ABI } from '@/services/dex-abi';
+import { FAUCET_NETWORKS } from '@/config/faucet';
 import SettingsPage from '../settings/page';
 import { privateKeyToHex } from '@/utils/wallet';
 import { getInjectiveAddress, getEthereumAddress } from '@injectivelabs/sdk-ts';
@@ -66,6 +67,15 @@ const NETWORK_META: Record<WalletNetworkMode, { label: string; shortLabel: strin
     chain: INJECTIVE_TESTNET,
     tokenSet: TOKENS_TESTNET as typeof TOKENS_MAINNET,
   },
+};
+
+const FAUCET_ICON_BY_ID: Record<string, string> = {
+  injective: '/injswap.png',
+  sepolia: '/eth-logo.png',
+  arbitrum: '/arb-logo.png',
+  optimism: '/op-logo.png',
+  base: '/base-logo.png',
+  polygonzkevm: '/polygon-logo.png',
 };
 
 interface DashboardTransaction {
@@ -116,6 +126,11 @@ function readStoredNinjaBalance(walletAddress?: string) {
     console.error('Failed to restore ninja balance:', error);
     return DEFAULT_NINJA_BALANCE;
   }
+}
+
+function getFaucetClaimStorageKey(walletAddress?: string) {
+  if (!walletAddress) return null;
+  return `injpass:faucet-claim:${walletAddress.toLowerCase()}:${new Date().toISOString().split('T')[0]}`;
 }
 
 async function getDashboardTokenBalances(userAddress: Address, networkMode: WalletNetworkMode) {
@@ -454,6 +469,10 @@ export default function DashboardPage() {
   const [assetTab, setAssetTab] = useState<AssetTab>('tokens');
   const [assetSurfaceMode, setAssetSurfaceMode] = useState<AssetSurfaceMode>('assets');
   const [assetTrendReplayKey, setAssetTrendReplayKey] = useState(0);
+  const [faucetClaimingId, setFaucetClaimingId] = useState<string | null>(null);
+  const [faucetClaimedId, setFaucetClaimedId] = useState<string | null>(null);
+  const [faucetClaimLocked, setFaucetClaimLocked] = useState(false);
+  const [faucetError, setFaucetError] = useState('');
   const [tokenBalances, setTokenBalances] = useState<Record<string, string>>({
     INJ: '0.0000',
     USDC: '0.00',
@@ -580,6 +599,34 @@ export default function DashboardPage() {
       window.clearInterval(interval);
       window.removeEventListener('storage', handleStorage);
     };
+  }, [address]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const storageKey = getFaucetClaimStorageKey(address || undefined);
+    if (!storageKey) {
+      setFaucetClaimedId(null);
+      setFaucetClaimLocked(false);
+      return;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (!raw) {
+        setFaucetClaimedId(null);
+        setFaucetClaimLocked(false);
+        return;
+      }
+
+      const parsed = JSON.parse(raw) as { targetId?: string };
+      setFaucetClaimedId(parsed.targetId || null);
+      setFaucetClaimLocked(true);
+    } catch (error) {
+      console.error('Failed to restore faucet claim state:', error);
+      setFaucetClaimedId(null);
+      setFaucetClaimLocked(false);
+    }
   }, [address]);
 
   useEffect(() => {
@@ -741,6 +788,48 @@ export default function DashboardPage() {
       setNetworkSwitching(false);
     }
   }, [address, currentNetworkMeta.chain, ninjaBalance, walletNetworkMode]);
+
+  const handleFaucetTokenClaim = useCallback(async (networkId: string) => {
+    if (!address || faucetClaimLocked || faucetClaimingId) {
+      return;
+    }
+
+    setFaucetClaimingId(networkId);
+    setFaucetError('');
+
+    try {
+      const res = await fetch('/api/faucet/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address,
+          companion: networkId === 'injective' ? null : networkId,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Claim failed');
+      }
+
+      setFaucetClaimedId(networkId);
+      setFaucetClaimLocked(true);
+
+      const storageKey = getFaucetClaimStorageKey(address);
+      if (storageKey && typeof window !== 'undefined') {
+        window.localStorage.setItem(storageKey, JSON.stringify({
+          targetId: networkId,
+          claimedAt: new Date().toISOString(),
+        }));
+      }
+
+      void loadData({ background: true });
+    } catch (error) {
+      setFaucetError(error instanceof Error ? error.message : 'Claim failed');
+    } finally {
+      setFaucetClaimingId(null);
+    }
+  }, [address, faucetClaimLocked, faucetClaimingId, loadData]);
 
   // Load NFTs when switching to NFTs tab
   const loadNFTs = async () => {
@@ -1373,6 +1462,7 @@ export default function DashboardPage() {
 
   const openFaucetAssetSurface = () => {
     setFlippedTokenCard(null);
+    setFaucetError('');
     setAssetSurfaceMode((current) => {
       const nextMode = current === 'faucet' ? 'assets' : 'faucet';
       setWalletNetworkMode(nextMode === 'faucet' ? 'testnet' : 'mainnet');
@@ -1434,6 +1524,12 @@ export default function DashboardPage() {
   const swapUnavailableOnTestnet = walletNetworkMode === 'testnet';
   const activeBoundCards = boundCards.filter((card) => card.isActive);
   const recentBoundCards = boundCards.slice(0, 2);
+  const faucetCards = FAUCET_NETWORKS.map((network) => ({
+    id: network.id,
+    label: network.isBase ? 'INJ' : network.name,
+    amountLabel: `${network.amount} ${network.symbol}`,
+    icon: FAUCET_ICON_BY_ID[network.id] || '/injswap.png',
+  }));
   const dashboardTokenCards = [
     {
       symbol: 'INJ',
@@ -2992,39 +3088,74 @@ export default function DashboardPage() {
                     : 'pointer-events-none translate-x-10 scale-[0.98] opacity-0'
                 }`}
               >
-                <div className="bg-black rounded-2xl border border-white/10 relative overflow-hidden h-full flex flex-col">
+                <div className="bg-black rounded-2xl border border-white/10 relative overflow-hidden h-full flex flex-col p-4 sm:p-5">
                   <div className="absolute bottom-0 left-0 h-32 w-32 rounded-full bg-gradient-to-tr from-cyan-500/8 to-transparent blur-2xl" />
                   <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-gradient-to-bl from-violet-500/8 to-transparent blur-2xl" />
-                  <div className="relative flex items-center justify-between gap-4 border-b border-white/8 px-4 py-4 sm:px-5">
-                    <div>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Faucet</div>
-                      <div className="mt-1 flex items-center gap-2">
-                        <div className="text-base font-bold text-white">Testnet faucet</div>
-                        <span className="rounded-full border border-[#5d7690] bg-[#1d2432] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-100">
-                          {currentNetworkShortLabel}
-                        </span>
-                      </div>
+                  <div className="relative flex min-h-0 flex-1 flex-col">
+                    <div className="grid gap-2.5">
+                      {faucetCards.map((token) => {
+                        const isClaiming = faucetClaimingId === token.id;
+                        const isClaimed = faucetClaimLocked && faucetClaimedId === token.id;
+                        const isLocked = faucetClaimLocked && faucetClaimedId !== token.id;
+
+                        return (
+                          <button
+                            key={token.id}
+                            onClick={() => void handleFaucetTokenClaim(token.id)}
+                            disabled={isClaiming || faucetClaimLocked || !address}
+                            className={`flex min-h-[64px] items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-all ${
+                              isClaimed
+                                ? 'border-slate-500/20 bg-slate-500/10 text-gray-400'
+                                : isLocked
+                                  ? 'border-white/6 bg-white/[0.02] text-gray-500 opacity-45 grayscale'
+                                  : isClaiming
+                                    ? 'border-cyan-400/20 bg-cyan-500/10 text-white'
+                                    : 'border-white/10 bg-white/5 text-white hover:bg-white/[0.08] hover:border-white/18'
+                            } ${!address ? 'cursor-not-allowed opacity-50' : ''}`}
+                          >
+                            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full">
+                              <Image
+                                src={token.icon}
+                                alt={token.label}
+                                width={40}
+                                height={40}
+                                className="h-full w-full object-contain"
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="mb-0.5 font-bold">{token.label}</div>
+                              <div className={`${isClaimed || isLocked ? 'text-gray-500' : 'text-gray-400'} text-[13px]`}>
+                                {token.amountLabel}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className={`font-bold font-mono text-[13px] ${
+                                isClaimed || isLocked ? 'text-gray-500' : 'text-white'
+                              }`}>
+                                {isClaiming ? '...' : isClaimed ? 'Claimed' : isLocked ? 'Locked' : 'Claim'}
+                              </div>
+                              <div className={`text-[13px] ${
+                                isClaimed
+                                  ? 'text-gray-500'
+                                  : isLocked
+                                    ? 'text-gray-600'
+                                    : isClaiming
+                                      ? 'text-cyan-300'
+                                      : 'text-green-400'
+                              }`}>
+                                {isClaiming ? 'Processing' : isClaimed ? 'Done' : isLocked ? 'Unavailable' : 'Ready'}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
-                    <button
-                      onClick={() => setAssetSurfaceMode('assets')}
-                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 transition-all hover:bg-white/10"
-                      title="Close faucet"
-                    >
-                      <svg className="h-4 w-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div className="min-h-0 flex-1 p-3 sm:p-4">
-                    <div className="h-full overflow-hidden rounded-[1.75rem] border border-white/10 bg-black/70">
-                      <div className="h-full overflow-hidden rounded-[1.55rem] bg-black">
-                        <DashboardSurfaceFrame
-                          src="/faucet?embed=1"
-                          title="Embedded faucet"
-                          loadingStrategy="eager"
-                        />
+
+                    {faucetError && (
+                      <div className="mt-3 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                        {faucetError}
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
