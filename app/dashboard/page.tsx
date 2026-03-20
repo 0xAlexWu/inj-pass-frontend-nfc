@@ -1417,18 +1417,6 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               <ThemeToggleButton compact />
               <button
-                onClick={toggleWalletNetworkMode}
-                disabled={networkSwitching}
-                className={`rounded-lg border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] transition-all ${
-                  walletNetworkMode === 'testnet'
-                    ? 'border-[#5c7899] bg-[linear-gradient(135deg,#1b2230,#2b435e)] text-slate-100 shadow-[0_8px_20px_rgba(35,74,118,0.18)]'
-                    : 'border-white/10 bg-white/5 text-gray-300 hover:border-cyan-500/40 hover:bg-cyan-500/12 hover:text-white'
-                } ${networkSwitching ? 'cursor-wait opacity-80' : ''}`}
-                title={walletNetworkMode === 'testnet' ? 'Switch to mainnet wallet' : 'Switch to testnet wallet'}
-              >
-                {networkSwitching ? '...' : 'T'}
-              </button>
-              <button
                 onClick={openAiAssetSurface}
                 className={`rounded-lg border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] transition-all ${
                   !isAiStage
@@ -1541,6 +1529,18 @@ export default function DashboardPage() {
                       </button>
                     </div>
                     <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={toggleWalletNetworkMode}
+                        disabled={networkSwitching}
+                        className={`rounded px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] transition-all ${
+                          walletNetworkMode === 'testnet'
+                            ? 'border border-[#5c7899] bg-[linear-gradient(135deg,#1b2230,#2b435e)] text-slate-100 shadow-[0_8px_20px_rgba(35,74,118,0.18)]'
+                            : 'border border-white/10 bg-white/5 text-gray-300 hover:border-cyan-500/40 hover:bg-cyan-500/12 hover:text-white'
+                        } ${networkSwitching ? 'cursor-wait opacity-80' : ''}`}
+                        title={walletNetworkMode === 'testnet' ? 'Switch to mainnet wallet' : 'Switch to testnet wallet'}
+                      >
+                        {networkSwitching ? '...' : 'T'}
+                      </button>
                       <button 
                         onClick={handleRefresh}
                         disabled={refreshing}
