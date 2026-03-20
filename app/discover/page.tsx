@@ -259,9 +259,9 @@ export default function DiscoverPage() {
               surfaceReady ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
             }`}
           >
-            <div className={`relative min-w-0 flex-1 max-w-[560px] rounded-xl p-1 ${isLight ? 'border border-slate-200/80 bg-white/90 shadow-[0_10px_32px_rgba(148,163,184,0.10)]' : 'bg-white/5'}`}>
+            <div className={`relative min-w-0 flex-1 max-w-[560px] rounded-xl p-1 ${isLight ? 'border border-slate-200/80 bg-slate-100/80 shadow-[0_10px_32px_rgba(148,163,184,0.10)]' : 'bg-white/5'}`}>
               <div
-                className={`pointer-events-none absolute bottom-1 top-1 rounded-lg transition-all duration-300 ease-out ${isLight ? 'bg-slate-900 shadow-[0_12px_28px_rgba(15,23,42,0.14)]' : 'bg-white shadow-lg'}`}
+                className={`pointer-events-none absolute bottom-1 top-1 rounded-lg transition-all duration-300 ease-out ${isLight ? 'border border-slate-200/80 bg-white shadow-[0_10px_24px_rgba(148,163,184,0.18)]' : 'bg-white shadow-lg'}`}
                 style={{
                   width: `calc((100% - ${(categoryTabs.length - 1) * 0.5}rem) / ${categoryTabs.length})`,
                   left: `calc(0.25rem + ${activeCategoryIndex} * ((100% - ${(categoryTabs.length - 1) * 0.5}rem) / ${categoryTabs.length} + 0.5rem))`,
@@ -274,7 +274,7 @@ export default function DiscoverPage() {
                     onClick={() => setActiveCategory(category.id as DiscoverCategory)}
                     className={`flex-1 whitespace-nowrap rounded-lg px-3 py-2.5 text-xs font-bold transition-all duration-300 ${
                       activeCategory === category.id
-                        ? isLight ? 'text-white' : 'text-black'
+                        ? isLight ? 'text-slate-900' : 'text-black'
                         : isLight ? 'text-slate-500 hover:text-slate-900' : 'text-gray-400 hover:text-white'
                     }`}
                   >

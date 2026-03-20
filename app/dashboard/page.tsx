@@ -2361,7 +2361,11 @@ export default function DashboardPage() {
                     </div>
 
                     <div
-                      className={`absolute inset-0 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(8,10,18,0.98),rgba(10,13,20,0.96))] px-4 py-3 transition-all duration-500 ${
+                      className={`absolute inset-0 rounded-2xl border px-4 py-3 transition-all duration-500 ${
+                        isLight
+                          ? 'border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(241,245,255,0.92))] shadow-[0_12px_26px_rgba(148,163,184,0.12)]'
+                          : 'border-white/10 bg-[linear-gradient(180deg,rgba(8,10,18,0.98),rgba(10,13,20,0.96))]'
+                      } ${
                         flippedTokenCard === token.symbol ? 'visible z-20 opacity-100' : 'pointer-events-none invisible z-0 opacity-0'
                       }`}
                       style={{
@@ -2372,12 +2376,16 @@ export default function DashboardPage() {
                       }}
                     >
                       <div className="flex h-full items-center gap-3">
-                        <div className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
+                        <div className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                          isLight
+                            ? 'border-slate-200/80 bg-slate-900/[0.03] text-slate-700'
+                            : 'border-white/10 bg-white/[0.05] text-white'
+                        }`}>
                             {token.symbol}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="mb-0.5 uppercase tracking-[0.14em] text-[9px] text-gray-500">Contract</div>
-                          <div className="truncate font-mono text-[13px] text-white">
+                          <div className={`mb-0.5 text-[9px] uppercase tracking-[0.14em] ${isLight ? 'text-slate-400' : 'text-gray-500'}`}>Contract</div>
+                          <div className={`truncate font-mono text-[13px] ${isLight ? 'text-slate-900' : 'text-white'}`}>
                             {token.contractValue}
                           </div>
                         </div>
@@ -2393,8 +2401,12 @@ export default function DashboardPage() {
                               }}
                               className={`rounded-lg border px-2 py-1 text-[10px] font-semibold transition-all ${
                                 copiedTokenInfo === token.symbol
-                                  ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
-                                  : 'border-white/10 bg-white/5 text-white hover:bg-white/10'
+                                  ? isLight
+                                    ? 'border-emerald-300/70 bg-emerald-500/10 text-emerald-700'
+                                    : 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
+                                  : isLight
+                                    ? 'border-slate-200/80 bg-slate-900/[0.03] text-slate-700 hover:bg-slate-900/[0.06]'
+                                    : 'border-white/10 bg-white/5 text-white hover:bg-white/10'
                               }`}
                             >
                               {copiedTokenInfo === token.symbol ? 'Copied' : 'Copy'}

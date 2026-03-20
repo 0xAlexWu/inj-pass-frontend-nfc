@@ -40,6 +40,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [theme]);
 
   useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== THEME_STORAGE_KEY) return;
+      const nextTheme = event.newValue === 'light' ? 'light' : 'dark';
+      applyTheme(nextTheme);
+      setThemeState(nextTheme);
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  useEffect(() => {
     return () => {
       if (animationTimeoutRef.current !== null) {
         window.clearTimeout(animationTimeoutRef.current);
