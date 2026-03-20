@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useWallet } from '@/contexts/WalletContext';
 import { useEffect, useState } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import AccountHeader from '../components/AccountHeader';
 
 type DAppCategory = 'all' | 'defi' | 'nft' | 'game' | 'social' | 'dao';
@@ -204,9 +205,10 @@ export default function DiscoverPage() {
 
   if (isCheckingSession) {
     return (
-      <div className={`flex items-center justify-center ${isEmbedded ? 'h-full' : 'min-h-screen'} ${isLight ? 'bg-[#eef4fb]' : 'bg-black'}`}>
-        <div className={`h-8 w-8 rounded-full border-2 animate-spin ${isLight ? 'border-slate-300 border-t-slate-700' : 'border-white/15 border-t-white'}`} />
-      </div>
+      <LoadingSpinner
+        progress={isAiMode ? 58 : 44}
+        statusLabel={isAiMode ? 'Loading AI-driven dApps' : 'Loading discovery workspace'}
+      />
     );
   }
 
