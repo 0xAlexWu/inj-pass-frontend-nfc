@@ -1726,9 +1726,9 @@ export default function AgentsPage() {
                 </button>
               </div>
 
-              <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-5 sm:p-6 lg:grid-cols-[360px_minmax(0,1fr)]">
-                <section className="grid min-h-0 grid-rows-[auto_auto_1fr] gap-4">
-                  <div className={`rounded-[1.8rem] border p-5 ${
+              <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-5 sm:p-6 lg:grid-cols-[340px_minmax(0,1fr)]">
+                <section className="min-h-0">
+                  <div className={`flex h-full flex-col rounded-[1.8rem] border p-5 ${
                     isLight
                       ? 'border-violet-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(245,247,255,0.92))]'
                       : 'border-[#6e5dff]/20 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))]'
@@ -1769,41 +1769,14 @@ export default function AgentsPage() {
                       <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-500">Link</div>
                       <p className={`mt-2 break-all text-xs leading-5 ${isLight ? 'text-slate-600' : 'text-gray-300'}`}>{inviteLink}</p>
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className={`rounded-[1.35rem] border px-4 py-4 ${
-                      isLight ? 'border-slate-200/80 bg-white/82' : 'border-white/10 bg-white/[0.03]'
-                    }`}>
-                      <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">Invited</p>
-                      <p className={`mt-2 text-3xl font-semibold ${isLight ? 'text-slate-900' : 'text-white'}`}>{INVITED_FRIENDS.length}</p>
-                      <p className="mt-1 text-xs text-gray-400">{activeInviteCount} active</p>
-                    </div>
-                    <div className={`rounded-[1.35rem] border px-4 py-4 ${
-                      isLight ? 'border-slate-200/80 bg-white/82' : 'border-white/10 bg-white/[0.03]'
-                    }`}>
-                      <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">Passbits</p>
-                      <p className={`mt-2 text-3xl font-semibold ${isLight ? 'text-violet-700' : 'text-blue-300'}`}>{totalInviteCredits.toLocaleString()}</p>
-                      <p className="mt-1 text-xs text-gray-400">earned</p>
-                    </div>
-                  </div>
-
-                  <div className={`rounded-[1.35rem] border px-4 py-4 ${
-                    isLight ? 'border-slate-200/80 bg-slate-900/[0.03]' : 'border-white/10 bg-black/20'
-                  }`}>
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-500">Referral Notes</div>
-                    <div className={`mt-3 space-y-3 text-sm ${isLight ? 'text-slate-600' : 'text-gray-300'}`}>
-                      <div className="flex items-start gap-2">
-                        <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-60" />
-                        <span>Active friends unlock rewards immediately.</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-60" />
-                        <span>Pending invites stay tracked until wallet activation.</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-60" />
-                        <span>Code and link route to the same referral path.</span>
+                    <div className="mt-auto pt-4">
+                      <div className={`rounded-[1.35rem] border px-4 py-4 ${
+                        isLight ? 'border-slate-200/80 bg-white/82' : 'border-white/10 bg-white/[0.03]'
+                      }`}>
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">Referral Route</p>
+                        <p className={`mt-2 text-sm leading-6 ${isLight ? 'text-slate-600' : 'text-gray-300'}`}>
+                          Share the code or the link. Both route into the same INJ Pass referral flow.
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -1823,6 +1796,33 @@ export default function AgentsPage() {
                       isLight ? 'border-slate-200/80 bg-slate-900/[0.03] text-slate-500' : 'border-white/10 bg-white/[0.04] text-gray-300'
                     }`}>
                       {INVITED_FRIENDS.length} total
+                    </div>
+                  </div>
+
+                  <div className={`grid grid-cols-[132px_132px_minmax(0,1fr)] gap-3 px-5 py-4 ${
+                    isLight ? 'border-b border-slate-200/80 bg-white/70' : 'border-b border-white/10 bg-black/10'
+                  }`}>
+                    <div className={`rounded-[1.1rem] border px-4 py-3 ${
+                      isLight ? 'border-slate-200/80 bg-white/82' : 'border-white/10 bg-white/[0.03]'
+                    }`}>
+                      <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">Invited</p>
+                      <p className={`mt-1 text-2xl font-semibold ${isLight ? 'text-slate-900' : 'text-white'}`}>{INVITED_FRIENDS.length}</p>
+                      <p className="mt-1 text-xs text-gray-400">{activeInviteCount} active</p>
+                    </div>
+                    <div className={`rounded-[1.1rem] border px-4 py-3 ${
+                      isLight ? 'border-slate-200/80 bg-white/82' : 'border-white/10 bg-white/[0.03]'
+                    }`}>
+                      <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">Passbits</p>
+                      <p className={`mt-1 text-2xl font-semibold ${isLight ? 'text-violet-700' : 'text-blue-300'}`}>{totalInviteCredits.toLocaleString()}</p>
+                      <p className="mt-1 text-xs text-gray-400">earned</p>
+                    </div>
+                    <div className={`rounded-[1.1rem] border px-4 py-3 ${
+                      isLight ? 'border-slate-200/80 bg-slate-900/[0.03]' : 'border-white/10 bg-black/20'
+                    }`}>
+                      <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">Referral Notes</p>
+                      <p className={`mt-1 text-sm leading-6 ${isLight ? 'text-slate-600' : 'text-gray-300'}`}>
+                        Active friends unlock rewards immediately. Pending invites stay tracked until wallet activation.
+                      </p>
                     </div>
                   </div>
 
