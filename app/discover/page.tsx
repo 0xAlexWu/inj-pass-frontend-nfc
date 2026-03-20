@@ -226,6 +226,9 @@ export default function DiscoverPage() {
   }
 
   if (!isUnlocked) {
+    if (isEmbedded) {
+      return <div className={`h-full ${isLight ? 'bg-[#eef4fb]' : 'bg-black'}`} />;
+    }
     navigateApp('/');
     return null;
   }

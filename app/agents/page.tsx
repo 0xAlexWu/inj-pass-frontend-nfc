@@ -407,10 +407,10 @@ export default function AgentsPage() {
 
   // ── Auth guard ──────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!isCheckingSession && (!isUnlocked || !address)) {
+    if (!isEmbedded && !isCheckingSession && (!isUnlocked || !address)) {
       navigateApp('/welcome');
     }
-  }, [isUnlocked, address, isCheckingSession, navigateApp]);
+  }, [isUnlocked, address, isCheckingSession, isEmbedded, navigateApp]);
 
   // ── Load persisted history ──────────────────────────────────────────────
   useEffect(() => {
@@ -1066,6 +1066,13 @@ export default function AgentsPage() {
         <div className={`w-8 h-8 border-2 rounded-full animate-spin ${isLight ? 'border-slate-300 border-t-slate-700' : 'border-white/20 border-t-white'}`} />
       </div>
     );
+  }
+
+  if (!isUnlocked || !address) {
+    if (isEmbedded) {
+      return <div className={rootShellClass} />;
+    }
+    return null;
   }
 
   // ─── UI ─────────────────────────────────────────────────────────────────
