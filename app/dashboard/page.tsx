@@ -1979,7 +1979,7 @@ export default function DashboardPage() {
                               </div>
                             </div>
 
-                            <div className="flex min-h-0 flex-col rounded-2xl border border-white/10 bg-black/25 p-4">
+                            <div className="flex min-h-0 flex-col rounded-2xl border border-white/10 bg-black/15 p-4">
                               <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">Summary</div>
                               <div className="mt-4 space-y-3">
                                 <div className="flex items-center justify-between gap-3 text-sm">
@@ -1996,7 +1996,7 @@ export default function DashboardPage() {
                                 </div>
                               </div>
 
-                              <div className="mt-5 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3">
+                              <div className="mt-5 rounded-2xl border border-white/8 bg-white/[0.02] px-4 py-3">
                                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">Gas</div>
                                 <div className="mt-3 space-y-3">
                                   <div className="flex items-center justify-between gap-3 text-sm">
