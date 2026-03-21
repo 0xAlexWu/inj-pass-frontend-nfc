@@ -58,6 +58,22 @@ export default function EmbedPage() {
     }
   }, [hasPendingSign]);
 
+  useEffect(() => {
+    const handleUnload = () => {
+      if (authPopup && !authPopup.closed) {
+        authPopup.close();
+      }
+    };
+
+    window.addEventListener('pagehide', handleUnload);
+    window.addEventListener('beforeunload', handleUnload);
+
+    return () => {
+      window.removeEventListener('pagehide', handleUnload);
+      window.removeEventListener('beforeunload', handleUnload);
+    };
+  }, [authPopup]);
+
   const expand  = useCallback(() => setMinimized(false), []);
   const minimize = useCallback(() => setMinimized(true), []);
 
@@ -144,6 +160,10 @@ export default function EmbedPage() {
 
   const handleDisconnect = () => {
     if (authPopup && !authPopup.closed) authPopup.close();
+    const backdrop = document.getElementById('injpass-backdrop');
+    if (backdrop) {
+      backdrop.remove();
+    }
     setAuthPopup(null);
     setAddress('');
     setWalletName('');

@@ -6,114 +6,18 @@ import { useEffect, useState } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import AccountHeader from '../components/AccountHeader';
+import { DAPPS, DApp, DAppCategory } from '@/config/dapps';
+import { NETWORK_CONFIG } from '@/config/network';
+import { startQRScanner, stopQRScanner, clearQRScanner, isCameraSupported, isValidAddress } from '@/services/qr-scanner';
+import { QRCodeSVG } from 'qrcode.react';
 
-type DAppCategory = 'all' | 'defi' | 'nft' | 'game' | 'social' | 'dao';
 type DiscoverCategory = DAppCategory | 'ai';
-
-interface DApp {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  category: DAppCategory;
-  url: string;
-  featured?: boolean;
-  aiDriven?: boolean;
-}
 
 const AI_DAPP_MENTIONS: Record<string, string> = {
   Omisper: '@Omisper',
   'Hash Mahjong': '@HashMahjong',
 };
-
-const DAPPS: DApp[] = [
-  {
-    id: '9',
-    name: 'Omisper',
-    description: 'Decentralized Social Platform',
-    icon: '/omisper.png',
-    category: 'social',
-    url: 'https://omisper-front.pages.dev/',
-    featured: true,
-    aiDriven: true,
-  },
-  {
-    id: '10',
-    name: 'Hash Mahjong',
-    description: 'Injective EVM Mini Game',
-    icon: '/hashmahjong.png',
-    category: 'game',
-    url: 'https://hash-mahjong-two.vercel.app/',
-    featured: true,
-    aiDriven: true,
-  },
-  {
-    id: '1',
-    name: 'Helix',
-    description: 'Decentralized Derivatives Trading',
-    icon: 'https://www.google.com/s2/favicons?domain=helixapp.com&sz=128',
-    category: 'defi',
-    url: 'https://helixapp.com',
-    featured: true,
-  },
-  {
-    id: '2',
-    name: 'Name Service',
-    description: '.inj Domain Names',
-    icon: 'https://www.google.com/s2/favicons?domain=inj.space.id&sz=128',
-    category: 'defi',
-    url: 'https://www.inj.space.id/',
-    featured: true,
-  },
-  {
-    id: '3',
-    name: 'Paradyze',
-    description: 'Yield & Structured Products',
-    icon: 'https://www.google.com/s2/favicons?domain=paradyze.io&sz=128',
-    category: 'defi',
-    url: 'https://www.paradyze.io/',
-  },
-  {
-    id: '4',
-    name: 'Talis',
-    description: 'NFT Marketplace',
-    icon: 'https://www.google.com/s2/favicons?domain=talis.art&sz=128',
-    category: 'nft',
-    url: 'https://talis.art',
-  },
-  {
-    id: '5',
-    name: 'Rarible',
-    description: 'Multichain NFT Marketplace',
-    icon: 'https://www.google.com/s2/favicons?domain=rarible.com&sz=128',
-    category: 'nft',
-    url: 'https://rarible.com',
-  },
-  {
-    id: '8',
-    name: 'n1nj4',
-    description: 'NFT Marketplace',
-    icon: 'https://www.google.com/s2/favicons?domain=n1nj4.fun&sz=128',
-    category: 'nft',
-    url: 'https://www.n1nj4.fun/',
-  },
-  {
-    id: '6',
-    name: 'Injective Hub',
-    description: 'Governance & Staking',
-    icon: 'https://www.google.com/s2/favicons?domain=hub.injective.network&sz=128',
-    category: 'dao',
-    url: 'https://hub.injective.network',
-  },
-  {
-    id: '7',
-    name: 'Choice',
-    description: 'DEX Aggregator & Vaults',
-    icon: 'https://www.google.com/s2/favicons?domain=choice.exchange&sz=128',
-    category: 'defi',
-    url: 'https://choice.exchange',
-  },
-];
+const AI_DRIVEN_DAPP_NAMES = new Set<keyof typeof AI_DAPP_MENTIONS>(['Omisper', 'Hash Mahjong']);
 
 const CATEGORIES = [
   { id: 'all', name: 'New' },
@@ -172,6 +76,14 @@ export default function DiscoverPage() {
   const router = useRouter();
   const { isUnlocked, address, isCheckingSession } = useWallet();
   const { theme } = useTheme();
+  const [showQRScanner, setShowQRScanner] = useState(false);
+  const [qrScanning, setQrScanning] = useState(false);
+  const [qrError, setQrError] = useState('');
+  const [qrSuccess, setQrSuccess] = useState(false);
+  const [scannedAddress, setScannedAddress] = useState('');
+  const [closingQRScanner, setClosingQRScanner] = useState(false);
+  const [showMyQR, setShowMyQR] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [routeContext] = useState(() => {
     if (typeof window === 'undefined') {
       return { embedded: false, aiMode: false };
@@ -190,6 +102,14 @@ export default function DiscoverPage() {
   const [activeCategory, setActiveCategory] = useState<DiscoverCategory>(isAiMode ? 'ai' : 'all');
   const [searchQuery, setSearchQuery] = useState('');
   const [surfaceReady, setSurfaceReady] = useState(false);
+  const dapps: (DApp & { aiDriven?: boolean })[] = DAPPS.map((dapp) => ({
+    ...dapp,
+    icon:
+      dapp.icon.startsWith('http') || dapp.icon.startsWith('/')
+        ? dapp.icon
+        : `${NETWORK_CONFIG.faviconService}${dapp.icon}&sz=128`,
+    aiDriven: AI_DRIVEN_DAPP_NAMES.has(dapp.name as keyof typeof AI_DAPP_MENTIONS),
+  }));
 
   useEffect(() => {
     let frame = 0;
@@ -217,6 +137,74 @@ export default function DiscoverPage() {
     event.dataTransfer.setData('text/plain', mention);
   };
 
+  const openQRScanner = async () => {
+    try {
+      if (!isCameraSupported()) {
+        alert('Camera is not supported on this device. Please use a device with a camera and grant permission.');
+        return;
+      }
+
+      setShowQRScanner(true);
+      setQrScanning(false);
+      setQrSuccess(false);
+      setQrError('');
+      setScannedAddress('');
+      setClosingQRScanner(false);
+      setShowMyQR(false);
+
+      window.setTimeout(async () => {
+        setQrScanning(true);
+        try {
+          await startQRScanner(
+            'qr-reader-discover',
+            (decodedText) => {
+              if (isValidAddress(decodedText)) {
+                setScannedAddress(decodedText);
+                setQrSuccess(true);
+                setQrScanning(false);
+                stopQRScanner();
+                window.setTimeout(() => {
+                  closeQRScanner();
+                  navigateApp(`/send?address=${decodedText}`);
+                }, 1000);
+              } else {
+                setQrError('Invalid address format');
+                setQrScanning(false);
+                stopQRScanner();
+              }
+            },
+            (nextError) => {
+              setQrError(nextError);
+              setQrScanning(false);
+            }
+          );
+        } catch (nextError) {
+          setQrError(nextError instanceof Error ? nextError.message : 'Failed to start camera');
+          setQrScanning(false);
+        }
+      }, 300);
+    } catch (nextError) {
+      alert(`Error: ${nextError instanceof Error ? nextError.message : 'Unknown error'}`);
+    }
+  };
+
+  const closeQRScanner = () => {
+    setClosingQRScanner(true);
+    if (!showMyQR) {
+      stopQRScanner();
+    }
+    window.setTimeout(() => {
+      setShowQRScanner(false);
+      setQrScanning(false);
+      setQrSuccess(false);
+      setQrError('');
+      setScannedAddress('');
+      setClosingQRScanner(false);
+      setShowMyQR(false);
+      clearQRScanner();
+    }, 350);
+  };
+
   if (isCheckingSession) {
     return (
       <LoadingSpinner
@@ -232,7 +220,7 @@ export default function DiscoverPage() {
   }
 
   const categoryTabs = isAiMode ? AI_CATEGORY : CATEGORIES;
-  const visibleDapps = isAiMode ? DAPPS.filter((dapp) => dapp.aiDriven) : DAPPS;
+  const visibleDapps = isAiMode ? dapps.filter((dapp) => dapp.aiDriven) : dapps;
   const filteredDapps = visibleDapps.filter((dapp) => {
     const matchesCategory = activeCategory === 'all' || activeCategory === 'ai' || dapp.category === activeCategory;
     const matchesSearch =
@@ -241,7 +229,7 @@ export default function DiscoverPage() {
     return matchesCategory && matchesSearch;
   });
 
-  const featuredDapps = DAPPS.filter((dapp) => dapp.featured);
+  const featuredDapps = dapps.filter((dapp) => dapp.featured);
   const activeCategoryIndex = Math.max(
     categoryTabs.findIndex((category) => category.id === activeCategory),
     0
@@ -258,7 +246,7 @@ export default function DiscoverPage() {
                 showFaucetButton={true}
                 onFaucetClick={() => navigateApp('/faucet')}
                 showScanButton={true}
-                onScanClick={() => {}}
+                onScanClick={openQRScanner}
               />
             </div>
             <div className={`rounded-2xl border p-4 ${isLight ? 'border-slate-200/80 bg-white/78' : 'border-white/10 bg-black'}`}>
@@ -452,6 +440,172 @@ export default function DiscoverPage() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {showQRScanner && !isEmbedded && (
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm transition-opacity duration-200 ${
+            closingQRScanner ? 'opacity-0' : 'opacity-100'
+          }`}
+          onClick={closeQRScanner}
+        >
+          <div
+            className={`w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl ${
+              closingQRScanner ? 'slide-down' : 'slide-up'
+            }`}
+            onClick={(event) => event.stopPropagation()}
+            style={{ maxHeight: '85vh' }}
+          >
+            <div className="border-b border-white/5 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-white">Scan QR Code</h3>
+                  <p className="text-xs text-gray-400">Point camera at wallet address</p>
+                </div>
+                <button onClick={closeQRScanner} className="rounded-xl p-2 transition-all hover:bg-white/10">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex min-h-[320px] flex-col items-center justify-center p-4">
+              {showMyQR ? (
+                <>
+                  <div className="mb-3 text-center">
+                    <h4 className="mb-1 text-sm font-bold text-white">My Wallet Address</h4>
+                    <p className="text-xs text-gray-400">Let others scan this code</p>
+                  </div>
+                  <div className="mb-3 rounded-xl bg-white p-4">
+                    <QRCodeSVG value={address || ''} size={200} level="H" includeMargin={true} />
+                  </div>
+                  <div className="w-full">
+                    <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-3">
+                      <span className="mr-2 truncate text-xs font-mono text-white">
+                        {address?.slice(0, 10)}...{address?.slice(-8)}
+                      </span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(address || '');
+                          setCopied(true);
+                          window.setTimeout(() => setCopied(false), 2000);
+                        }}
+                        className="flex-shrink-0 rounded-lg p-1.5 transition-all hover:bg-white/10"
+                      >
+                        {copied ? (
+                          <svg className="h-4 w-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 16 16">
+                            <rect width="11" height="11" x="4" y="4" rx="1" ry="1" strokeWidth="1.5" />
+                            <path d="M2 10c-0.8 0-1.5-0.7-1.5-1.5V2c0-0.8 0.7-1.5 1.5-1.5h8.5c0.8 0 1.5 0.7 1.5 1.5" strokeWidth="1.5" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : !qrSuccess && !qrError ? (
+                <>
+                  <div className="relative mb-4 w-full">
+                    <div id="qr-reader-discover" className="overflow-hidden rounded-xl border-2 border-white/20" style={{ width: '100%' }} />
+                    {qrScanning && (
+                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                        <div className="h-48 w-48 animate-pulse rounded-xl border-2 border-white/50" />
+                      </div>
+                    )}
+                  </div>
+                  <h4 className="mb-1 text-sm font-bold text-white">
+                    {qrScanning ? 'Scanning...' : 'Initializing Camera...'}
+                  </h4>
+                  <p className="text-center text-xs text-gray-400">
+                    {qrScanning ? 'Point camera at QR code' : 'Please allow camera access'}
+                  </p>
+                </>
+              ) : qrSuccess ? (
+                <>
+                  <div className="relative mb-4 flex h-32 w-32 items-center justify-center">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="h-32 w-32 animate-ping rounded-full border-2 border-white/30" />
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="h-28 w-28 animate-ping rounded-full border-2 border-white/40" style={{ animationDelay: '0.15s' }} />
+                    </div>
+                    <div className="success-bounce relative flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-2xl">
+                      <svg className="h-10 w-10 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  </div>
+                  <h4 className="mb-1 text-sm font-bold text-white">QR Code Scanned!</h4>
+                  <p className="mb-3 text-center text-xs text-gray-400">Redirecting to send page...</p>
+                  <div className="rounded-lg bg-white/5 px-3 py-2 text-xs font-mono text-gray-500">
+                    {scannedAddress.slice(0, 8)}...{scannedAddress.slice(-6)}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-500/20">
+                    <svg className="h-6 w-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <h4 className="mb-1 text-sm font-bold text-white">Scan Failed</h4>
+                  <p className="mb-4 text-center text-xs text-red-400">{qrError}</p>
+                  <button
+                    onClick={() => {
+                      setQrError('');
+                      openQRScanner();
+                    }}
+                    className="rounded-xl bg-white px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-gray-100"
+                  >
+                    Try Again
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div className="border-t border-white/5 p-3">
+              <button
+                onClick={() => {
+                  if (showMyQR) {
+                    setShowMyQR(false);
+                    window.setTimeout(() => {
+                      openQRScanner();
+                    }, 100);
+                  } else {
+                    setShowMyQR(true);
+                    stopQRScanner();
+                    setQrScanning(false);
+                  }
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm font-bold text-white transition-all hover:bg-white/10"
+              >
+                {showMyQR ? (
+                  <>
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Scan QR Code
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                      <path d="M3 9V5a2 2 0 0 1 2-2h4" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M21 9V5a2 2 0 0 0-2-2h-4" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M3 15v4a2 2 0 0 0 2 2h4" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M21 15v4a2 2 0 0 1-2 2h-4" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Show My QR Code
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

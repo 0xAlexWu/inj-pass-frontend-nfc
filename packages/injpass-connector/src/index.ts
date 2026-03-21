@@ -107,6 +107,20 @@ export class InjPassConnector {
       containerId: config.containerId,
     };
     this.embedOrigin = parsedEmbedUrl.origin;
+
+    // Auto-cleanup when page is closed/unloaded
+    // This ensures the iframe and popup are properly closed when dApp is closed
+    const cleanupHandler = () => {
+      // Only cleanup if we have an active connection or pending iframe
+      if (this.iframe || this.connected) {
+        this.disconnect();
+      }
+    };
+
+    window.addEventListener('pagehide', cleanupHandler);
+
+    // Fallback for some browsers that don't fire pagehide reliably
+    window.addEventListener('beforeunload', cleanupHandler);
   }
 
   /**
@@ -204,10 +218,17 @@ export class InjPassConnector {
    * Disconnect from wallet
    */
   disconnect(): void {
+    // Remove iframe
     if (this.iframe) {
       this.iframe.contentWindow?.postMessage({ type: 'INJPASS_DISCONNECT' }, this.embedOrigin);
       this.iframe.remove();
       this.iframe = null;
+    }
+
+    // Remove modal backdrop if exists
+    const backdrop = document.getElementById('injpass-backdrop');
+    if (backdrop) {
+      backdrop.remove();
     }
 
     if (this.messageHandler) {
@@ -288,9 +309,7 @@ export class InjPassConnector {
     if (this.config.mode === 'floating') {
       this.iframe.style.position = 'fixed';
       Object.entries(this.config.position).forEach(([key, value]) => {
-        if (!value) return;
-        const styleKey = key as 'top' | 'bottom' | 'left' | 'right';
-        this.iframe!.style[styleKey] = value;
+        (this.iframe!.style as CSSStyleDeclaration & Record<string, string>)[key] = value;
       });
       // ⚠️ DO NOT set width/height here for floating mode!
       // The embed page controls size via INJPASS_RESIZE messages

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/contexts/WalletContext';
 import { usePin } from '@/contexts/PinContext';
-import { estimateGas, sendTransaction } from '@/wallet/chain';
+import { estimateGas, getBalance, sendTransaction } from '@/wallet/chain';
 import { INJECTIVE_MAINNET, GasEstimate } from '@/types/chain';
 import { isNFCSupported, readNFCCard } from '@/services/nfc';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -43,6 +43,7 @@ function SendPageContent() {
   const [copied, setCopied] = useState(false);
   const [nfcError, setNfcError] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [userBalance, setUserBalance] = useState('0');
 
   // Load address book from localStorage
   useEffect(() => {
@@ -67,6 +68,15 @@ function SendPageContent() {
       setRecipient(addressParam);
     }
   }, []);
+
+  useEffect(() => {
+    if (!address) return;
+    getBalance(address, INJECTIVE_MAINNET)
+      .then((balance) => setUserBalance(balance.formatted))
+      .catch((error) => {
+        console.error('[Send] Failed to load balance:', error);
+      });
+  }, [address]);
 
   // Save address to address book
   const saveToAddressBook = () => {
@@ -183,6 +193,35 @@ function SendPageContent() {
     return address.startsWith('inj1') && address.length >= 40;
   };
 
+  const isValidRecipientAddress = useCallback((nextAddress: string): boolean => {
+    if (!nextAddress) return true;
+    return isEvmAddress(nextAddress) || isCosmosAddress(nextAddress);
+  }, []);
+
+  const isInsufficientBalance = (): boolean => {
+    if (!amount || !recipient) return false;
+    const nextAmount = parseFloat(amount);
+    const nextBalance = parseFloat(userBalance);
+    return !Number.isNaN(nextAmount) && nextAmount > 0 && nextAmount > nextBalance;
+  };
+
+  const getButtonState = (): { label: string; isError: boolean; disabled: boolean } => {
+    if (loading) return { label: 'Sending...', isError: false, disabled: true };
+    if (recipient && !isValidRecipientAddress(recipient)) {
+      return { label: 'Invalid Address', isError: true, disabled: true };
+    }
+    if (recipient && amount && isInsufficientBalance()) {
+      return { label: 'Insufficient Balance', isError: true, disabled: true };
+    }
+    if (error) {
+      return { label: error, isError: true, disabled: true };
+    }
+    if (!recipient || !amount || !gasEstimate) {
+      return { label: 'Send Transaction', isError: false, disabled: true };
+    }
+    return { label: 'Send Transaction', isError: false, disabled: false };
+  };
+
   // Convert between EVM and Cosmos addresses using official Injective SDK
   const convertAddress = () => {
     try {
@@ -270,9 +309,12 @@ function SendPageContent() {
         stack: err instanceof Error ? err.stack : undefined
       });
       
-      // Only show error if not using defaults
+      // Ignore transient validation issues while the user is still typing
       if (!useDefaults) {
-        setError(err instanceof Error ? err.message : 'Failed to estimate gas');
+        const msg = err instanceof Error ? err.message : 'Failed to estimate gas';
+        if (!msg.includes('invalid') && !msg.includes('Invalid') && !msg.includes('checksum')) {
+          setError(msg);
+        }
       }
     } finally {
       setEstimating(false);
@@ -289,14 +331,14 @@ function SendPageContent() {
 
   // Auto-estimate gas when recipient and amount are filled
   useEffect(() => {
-    if (recipient && amount && address) {
+    if (recipient && amount && address && isValidRecipientAddress(recipient)) {
       handleEstimate(false);
     }
-  }, [recipient, amount, address, handleEstimate]);
+  }, [recipient, amount, address, handleEstimate, isValidRecipientAddress]);
 
   // Auto-refresh every 3 seconds
   useEffect(() => {
-    const shouldEstimate = (recipient && amount) || (!recipient && !amount);
+    const shouldEstimate = (recipient && amount && isValidRecipientAddress(recipient)) || (!recipient && !amount);
     if (!address || !shouldEstimate) return;
 
     const interval = setInterval(() => {
@@ -304,7 +346,7 @@ function SendPageContent() {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [recipient, amount, address, handleEstimate]);
+  }, [recipient, amount, address, handleEstimate, isValidRecipientAddress]);
 
   const handleSendClick = () => {
     // Check if authentication is needed
@@ -325,9 +367,10 @@ function SendPageContent() {
     setTxHash('');
     
     try {
+      const normalizedRecipient = getEvmAddress(recipient);
       const hash = await sendTransaction(
         privateKey,
-        recipient,
+        normalizedRecipient,
         amount,
         undefined,
         INJECTIVE_MAINNET
@@ -506,6 +549,8 @@ function SendPageContent() {
     );
   }
 
+  const buttonState = getButtonState();
+
   return (
     <div className={`${isEmbedded ? 'bg-black' : 'min-h-screen pb-24 md:pb-8 bg-black'}`}>
       {!isEmbedded && (
@@ -552,13 +597,13 @@ function SendPageContent() {
               Recipient Address
             </label>
             <div className="relative">
-              <input
-                type="text"
-                value={recipient}
+            <input
+              type="text"
+              value={recipient}
                 onChange={(e) => setRecipient(e.target.value)}
                 placeholder="0x... or inj1..."
-                className="w-full py-4 px-4 pr-32 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-white/30 transition-all font-mono text-sm"
-              />
+              className="w-full py-4 px-4 pr-32 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-white/30 transition-all font-mono text-sm"
+            />
               
               {/* Convert Address Button */}
               <button
@@ -713,8 +758,12 @@ function SendPageContent() {
           {/* Send Button */}
           <button
             onClick={handleSendClick}
-            disabled={!recipient || !amount || loading || !gasEstimate}
-            className="w-full py-4 rounded-2xl bg-white text-black font-bold hover:bg-gray-100 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            disabled={buttonState.disabled}
+            className={`w-full py-4 rounded-2xl font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+              buttonState.isError
+                ? 'bg-red-500/14 border border-red-500/30 text-red-200'
+                : 'bg-white text-black hover:bg-gray-100'
+            }`}
           >
             {loading ? (
               <>
@@ -725,11 +774,13 @@ function SendPageContent() {
               </>
             ) : (
               <>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <line x1="12" y1="19" x2="12" y2="5" strokeWidth={2.5} strokeLinecap="round" />
-                  <polyline points="5 12 12 5 19 12" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                Send Transaction
+                {!buttonState.isError && (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <line x1="12" y1="19" x2="12" y2="5" strokeWidth={2.5} strokeLinecap="round" />
+                    <polyline points="5 12 12 5 19 12" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+                {buttonState.label}
               </>
             )}
           </button>
