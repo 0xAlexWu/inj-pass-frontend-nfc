@@ -257,13 +257,13 @@ export default function DiscoverPage() {
       )}
 
       {isEmbedded ? (
-        <div className="flex h-full flex-col gap-4 px-4 py-3">
+        <div className="flex h-full flex-col gap-3 px-3 py-3 sm:gap-4 sm:px-4">
           <div
-            className={`flex items-center gap-3 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            className={`flex flex-col gap-2.5 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] sm:flex-row sm:items-center sm:gap-3 ${
               surfaceReady ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
             }`}
           >
-            <div className={`relative rounded-xl p-1 ${isAiMode ? 'w-[118px] flex-none' : 'min-w-0 flex-1 max-w-[560px]'} ${
+            <div className={`relative rounded-xl p-1 ${isAiMode ? 'w-full sm:w-[118px] sm:flex-none' : 'w-full sm:min-w-0 sm:flex-1 sm:max-w-[560px]'} ${
               useWalletSurfaceTheme
                 ? 'border border-white/10 bg-black'
                 : isLight
@@ -299,7 +299,7 @@ export default function DiscoverPage() {
                 ))}
               </div>
             </div>
-            <div className="ml-auto w-[168px] flex-shrink-0 sm:w-[196px] md:w-[220px]">
+            <div className="w-full sm:ml-auto sm:w-[196px] sm:flex-shrink-0 md:w-[220px]">
               <SearchBox value={searchQuery} onChange={setSearchQuery} onClear={() => setSearchQuery('')} isLight={useWalletSurfaceTheme ? false : isLight} />
             </div>
           </div>
@@ -310,7 +310,7 @@ export default function DiscoverPage() {
             </div>
           ) : (
             <div
-              className={`flex min-h-0 flex-1 gap-4 overflow-x-auto scrollbar-hide transition-all duration-500 delay-75 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+              className={`flex min-h-0 flex-1 gap-3 overflow-x-auto scrollbar-hide transition-all duration-500 delay-75 ease-[cubic-bezier(0.22,1,0.36,1)] sm:gap-4 ${
                 surfaceReady ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
               }`}
             >
@@ -320,7 +320,7 @@ export default function DiscoverPage() {
                   draggable={isAiMode && !!AI_DAPP_MENTIONS[dapp.name]}
                   onDragStart={(event) => handleDAppDragStart(event, dapp)}
                   onClick={() => handleDAppClick(dapp)}
-                  className={`flex min-w-[112px] flex-col items-center justify-center gap-2 rounded-[1.45rem] border px-3 py-4 text-center transition-all hover:-translate-y-[1px] ${
+                  className={`flex min-w-[102px] flex-col items-center justify-center gap-2 rounded-[1.35rem] border px-3 py-3.5 text-center transition-all hover:-translate-y-[1px] sm:min-w-[112px] sm:rounded-[1.45rem] sm:py-4 ${
                     useWalletSurfaceTheme
                       ? 'border-white/10 bg-black hover:bg-white/[0.05]'
                       : isLight
@@ -328,7 +328,7 @@ export default function DiscoverPage() {
                         : 'border-white/10 bg-transparent hover:bg-white/[0.06]'
                   } ${isAiMode && AI_DAPP_MENTIONS[dapp.name] ? 'cursor-grab active:cursor-grabbing' : ''}`}
                 >
-                  <div className={`flex h-11 w-11 items-center justify-center overflow-hidden rounded-full p-2 ${
+                  <div className={`flex h-10 w-10 items-center justify-center overflow-hidden rounded-full p-2 sm:h-11 sm:w-11 ${
                     useWalletSurfaceTheme
                       ? 'border border-white/10 bg-black shadow-[0_8px_18px_rgba(0,0,0,0.18)]'
                       : isLight
@@ -338,7 +338,7 @@ export default function DiscoverPage() {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={dapp.icon} alt={dapp.name} className="h-full w-full object-contain" />
                   </div>
-                  <div className={`w-full truncate text-xs font-bold ${useWalletSurfaceTheme ? 'text-white' : isLight ? 'text-slate-900' : 'text-white'}`}>{dapp.name}</div>
+                  <div className={`w-full truncate text-[11px] font-bold sm:text-xs ${useWalletSurfaceTheme ? 'text-white' : isLight ? 'text-slate-900' : 'text-white'}`}>{dapp.name}</div>
                 </button>
               ))}
             </div>

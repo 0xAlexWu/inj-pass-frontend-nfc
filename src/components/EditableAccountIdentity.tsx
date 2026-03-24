@@ -44,7 +44,7 @@ export default function EditableAccountIdentity({ address, className = '', defau
 
   return (
     <div
-      className={`flex min-w-0 items-center gap-2.5 ${className}`}
+      className={`flex min-w-0 flex-1 items-start gap-2.5 sm:items-center ${className}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {
         if (!isEditing) {
@@ -52,7 +52,7 @@ export default function EditableAccountIdentity({ address, className = '', defau
         }
       }}
     >
-      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[0.95rem] border p-1.5 ${
+      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[0.95rem] border p-1.5 sm:h-9 sm:w-9 ${
         isLight
           ? 'border-slate-200/80 bg-white/85 shadow-[0_10px_24px_rgba(148,163,184,0.14)]'
           : 'border-white/10 bg-white/5'
@@ -66,8 +66,8 @@ export default function EditableAccountIdentity({ address, className = '', defau
         />
       </div>
 
-      <div className="min-w-0">
-        <div className="flex min-w-0 items-center gap-2">
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
           {isEditing ? (
             <div className="flex min-w-0 items-center gap-2">
               <input
@@ -129,7 +129,7 @@ export default function EditableAccountIdentity({ address, className = '', defau
                 </svg>
               </button>
 
-              <div className="flex min-w-0 items-center gap-1.5">
+              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                 <span className="injpass-nameplate injpass-nameplate-gold">N1NJ4</span>
                 <span className="injpass-nameplate injpass-nameplate-silver">.INJ</span>
               </div>
@@ -137,7 +137,7 @@ export default function EditableAccountIdentity({ address, className = '', defau
           )}
         </div>
 
-        <div className="mt-1.5 flex items-center gap-1.5 whitespace-nowrap">
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           {address && (
             <span className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${
               isLight

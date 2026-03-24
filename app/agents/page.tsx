@@ -375,12 +375,12 @@ export default function AgentsPage() {
   const headerShellClass = `flex items-center gap-3 ${isCompactStage ? (isLight ? 'border-b border-slate-200/80' : 'border-b border-white/10') : `border-b ${isLight ? 'border-slate-200/80' : 'border-white/10'}`} flex-shrink-0 ${
     isCompactEmbedded && isEmbedded
       ? isLight
-        ? 'px-4 py-3 bg-transparent'
-        : 'px-4 py-3 bg-transparent'
+        ? 'px-3 py-3 bg-transparent sm:px-4'
+        : 'px-3 py-3 bg-transparent sm:px-4'
       : isEmbedded
       ? isLight
-        ? 'px-5 py-4 bg-white/70'
-        : 'px-5 py-4 bg-white/[0.02]'
+        ? 'px-4 py-3 bg-white/70 sm:px-5 sm:py-4'
+        : 'px-4 py-3 bg-white/[0.02] sm:px-5 sm:py-4'
       : isLight
         ? 'px-4 py-3 bg-white/72 backdrop-blur-xl'
         : 'px-4 py-3 bg-black/50 backdrop-blur-sm'
@@ -1269,7 +1269,7 @@ export default function AgentsPage() {
                 </div>
               </div>
               {isCompactStage ? (
-                <div className="flex items-center gap-2">
+                <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
                   <div className={`rounded-xl border px-2.5 py-2 ${
                     isLight
                       ? 'border-slate-200/80 bg-slate-900/[0.03]'
@@ -1329,8 +1329,8 @@ export default function AgentsPage() {
           <div className={`flex-1 ${isCompactStage ? (messages.length === 0 ? 'overflow-hidden' : 'overflow-y-auto scrollbar-hide') : 'overflow-y-auto'} ${isCompactStage ? '' : isEmbedded ? (isLight ? 'bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.05),transparent_36%)]' : 'bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_36%)]') : ''}`}>
           {messages.length === 0 ? (
             isCompactStage ? (
-              <div className="flex h-full min-h-0 flex-col px-4 py-3">
-                  <div className="flex items-start justify-between gap-3">
+              <div className="flex h-full min-h-0 flex-col px-3 py-3 sm:px-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <div className={`inline-flex w-fit items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
                         isLight
@@ -1339,10 +1339,10 @@ export default function AgentsPage() {
                       }`}>
                         No conversations yet
                       </div>
-                      <h2 className={`mt-3 text-[25px] font-bold tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                      <h2 className={`mt-3 text-[23px] font-bold tracking-tight sm:text-[25px] ${isLight ? 'text-slate-900' : 'text-white'}`}>
                         <span className="lambda-gradient">λ</span> Agent
                       </h2>
-                      <p className={`mt-2 max-w-xl text-[13px] leading-5 ${isLight ? 'text-slate-500' : 'text-gray-400'}`}>
+                      <p className={`mt-2 max-w-xl text-[12px] leading-5 sm:text-[13px] ${isLight ? 'text-slate-500' : 'text-gray-400'}`}>
                         AI-powered wallet assistant for balances, swaps, transfers, and quick Injective checks.
                       </p>
                     </div>
@@ -1353,7 +1353,7 @@ export default function AgentsPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {[
                       'What is my wallet address?',
                       'Show my balances',
@@ -2044,7 +2044,7 @@ export default function AgentsPage() {
         <div className={`flex-shrink-0 border-t ${isLight ? 'border-slate-200/80' : 'border-white/10'} ${isCompactStage ? 'bg-transparent px-3 pt-5 pb-1.5' : isEmbedded ? (isLight ? 'bg-white/70 p-5' : 'bg-white/[0.02] p-5') : (isLight ? 'bg-white/72 backdrop-blur-xl p-4' : 'bg-black/80 backdrop-blur-sm p-4')}`}>
           <div className={`${isCompactStage ? 'max-w-none' : isEmbedded ? 'max-w-4xl' : 'max-w-3xl'} mx-auto`}>
             {isCompactStage && (
-              <div className="mb-2.5 flex flex-wrap items-center justify-start gap-1.5">
+              <div className="mb-3.5 flex flex-wrap items-center justify-start gap-1.5">
                 <div className={`rounded-full border px-2.5 py-1 text-[10px] font-medium ${
                   isLight
                     ? 'border-slate-200/80 bg-white/70 text-slate-500'

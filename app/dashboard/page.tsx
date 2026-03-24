@@ -1610,11 +1610,11 @@ export default function DashboardPage() {
   const isTestnet = walletNetworkMode === 'testnet';
   const activeWalletPanelMeta = walletPanel !== 'overview' ? walletPanelMeta[walletPanel] : null;
   const formattedNinjaBalance = walletNetworkMode === 'mainnet' ? ninjaBalance.toFixed(2) : '0.00';
-  const overviewStageClassName = 'h-[510px] md:h-[482px]';
-  const detailStageClassName = 'h-[540px] md:h-[520px]';
+  const overviewStageClassName = 'h-[438px] sm:h-[470px] md:h-[482px]';
+  const detailStageClassName = 'h-[500px] sm:h-[528px] md:h-[520px]';
   const aiStageClassName = overviewStageClassName;
   const walletStageClassName = isAiStage ? aiStageClassName : isWalletOverview ? overviewStageClassName : detailStageClassName;
-  const assetStageClassName = overviewStageClassName;
+  const assetStageClassName = 'h-[392px] sm:h-[430px] md:h-[482px]';
   const currentNetworkLabel = currentNetworkMeta.label;
   const currentNetworkShortLabel = currentNetworkMeta.shortLabel;
   const currentTokenSet = currentNetworkMeta.tokenSet;
@@ -1747,11 +1747,11 @@ export default function DashboardPage() {
             <div className="bg-gradient-to-b from-white/5 to-transparent border-b border-white/5 backdrop-blur-sm">
             <div className="max-w-7xl mx-auto px-4 py-6">
           {/* Header Top */}
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-5 flex flex-col gap-4 md:mb-6 md:flex-row md:items-start md:justify-between">
             <EditableAccountIdentity key={address || 'default'} address={address || undefined} />
 
             {/* Scan QR Code Button */}
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-wrap items-center justify-end gap-2 md:w-auto md:flex-nowrap">
               <ThemeToggleButton compact />
               <button
                 onClick={openAiAssetSurface}
@@ -1822,7 +1822,7 @@ export default function DashboardPage() {
           </div>
 
           <div
-            className="grid gap-5 transition-[grid-template-columns] duration-500 xl:[grid-template-columns:var(--dashboard-columns)]"
+            className="grid gap-4 transition-[grid-template-columns] duration-500 md:gap-5 xl:[grid-template-columns:var(--dashboard-columns)]"
             style={{
               ['--dashboard-columns' as string]: isAiStage
                 ? 'minmax(232px,0.38fr) minmax(0,1.62fr)'
@@ -1840,15 +1840,15 @@ export default function DashboardPage() {
                 }`}
               >
             {/* Total Balance Card - OKX Style */}
-            <div className="bg-black rounded-2xl p-6 border border-white/10 relative overflow-hidden flex h-full flex-col">
+            <div className="bg-black rounded-2xl border border-white/10 relative overflow-hidden flex h-full flex-col p-4 sm:p-5 md:p-6">
               {/* Subtle gradient accent */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-500/5 to-transparent rounded-full blur-2xl"></div>
               
               <div className="relative flex flex-1 flex-col">
                 {/* Header with Balance Label */}
                 {isWalletOverview && (
-                  <div className="mb-4 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                  <div className="mb-3 flex items-start justify-between gap-3 sm:mb-4">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Total Balance</span>
                       {isTestnet && (
                         <span className="rounded-full border border-[#5d7690] bg-[#1d2432] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-100">
@@ -1871,7 +1871,7 @@ export default function DashboardPage() {
                         )}
                       </button>
                     </div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
                       <button
                         onClick={toggleWalletNetworkMode}
                         disabled={networkSwitching}
@@ -1916,25 +1916,25 @@ export default function DashboardPage() {
                     }`}
                   >
                     <div key={`wallet-overview-${walletNetworkMode}-${walletSurfaceMotionKey}`} className="dashboard-surface-enter flex h-full flex-col">
-                      <div className="flex flex-col gap-6 xl:flex-row xl:items-end">
+                      <div className="flex h-full flex-col gap-4 md:gap-6 xl:flex-row xl:items-end">
                         <div className="min-w-0 flex-1">
-                          <div className="-translate-y-1 pl-3 md:pl-4">
-                            <div className="flex items-end gap-3 md:gap-4 flex-wrap">
-                              <span className="text-4xl md:text-5xl font-bold text-white font-mono tracking-tight">
+                          <div className="pl-1 sm:pl-3 md:pl-4">
+                            <div className="flex flex-wrap items-end gap-2.5 sm:gap-3 md:gap-4">
+                              <span className="text-[2rem] font-bold leading-none text-white font-mono tracking-tight sm:text-4xl md:text-5xl">
                                 {balanceVisible ? <RollingBalanceNumber value={formattedBalance} /> : '••••••'}
                               </span>
-                              <span className="text-xl font-semibold text-gray-400">INJ</span>
+                              <span className="text-lg font-semibold text-gray-400 sm:text-xl">INJ</span>
                             </div>
-                            <div className="flex items-center gap-4 mt-2">
-                              <div className="text-base text-gray-400 font-mono">
+                            <div className="mt-2 flex flex-wrap items-center gap-2.5 sm:gap-4">
+                              <div className="text-sm text-gray-400 font-mono sm:text-base">
                                 ≈ ${balanceVisible ? totalUsdValue : '••••••'} USD
                               </div>
                               {balanceVisible && balance && (
-                                <div className="flex items-center gap-2">
-                                  <span className={`text-sm font-semibold ${injPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className={`text-xs font-semibold sm:text-sm ${injPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                     {injPriceChange24h >= 0 ? '+' : ''}${(parseFloat(balance.formatted) * injPrice * injPriceChange24h / 100).toFixed(2)}
                                   </span>
-                                  <span className={`text-sm ${injPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                  <span className={`text-xs sm:text-sm ${injPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                     {injPriceChange24h >= 0 ? '+' : ''}{injPriceChange24h.toFixed(2)}%
                                   </span>
                                   <span className="text-gray-500 text-xs">24h</span>
@@ -1944,7 +1944,7 @@ export default function DashboardPage() {
                           </div>
                         </div>
 
-                        <div className="xl:w-[320px] xl:flex-shrink-0">
+                        <div className="w-full xl:w-[320px] xl:flex-shrink-0">
                           <PixelTrendChart
                             values={assetTrendSeries}
                             hidden={!balanceVisible}
@@ -1956,7 +1956,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      <div className="pointer-events-none relative flex min-h-[56px] flex-[0.62] items-center justify-center">
+                      <div className="pointer-events-none relative flex min-h-[18px] flex-[0.18] items-center justify-center sm:min-h-[28px] sm:flex-[0.28] md:min-h-[56px] md:flex-[0.62]">
                         <div className="absolute inset-x-12 top-1/2 h-40 -translate-y-1/2 rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.07),transparent_70%)] blur-3xl" />
                       </div>
                     </div>
@@ -1995,7 +1995,7 @@ export default function DashboardPage() {
                         walletPanel === 'settings'
                           ? 'overflow-hidden pr-0 pt-3'
                           : walletPanel === 'send' || walletPanel === 'swap' || walletPanel === 'history' || walletPanel === 'card' || walletPanel === 'chance'
-                            ? 'overflow-hidden pt-4'
+                            ? 'overflow-y-auto pr-1 pt-4 sm:overflow-hidden sm:pr-0'
                             : 'overflow-y-auto pt-4 pr-1'
                       }`}>
                         {walletPanel === 'send' && (
@@ -2845,14 +2845,14 @@ export default function DashboardPage() {
                 </div>
 
                 {isWalletOverview && (
-                <div className="mt-auto grid grid-cols-4 gap-3 pt-4">
+                <div className="mt-auto grid grid-cols-2 gap-3 pt-4 sm:grid-cols-4">
                   {/* Send Button */}
                   <button 
                     onClick={() => toggleWalletPanel('send')}
-                    className="flex flex-col items-center gap-2 group"
+                    className="flex flex-col items-center gap-1.5 group sm:gap-2"
                   >
-                    <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white shadow-lg transition-all hover:bg-gray-100 group-hover:scale-105">
-                      <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="h-12 w-12 rounded-full flex items-center justify-center bg-white shadow-lg transition-all hover:bg-gray-100 group-hover:scale-105 sm:h-14 sm:w-14">
+                      <svg className="h-4 w-4 text-black sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <line x1="12" y1="19" x2="12" y2="5" strokeWidth={2.5} strokeLinecap="round" />
                         <polyline points="5 12 12 5 19 12" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
@@ -2863,10 +2863,10 @@ export default function DashboardPage() {
                   {/* Receive Button */}
                   <button 
                     onClick={() => toggleWalletPanel('receive')}
-                    className="flex flex-col items-center gap-2 group"
+                    className="flex flex-col items-center gap-1.5 group sm:gap-2"
                   >
-                    <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white shadow-lg transition-all hover:bg-gray-100 group-hover:scale-105">
-                      <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="h-12 w-12 rounded-full flex items-center justify-center bg-white shadow-lg transition-all hover:bg-gray-100 group-hover:scale-105 sm:h-14 sm:w-14">
+                      <svg className="h-4 w-4 text-black sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <line x1="12" y1="5" x2="12" y2="19" strokeWidth={2.5} strokeLinecap="round" />
                         <polyline points="19 12 12 19 5 12" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
@@ -2877,10 +2877,10 @@ export default function DashboardPage() {
                   {/* Swap Button */}
                   <button 
                     onClick={() => toggleWalletPanel('swap')}
-                    className="flex flex-col items-center gap-2 group"
+                    className="flex flex-col items-center gap-1.5 group sm:gap-2"
                   >
-                    <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white shadow-lg transition-all hover:bg-gray-100 group-hover:scale-105">
-                      <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="h-12 w-12 rounded-full flex items-center justify-center bg-white shadow-lg transition-all hover:bg-gray-100 group-hover:scale-105 sm:h-14 sm:w-14">
+                      <svg className="h-4 w-4 text-black sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <polyline points="16 3 21 3 21 8" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                         <line x1="4" y1="20" x2="21" y2="3" strokeWidth={2.5} strokeLinecap="round" />
                         <polyline points="21 16 21 21 16 21" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
@@ -2894,10 +2894,10 @@ export default function DashboardPage() {
                   {/* History Button */}
                   <button 
                     onClick={() => toggleWalletPanel('history')}
-                    className="flex flex-col items-center gap-2 group"
+                    className="flex flex-col items-center gap-1.5 group sm:gap-2"
                   >
-                    <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white shadow-lg transition-all hover:bg-gray-100 group-hover:scale-105">
-                      <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="h-12 w-12 rounded-full flex items-center justify-center bg-white shadow-lg transition-all hover:bg-gray-100 group-hover:scale-105 sm:h-14 sm:w-14">
+                      <svg className="h-4 w-4 text-black sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <circle cx="12" cy="12" r="10" strokeWidth={2.5} strokeLinecap="round" />
                         <polyline points="12 6 12 12 16 14" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
@@ -2917,7 +2917,7 @@ export default function DashboardPage() {
                     : 'pointer-events-none translate-x-[calc(100%+1.25rem)] scale-[0.94] opacity-0'
                 }`}
               >
-                <div className="bg-black rounded-2xl border border-white/10 relative overflow-hidden p-4 sm:p-5 h-full flex flex-col">
+                <div className="bg-black rounded-2xl border border-white/10 relative overflow-hidden p-3 sm:p-4 md:p-5 h-full flex flex-col">
                   <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full bg-gradient-to-tr from-cyan-500/5 to-transparent blur-2xl" />
                   {renderCompactAssetSurface('left')}
                 </div>
@@ -2934,14 +2934,14 @@ export default function DashboardPage() {
                     : 'translate-x-0 scale-100 opacity-100'
                 }`}
               >
-            <div className="bg-black rounded-2xl border border-white/10 relative overflow-hidden p-4 sm:p-5 h-full flex flex-col">
+            <div className="bg-black rounded-2xl border border-white/10 relative overflow-hidden p-3 sm:p-4 md:p-5 h-full flex flex-col">
               <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-cyan-500/5 to-transparent rounded-full blur-2xl"></div>
               {isCardPanel ? (
                 renderCompactAssetSurface('right')
               ) : (
               <div key={`asset-surface-${walletNetworkMode}-${assetSurfaceMotionKey}`} className="dashboard-surface-enter relative flex flex-1 flex-col">
         {/* Asset Tabs - Smooth Sliding Background */}
-        <div className="relative mb-4 p-1 bg-white/5 rounded-xl">
+        <div className="relative mb-3 rounded-xl bg-white/5 p-1 sm:mb-4">
           {/* Sliding Background */}
           <div 
             className="absolute top-1 bottom-1 bg-white rounded-lg transition-all duration-300 ease-out shadow-lg"
@@ -2955,13 +2955,13 @@ export default function DashboardPage() {
           <div className="relative flex gap-2">
             <button 
               onClick={() => setAssetTab('tokens')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-3 px-2 sm:px-4 rounded-lg font-bold text-xs sm:text-sm transition-all duration-300 ${
+              className={`flex-1 flex items-center justify-center gap-1 py-2.5 px-1.5 rounded-lg font-bold text-[11px] transition-all duration-300 sm:gap-1.5 sm:px-4 sm:py-3 sm:text-sm ${
                 assetTab === 'tokens' 
                   ? 'text-black' 
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="10" strokeWidth={2} />
                 <path d="M12 6v12M6 12h12" strokeWidth={2} strokeLinecap="round" />
               </svg>
@@ -2969,13 +2969,13 @@ export default function DashboardPage() {
             </button>
             <button 
               onClick={() => setAssetTab('nfts')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-3 px-2 sm:px-4 rounded-lg font-bold text-xs sm:text-sm transition-all duration-300 ${
+              className={`flex-1 flex items-center justify-center gap-1 py-2.5 px-1.5 rounded-lg font-bold text-[11px] transition-all duration-300 sm:gap-1.5 sm:px-4 sm:py-3 sm:text-sm ${
                 assetTab === 'nfts' 
                   ? 'text-black' 
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <rect width="18" height="18" x="3" y="3" rx="2" ry="2" strokeWidth={2} />
                 <path d="M9 3v18M3 9h18" strokeWidth={2} strokeLinecap="round" />
               </svg>
@@ -2983,26 +2983,26 @@ export default function DashboardPage() {
             </button>
             <button 
               onClick={() => setAssetTab('defi')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-3 px-2 sm:px-4 rounded-lg font-bold text-xs sm:text-sm transition-all duration-300 ${
+              className={`flex-1 flex items-center justify-center gap-1 py-2.5 px-1.5 rounded-lg font-bold text-[11px] transition-all duration-300 sm:gap-1.5 sm:px-4 sm:py-3 sm:text-sm ${
                 assetTab === 'defi' 
                   ? 'text-black' 
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               <span>DeFi</span>
             </button>
             <button 
               onClick={() => setAssetTab('earn')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-3 px-2 sm:px-4 rounded-lg font-bold text-xs sm:text-sm transition-all duration-300 ${
+              className={`flex-1 flex items-center justify-center gap-1 py-2.5 px-1.5 rounded-lg font-bold text-[11px] transition-all duration-300 sm:gap-1.5 sm:px-4 sm:py-3 sm:text-sm ${
                 assetTab === 'earn' 
                   ? 'text-black' 
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v18M7.5 7.5h5.25a2.75 2.75 0 010 5.5h-1.5a2.75 2.75 0 000 5.5H17" />
               </svg>
               <span>Earn</span>
@@ -3011,7 +3011,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Asset List */}
-        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+        <div className="min-h-0 flex-1 overflow-y-auto pr-0 sm:pr-1">
           {assetTab === 'tokens' && (
             <div className="space-y-3">
               {dashboardTokenCards.map((token) => (
@@ -3024,13 +3024,13 @@ export default function DashboardPage() {
                         setFlippedTokenCard((current) => (current === token.symbol ? null : token.symbol));
                       }
                     }}
-                    className="relative h-[84px] w-full cursor-pointer text-left"
+                    className="relative h-[76px] w-full cursor-pointer text-left sm:h-[84px]"
                     role="button"
                     tabIndex={0}
                     style={{ transformStyle: 'preserve-3d' }}
                   >
                     <div
-                      className={`absolute inset-0 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition-all duration-500 [backface-visibility:hidden] ${
+                      className={`absolute inset-0 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 transition-all duration-500 [backface-visibility:hidden] sm:px-4 sm:py-3 ${
                         flippedTokenCard === token.symbol ? 'pointer-events-none invisible z-0 opacity-0' : 'visible z-10 opacity-100'
                       }`}
                       style={{
@@ -3040,7 +3040,7 @@ export default function DashboardPage() {
                       }}
                     >
                       <div className="flex h-full items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full">
+                        <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full sm:h-10 sm:w-10">
                           <Image
                             src={token.icon}
                             alt={token.symbol}
@@ -3051,20 +3051,20 @@ export default function DashboardPage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="mb-0.5 flex items-center gap-1.5">
-                            <div className="font-bold">{token.symbol}</div>
+                            <div className="text-sm font-bold sm:text-base">{token.symbol}</div>
                             <span className="text-[9px] uppercase tracking-[0.16em] text-gray-500">Tap for info</span>
                           </div>
-                          <div className="text-[13px] text-gray-400">{token.balance}</div>
+                          <div className="text-[12px] text-gray-400 sm:text-[13px]">{token.balance}</div>
                         </div>
                         <div className="text-right">
-                          <div className="font-bold font-mono text-[13px]">{token.usdValue}</div>
-                          <div className={`text-[13px] ${token.changeClass}`}>{token.change}</div>
+                          <div className="font-bold font-mono text-[12px] sm:text-[13px]">{token.usdValue}</div>
+                          <div className={`text-[12px] sm:text-[13px] ${token.changeClass}`}>{token.change}</div>
                         </div>
                       </div>
                     </div>
 
                     <div
-                      className={`absolute inset-0 rounded-2xl border px-4 py-3 transition-all duration-500 ${
+                      className={`absolute inset-0 rounded-2xl border px-3 py-2.5 transition-all duration-500 sm:px-4 sm:py-3 ${
                         isLight
                           ? 'border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(241,245,255,0.92))] shadow-[0_12px_26px_rgba(148,163,184,0.12)]'
                           : 'border-white/10 bg-[linear-gradient(180deg,rgba(8,10,18,0.98),rgba(10,13,20,0.96))]'
@@ -3079,7 +3079,7 @@ export default function DashboardPage() {
                       }}
                     >
                       <div className="flex h-full items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full">
+                        <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full sm:h-10 sm:w-10">
                           <Image
                             src={token.icon}
                             alt={token.symbol}
@@ -3089,9 +3089,9 @@ export default function DashboardPage() {
                           />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className={`mb-0.5 font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>{token.symbol}</div>
+                          <div className={`mb-0.5 text-sm font-bold sm:text-base ${isLight ? 'text-slate-900' : 'text-white'}`}>{token.symbol}</div>
                           <div className={`mb-0.5 text-[9px] uppercase tracking-[0.14em] ${isLight ? 'text-slate-400' : 'text-gray-500'}`}>Contract</div>
-                          <div className={`truncate font-mono text-[13px] ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                          <div className={`truncate font-mono text-[12px] sm:text-[13px] ${isLight ? 'text-slate-900' : 'text-white'}`}>
                             {token.contractValue}
                           </div>
                         </div>
@@ -3150,7 +3150,7 @@ export default function DashboardPage() {
                     <div 
                       key={`${nft.contractAddress}-${nft.tokenId}`}
                       onClick={() => setSelectedNFT(nft)}
-                      className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer"
+                      className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 transition-all cursor-pointer hover:bg-white/10 sm:gap-4 sm:p-4"
                     >
                       <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shadow-lg">
                         {nft.image ? (
@@ -3193,7 +3193,7 @@ export default function DashboardPage() {
               ) : stakingInfo && parseFloat(stakingInfo.totalStaked) > 0 ? (
                 <>
                   {/* Staking Position */}
-                  <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
+                  <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 transition-all cursor-pointer hover:bg-white/10 sm:gap-4 sm:p-4">
                     <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden">
                       <Image
                         src="/injswap.png"
@@ -3218,7 +3218,7 @@ export default function DashboardPage() {
 
                   {/* Staking Rewards */}
                   {parseFloat(stakingInfo.rewards) > 0 && (
-                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
+                    <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 transition-all cursor-pointer hover:bg-white/10 sm:gap-4 sm:p-4">
                       <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center text-2xl shadow-lg">
                         💰
                       </div>
@@ -3312,7 +3312,7 @@ export default function DashboardPage() {
                             key={token.id}
                             onClick={() => void handleFaucetTokenClaim(token.id)}
                             disabled={isClaiming || faucetClaimLocked || !address}
-                            className={`flex h-[84px] items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-all ${
+                            className={`flex h-[76px] items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition-all sm:h-[84px] sm:px-4 sm:py-3 ${
                               isClaimed
                                 ? 'border-slate-500/20 bg-slate-500/10 text-gray-400'
                                 : isLocked
@@ -3322,7 +3322,7 @@ export default function DashboardPage() {
                                     : 'border-white/10 bg-white/5 text-white hover:bg-white/[0.08] hover:border-white/18'
                             } ${!address ? 'cursor-not-allowed opacity-50' : ''}`}
                           >
-                            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full">
+                            <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full sm:h-10 sm:w-10">
                               <Image
                                 src={token.icon}
                                 alt={token.label}
@@ -3332,18 +3332,18 @@ export default function DashboardPage() {
                               />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="mb-0.5 font-bold">{token.label}</div>
-                              <div className={`${isClaimed || isLocked ? 'text-gray-500' : 'text-gray-400'} text-[13px]`}>
+                              <div className="mb-0.5 text-sm font-bold sm:text-base">{token.label}</div>
+                              <div className={`${isClaimed || isLocked ? 'text-gray-500' : 'text-gray-400'} text-[12px] sm:text-[13px]`}>
                                 {token.amountLabel}
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className={`font-bold font-mono text-[13px] ${
+                              <div className={`font-bold font-mono text-[12px] sm:text-[13px] ${
                                 isClaimed || isLocked ? 'text-gray-500' : 'text-white'
                               }`}>
                                 {isClaiming ? '...' : isClaimed ? 'Claimed' : isLocked ? 'Locked' : 'Claim'}
                               </div>
-                              <div className={`text-[13px] ${
+                              <div className={`text-[12px] sm:text-[13px] ${
                                 isClaimed
                                   ? 'text-gray-500'
                                   : isLocked

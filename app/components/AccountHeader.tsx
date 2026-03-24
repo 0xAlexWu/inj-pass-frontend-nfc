@@ -21,20 +21,20 @@ export default function AccountHeader({
   onFaucetClick,
 }: AccountHeaderProps) {
   return (
-    <div className="flex items-center justify-between gap-4">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <EditableAccountIdentity key={address || 'default'} address={address} defaultName={accountName} />
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2 sm:flex-nowrap">
         <ThemeToggleButton compact />
 
         {showFaucetButton && (
           <button
             onClick={onFaucetClick}
-            className="rounded-lg border border-white/10 bg-white/5 p-2.5 transition-all group hover:border-violet-500/40 hover:bg-violet-600/20"
+            className="rounded-lg border border-white/10 bg-white/5 p-2 transition-all group hover:border-violet-500/40 hover:bg-violet-600/20 sm:p-2.5"
             title="Testnet Faucet"
           >
             <svg
-              className="h-[18px] w-[18px] text-gray-400 transition-colors group-hover:text-violet-300"
+              className="h-4 w-4 text-gray-400 transition-colors group-hover:text-violet-300 sm:h-[18px] sm:w-[18px]"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -59,10 +59,10 @@ export default function AccountHeader({
         {showScanButton && (
           <button 
             onClick={onScanClick}
-            className="rounded-lg border border-white/10 bg-white/5 p-2.5 transition-all hover:bg-white/10"
+            className="rounded-lg border border-white/10 bg-white/5 p-2 transition-all hover:bg-white/10 sm:p-2.5"
             title="Scan QR Code"
           >
-            <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+            <svg className="h-4 w-4 sm:h-[18px] sm:w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
               {/* Top-left corner */}
               <path d="M3 9V5a2 2 0 0 1 2-2h4" strokeLinecap="round" strokeLinejoin="round" />
               {/* Top-right corner */}
