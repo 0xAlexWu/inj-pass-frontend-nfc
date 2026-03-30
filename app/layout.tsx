@@ -1,21 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { WalletProvider } from "@/contexts/WalletContext";
 import { PinProvider } from "@/contexts/PinContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import Script from "next/script";
 import { SidebarOverlay, GeometricShapes } from "./components/LayoutClient";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-space-grotesk",
-});
 
 export const metadata: Metadata = {
   title: "INJ Pass",
@@ -56,14 +45,32 @@ export default function RootLayout({
         <Script id="theme-init" strategy="beforeInteractive">
           {`
             try {
-              var theme = localStorage.getItem('injpass_theme_mode') === 'light' ? 'light' : 'dark';
+              var storedTheme = localStorage.getItem('injpass_theme_mode');
+              var hour = new Date().getHours();
+              var fallbackTheme = hour >= 7 && hour < 19 ? 'light' : 'dark';
+              var theme = storedTheme === 'light' || storedTheme === 'dark'
+                ? storedTheme
+                : fallbackTheme;
+
               document.documentElement.dataset.theme = theme;
               document.documentElement.style.colorScheme = theme;
+
+              var applyBodyTheme = function () {
+                if (document.body) {
+                  document.body.dataset.theme = theme;
+                }
+              };
+
+              applyBodyTheme();
+
+              if (!document.body) {
+                document.addEventListener('DOMContentLoaded', applyBodyTheme, { once: true });
+              }
             } catch (error) {}
           `}
         </Script>
       </head>
-      <body className={`${inter.variable} ${spaceGrotesk.variable} antialiased`}>
+      <body className="antialiased">
         <ThemeProvider>
           {/* Sidebar Overlay */}
           <SidebarOverlay />

@@ -1,1201 +1,1628 @@
 'use client';
 
+import type { CSSProperties, FormEvent, PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
-import ThemeToggleButton from '@/components/ThemeToggleButton';
+import { sha256 } from '@noble/hashes/sha2.js';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useWallet } from '@/contexts/WalletContext';
-import { encryptKey, hasWallet, saveWallet } from '@/wallet/keystore';
-import { createByPasskey, importPrivateKey } from '@/wallet/key-management';
+import {
+  createByPasskey,
+  unlockByPasskey,
+} from '@/wallet/key-management';
+import {
+  decryptKey,
+  hasWallet,
+  loadWallet,
+} from '@/wallet/keystore';
+import type { LocalKeystore } from '@/types/wallet';
+import TunnelBackground from '@/components/TunnelBackground';
 
-const heroMetrics = [
-  {
-    label: 'Access',
-    value: 'Passkey Native',
-    detail: 'Biometric-first entry without a seed phrase on the first screen.',
-  },
-  {
-    label: 'Surface',
-    value: 'Wallet + Pay',
-    detail: 'Balances, cards, pay, and discovery enter through one account surface.',
-  },
-  {
-    label: 'Time',
-    value: '< 30 seconds',
-    detail: 'Name the wallet, approve the passkey, and land straight in dashboard.',
-  },
-];
+type PendingAction = 'create' | 'enter' | null;
+type MockPhase = 'idle' | 'analyzing' | 'preparing' | 'awaiting' | 'complete';
 
-const surfaceNodes = [
-  {
-    key: 'wallet',
-    label: 'Wallet',
-    title: 'Asset control',
-    copy: 'Balances, send, receive, swap, and history.',
-  },
-  {
-    key: 'cards',
-    label: 'Cards',
-    title: 'NFC rail',
-    copy: 'Card center, tap flow, and device-bound management.',
-  },
-  {
-    key: 'pay',
-    label: 'Pay',
-    title: 'Checkout layer',
-    copy: 'Merchant settlement and wallet authorization in one path.',
-  },
-  {
-    key: 'discover',
-    label: 'Discover',
-    title: 'App surface',
-    copy: 'Agents, dApps, and next actions inside the same shell.',
-  },
-];
+interface MockExecutionState {
+  prompt: string;
+  intent: string;
+  phase: MockPhase;
+  hash: string;
+}
+
+interface ConversationMessage {
+  role: 'assistant' | 'user';
+  title?: string;
+  body: string;
+  tone: 'default' | 'active' | 'warning' | 'success';
+}
+
+interface ErrorToastState {
+  id: number;
+  message: string;
+  isExiting: boolean;
+}
+
+const ERROR_TOAST_DURATION_MS = 4200;
+const ERROR_TOAST_EXIT_MS = 320;
+const HEADLINE_LINES = [
+  'The Agent Wallet',
+  'that redefines',
+  'Web3 through AI.',
+] as const;
+const HEADLINE_TEXT = HEADLINE_LINES.join(' ');
+const HEADLINE_TYPING_STEPS = Math.max(
+  ...HEADLINE_LINES.map((line) => line.length)
+);
+const AI_STREAM_STEP = 2;
+const AI_STREAM_INTERVAL = 16;
+const AGENT_SCENARIOS = [
+  'Swap 250 USDT to INJ',
+  'Send 12 INJ to 0x4f2a71c98de4a3bc11f6d851be5f4b1f84e98aa1',
+  'Stake 40 INJ with the validator showing the strongest uptime',
+  'Claim staking rewards and restake them into INJ',
+  'Rebalance idle USDT into INJ if slippage stays below 0.5%',
+] as const;
 
 export default function WelcomePage() {
   const router = useRouter();
-  const { theme } = useTheme();
   const { unlock } = useWallet();
-  const isLight = theme === 'light';
+  const { theme, setTheme } = useTheme();
 
-  const [busyRoute, setBusyRoute] = useState<'create' | 'recover' | null>(null);
-  const [error, setError] = useState('');
-  const [showCreatePanel, setShowCreatePanel] = useState(false);
-  const [walletNameInput, setWalletNameInput] = useState('');
+  const pageRef = useRef<HTMLDivElement>(null);
+  const createNameInputRef = useRef<HTMLInputElement>(null);
+  const conversationViewportRef = useRef<HTMLDivElement>(null);
+  const spotlightTargetRef = useRef({ x: 0, y: 0 });
+  const spotlightCurrentRef = useRef({ x: 0, y: 0 });
+  const scenarioIndexRef = useRef(0);
+  const startScenarioLoopRef = useRef<(index: number) => void>(() => {});
+  const agentTimeoutsRef = useRef<number[]>([]);
+  const hasStartedAgentAutoplayRef = useRef(false);
+  const themeTransitionTimeoutRef = useRef<number | null>(null);
+  const headerEntranceTimeoutRef = useRef<number | null>(null);
+  const errorToastTimeoutRef = useRef<number | null>(null);
+  const errorToastExitTimeoutRef = useRef<number | null>(null);
+
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [walletNameInput, setWalletNameInput] = useState('INJ Pass');
   const [walletExists, setWalletExists] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [importStep, setImportStep] = useState<'key' | 'password'>('key');
-  const [privateKeyInput, setPrivateKeyInput] = useState('');
-  const [showPrivateKey, setShowPrivateKey] = useState(false);
-  const [importPassword, setImportPassword] = useState('');
-  const [importPasswordConfirm, setImportPasswordConfirm] = useState('');
-  const [importError, setImportError] = useState('');
-  const [importLoading, setImportLoading] = useState(false);
-  const privateKeyRef = useRef<HTMLInputElement>(null);
-  const importPasswordRef = useRef<HTMLInputElement>(null);
-
-  const isBusy = busyRoute !== null;
+  const [isThemeTransitioning, setIsThemeTransitioning] = useState(false);
+  const [hasHeaderEntered, setHasHeaderEntered] = useState(false);
+  const [agentInput, setAgentInput] = useState<string>(AGENT_SCENARIOS[0]);
+  const [agentExecution, setAgentExecution] = useState<MockExecutionState>({
+    prompt: '',
+    intent: 'Ready',
+    phase: 'idle',
+    hash: '',
+  });
+  const [headlineStep, setHeadlineStep] = useState(0);
+  const [conversationMessages, setConversationMessages] = useState<
+    ConversationMessage[]
+  >([]);
+  const [errorToast, setErrorToast] = useState<ErrorToastState | null>(null);
 
   useEffect(() => {
     setWalletExists(hasWallet());
   }, []);
 
   useEffect(() => {
-    if (!showCreatePanel) {
+    if (!isCreateDialogOpen) {
       return;
     }
-    const timeout = setTimeout(() => inputRef.current?.focus(), 60);
-    return () => clearTimeout(timeout);
-  }, [showCreatePanel]);
+
+    createNameInputRef.current?.focus();
+  }, [isCreateDialogOpen]);
 
   useEffect(() => {
-    if (showImportModal && importStep === 'key') {
-      const timeout = setTimeout(() => privateKeyRef.current?.focus(), 60);
-      return () => clearTimeout(timeout);
-    }
-  }, [showImportModal, importStep]);
+    return () => {
+      if (themeTransitionTimeoutRef.current) {
+        window.clearTimeout(themeTransitionTimeoutRef.current);
+      }
+
+      if (headerEntranceTimeoutRef.current) {
+        window.clearTimeout(headerEntranceTimeoutRef.current);
+      }
+
+      clearErrorToastTimers();
+    };
+  }, []);
 
   useEffect(() => {
-    if (importStep === 'password') {
-      const timeout = setTimeout(() => importPasswordRef.current?.focus(), 60);
-      return () => clearTimeout(timeout);
-    }
-  }, [importStep]);
-
-  const closeCreatePanel = () => {
-    setShowCreatePanel(false);
-    setWalletNameInput('');
-    setError('');
-  };
-
-  const handleCreateWallet = async () => {
-    if (!walletNameInput.trim()) {
-      setError('Please enter an account name');
+    if (typeof window === 'undefined') {
       return;
     }
 
-    setBusyRoute('create');
-    setError('');
+    const prefersReducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)'
+    ).matches;
+
+    if (prefersReducedMotion) {
+      setHasHeaderEntered(true);
+      return;
+    }
+
+    setHasHeaderEntered(false);
+    headerEntranceTimeoutRef.current = window.setTimeout(() => {
+      setHasHeaderEntered(true);
+      headerEntranceTimeoutRef.current = null;
+    }, 140);
+
+    return () => {
+      if (headerEntranceTimeoutRef.current) {
+        window.clearTimeout(headerEntranceTimeoutRef.current);
+        headerEntranceTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const page = pageRef.current;
+    if (!page) {
+      return;
+    }
+
+    const setDefaultSpotlight = () => {
+      const { width, height } = page.getBoundingClientRect();
+      const nextX = width * 0.74;
+      const nextY = height * 0.34;
+      spotlightTargetRef.current = { x: nextX, y: nextY };
+      spotlightCurrentRef.current = { x: nextX, y: nextY };
+      page.style.setProperty('--spotlight-x', `${nextX}px`);
+      page.style.setProperty('--spotlight-y', `${nextY}px`);
+    };
+
+    setDefaultSpotlight();
+
+    let frameId = 0;
+
+    const tick = () => {
+      const current = spotlightCurrentRef.current;
+      const target = spotlightTargetRef.current;
+
+      current.x += (target.x - current.x) * 0.09;
+      current.y += (target.y - current.y) * 0.09;
+
+      page.style.setProperty('--spotlight-x', `${current.x}px`);
+      page.style.setProperty('--spotlight-y', `${current.y}px`);
+
+      frameId = window.requestAnimationFrame(tick);
+    };
+
+    frameId = window.requestAnimationFrame(tick);
+    window.addEventListener('resize', setDefaultSpotlight);
+
+    return () => {
+      window.removeEventListener('resize', setDefaultSpotlight);
+      window.cancelAnimationFrame(frameId);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      clearAgentSimulation();
+    };
+  }, []);
+
+  useEffect(() => {
+    const viewport = conversationViewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    viewport.scrollTo({
+      top: viewport.scrollHeight,
+      behavior: 'smooth',
+    });
+  }, [conversationMessages]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const prefersReducedMotion = window.matchMedia(
+        '(prefers-reduced-motion: reduce)'
+      ).matches;
+
+      if (prefersReducedMotion) {
+        setHeadlineStep(HEADLINE_TYPING_STEPS);
+        return;
+      }
+    }
+
+    setHeadlineStep(0);
+
+    let currentIndex = 0;
+    const intervalId = window.setInterval(() => {
+      currentIndex += 1;
+      setHeadlineStep(currentIndex);
+
+      if (currentIndex >= HEADLINE_TYPING_STEPS) {
+        window.clearInterval(intervalId);
+      }
+    }, 24);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (headlineStep < HEADLINE_TYPING_STEPS) {
+      return;
+    }
+
+    if (hasStartedAgentAutoplayRef.current) {
+      return;
+    }
+
+    hasStartedAgentAutoplayRef.current = true;
+    startScenarioLoopRef.current(0);
+  }, [headlineStep]);
+
+  const unlockPasskeyWallet = async (keystore: LocalKeystore) => {
+    if (!keystore.credentialId) {
+      throw new Error('Missing passkey credential for this wallet.');
+    }
+
+    const entropy = await unlockByPasskey(keystore.credentialId);
+    const privateKey = await decryptKey(keystore.encryptedPrivateKey, entropy);
+    unlock(privateKey, keystore);
+  };
+
+  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const page = pageRef.current;
+    if (!page) {
+      return;
+    }
+
+    const bounds = page.getBoundingClientRect();
+    spotlightTargetRef.current = {
+      x: event.clientX - bounds.left,
+      y: event.clientY - bounds.top,
+    };
+  };
+
+  const handlePointerLeave = () => {
+    const page = pageRef.current;
+    if (!page) {
+      return;
+    }
+
+    const { width, height } = page.getBoundingClientRect();
+    spotlightTargetRef.current = {
+      x: width * 0.74,
+      y: height * 0.34,
+    };
+  };
+
+  const handleThemeToggle = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+    setIsThemeTransitioning(true);
+
+    if (themeTransitionTimeoutRef.current) {
+      window.clearTimeout(themeTransitionTimeoutRef.current);
+    }
+
+    themeTransitionTimeoutRef.current = window.setTimeout(() => {
+      setIsThemeTransitioning(false);
+    }, 520);
+  };
+
+  const handleOpenCreateDialog = () => {
+    dismissErrorToast(true);
+    setWalletNameInput((currentName) => currentName || 'INJ Pass');
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleCloseCreateDialog = () => {
+    if (pendingAction === 'create') {
+      return;
+    }
+
+    setIsCreateDialogOpen(false);
+  };
+
+  const handleCreateWallet = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPendingAction('create');
+    dismissErrorToast(true);
 
     try {
-      const result = await createByPasskey(walletNameInput.trim());
-      const { loadWallet } = await import('@/wallet/keystore');
-      const keystore = loadWallet();
+      const walletName = walletNameInput.trim();
 
-      if (!keystore) {
-        throw new Error('Failed to load created wallet');
+      if (!walletName) {
+        throw new Error('Please name your INJ Pass before continuing.');
       }
 
-      const { unlockByPasskey } = await import('@/wallet/key-management/createByPasskey');
-      const { decryptKey } = await import('@/wallet/keystore');
-      const entropy = await unlockByPasskey(result.credentialId);
-      const privateKey = await decryptKey(keystore.encryptedPrivateKey, entropy);
-
-      setWalletExists(true);
-      closeCreatePanel();
-      unlock(privateKey, keystore);
-      router.replace('/dashboard');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create wallet');
-    } finally {
-      setBusyRoute(null);
-    }
-  };
-
-  const handleRecoverWallet = async () => {
-    setBusyRoute('recover');
-    setError('');
-
-    try {
-      const { recoverFullWallet } = await import('@/wallet/key-management/recoverByPasskey');
-      const result = await recoverFullWallet();
-      const { loadWallet } = await import('@/wallet/keystore');
-      const keystore = loadWallet();
-
-      if (!keystore) {
-        throw new Error('Failed to load recovered wallet');
+      if (walletName.length > 20) {
+        throw new Error('INJ Pass name must be 20 characters or fewer.');
       }
 
-      const { unlockByPasskey } = await import('@/wallet/key-management/createByPasskey');
-      const { decryptKey } = await import('@/wallet/keystore');
-      const entropy = await unlockByPasskey(result.credentialId);
-      const privateKey = await decryptKey(keystore.encryptedPrivateKey, entropy);
+      const result = await createByPasskey(walletName);
+      const createdWallet = loadWallet();
+
+      if (!createdWallet) {
+        throw new Error('Failed to load the created wallet.');
+      }
+
+      await unlockPasskeyWallet({
+        ...createdWallet,
+        credentialId: result.credentialId,
+      });
 
       setWalletExists(true);
-      unlock(privateKey, keystore);
-      router.replace('/dashboard');
+      setIsCreateDialogOpen(false);
+      router.push('/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to recover wallet');
+      showErrorToast(
+        err instanceof Error ? err.message : 'Failed to create wallet.'
+      );
     } finally {
-      setBusyRoute(null);
+      setPendingAction(null);
     }
   };
 
-  const handleImportNextStep = () => {
-    setImportError('');
-
-    if (!privateKeyInput.trim()) {
-      setImportError('Please enter your private key');
-      return;
-    }
+  const handleEnterWallet = async () => {
+    setPendingAction('enter');
+    dismissErrorToast(true);
 
     try {
-      importPrivateKey(privateKeyInput.trim());
-      setImportStep('password');
+      const existingWallet = loadWallet();
+
+      if (!existingWallet || !existingWallet.credentialId) {
+        throw new Error('No paired passkey wallet was found on this device.');
+      }
+
+      await unlockPasskeyWallet(existingWallet);
+      router.push('/dashboard');
     } catch (err) {
-      setImportError(err instanceof Error ? err.message : 'Invalid private key');
-    }
-  };
-
-  const handleImportWallet = async () => {
-    setImportError('');
-
-    if (!importPassword) {
-      setImportError('Please enter a password');
-      return;
-    }
-
-    if (importPassword.length < 8) {
-      setImportError('Password must be at least 8 characters');
-      return;
-    }
-
-    if (importPassword !== importPasswordConfirm) {
-      setImportError('Passwords do not match');
-      return;
-    }
-
-    setImportLoading(true);
-
-    try {
-      const { privateKey, address } = importPrivateKey(privateKeyInput.trim());
-      const encoder = new TextEncoder();
-      const rawEntropy = encoder.encode(importPassword);
-      const entropy = new Uint8Array(Math.max(rawEntropy.length, 32));
-      entropy.set(rawEntropy);
-
-      const encryptedPrivateKey = await encryptKey(privateKey, entropy);
-      const keystore = {
-        address,
-        encryptedPrivateKey,
-        source: 'import' as const,
-        createdAt: Date.now(),
-        walletName: 'Imported Wallet',
-      };
-
-      saveWallet(keystore);
-      setWalletExists(true);
-      unlock(privateKey, keystore);
-      router.replace('/dashboard');
-    } catch (err) {
-      setImportError(err instanceof Error ? err.message : 'Failed to import wallet');
+      showErrorToast(
+        err instanceof Error ? err.message : 'Failed to enter INJ Pass.'
+      );
     } finally {
-      setImportLoading(false);
+      setPendingAction(null);
     }
   };
 
-  const handleCloseImport = () => {
-    setShowImportModal(false);
-    setImportStep('key');
-    setPrivateKeyInput('');
-    setImportPassword('');
-    setImportPasswordConfirm('');
-    setImportError('');
-    setShowPrivateKey(false);
+  const startAgentSimulation = (rawPrompt: string) => {
+    const prompt = rawPrompt.trim();
+    if (!prompt) {
+      return;
+    }
+
+    clearAgentSimulation();
+    setAgentInput(prompt);
+
+    const intent = inferIntent(prompt);
+    const hash = createMockHash(prompt);
+
+    setAgentExecution({
+      prompt,
+      intent,
+      phase: 'analyzing',
+      hash: '',
+    });
+    appendConversationMessages([
+      {
+        role: 'user',
+        body: prompt,
+        tone: 'default',
+      },
+      {
+        role: 'assistant',
+        title: 'Interpret intent',
+        body: `Reading the instruction and mapping it to ${withArticle(intent.toLowerCase())} action on Injective.`,
+        tone: 'active',
+      },
+    ]);
+
+    agentTimeoutsRef.current = [
+      window.setTimeout(() => {
+        setAgentExecution({
+          prompt,
+          intent,
+          phase: 'preparing',
+          hash: '',
+        });
+        appendConversationMessages([
+          {
+            role: 'assistant',
+            title: 'Build transaction',
+            body: 'Preparing a route for the requested action and assembling the transaction plan.',
+            tone: 'active',
+          },
+        ]);
+      }, 1100),
+      window.setTimeout(() => {
+        setAgentExecution({
+          prompt,
+          intent,
+          phase: 'awaiting',
+          hash: '',
+        });
+        appendConversationMessages([
+          {
+            role: 'assistant',
+            title: 'Request approval',
+            body: 'Simulating passkey approval before the onchain action is finalized.',
+            tone: 'warning',
+          },
+        ]);
+      }, 2500),
+      window.setTimeout(() => {
+        setAgentExecution({
+          prompt,
+          intent,
+          phase: 'complete',
+          hash,
+        });
+        appendConversationMessages([
+          {
+            role: 'assistant',
+            title: 'Execution complete',
+            body: `Tx hash\n${hash}`,
+            tone: 'success',
+          },
+        ]);
+      }, 4200),
+      window.setTimeout(() => {
+        startScenarioLoopRef.current(scenarioIndexRef.current);
+      }, 6000),
+    ];
   };
+
+  startScenarioLoopRef.current = (index: number) => {
+    scenarioIndexRef.current = (index + 1) % AGENT_SCENARIOS.length;
+    startAgentSimulation(AGENT_SCENARIOS[index]);
+  };
+
+  const handleAgentSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    startAgentSimulation(agentInput);
+  };
+
+  const isAgentRunning =
+    agentExecution.phase !== 'idle' && agentExecution.phase !== 'complete';
+  const isLightMode = theme === 'light';
+  const typedHeadlineLines = HEADLINE_LINES.map((line) =>
+    line.slice(0, headlineStep)
+  );
+  const typedLastLine = typedHeadlineLines[2];
+  const typedLastLineHasPeriod = typedLastLine.endsWith('.');
+  const typedLastLineBody = typedLastLineHasPeriod
+    ? typedLastLine.slice(0, -1)
+    : typedLastLine;
 
   return (
-    <div className={`relative min-h-screen overflow-hidden ${isLight ? 'bg-[#f1f4f7] text-slate-900' : 'bg-[#060606] text-white'}`}>
+    <div
+      ref={pageRef}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
+      className={`welcome-page relative isolate min-h-screen overflow-hidden ${
+        isLightMode ? 'bg-[#eef2f7] text-[#12151b]' : 'bg-[#020202] text-white'
+      }`}
+      style={
+        {
+          '--spotlight-x': '74%',
+          '--spotlight-y': '34%',
+        } as CSSProperties
+      }
+    >
+      <TunnelBackground mode={theme} />
       <div
-        className={`absolute inset-0 ${
-          isLight
-            ? 'bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.85),transparent_36%),radial-gradient(circle_at_18%_20%,rgba(59,130,246,0.09),transparent_26%),radial-gradient(circle_at_84%_12%,rgba(148,163,184,0.12),transparent_24%),linear-gradient(180deg,#f6f7f9_0%,#eef2f5_48%,#edf1f4_100%)]'
-            : 'bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_34%),radial-gradient(circle_at_18%_20%,rgba(115,115,115,0.14),transparent_24%),radial-gradient(circle_at_84%_12%,rgba(255,255,255,0.06),transparent_22%),linear-gradient(180deg,#050505_0%,#090909_52%,#030303_100%)]'
-        }`}
-      />
-      <div
-        className="absolute inset-0 opacity-40"
+        className="pointer-events-none absolute inset-0"
         style={{
-          backgroundImage: isLight
-            ? 'linear-gradient(rgba(15,23,42,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.05) 1px, transparent 1px)'
-            : 'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
-          backgroundSize: '34px 34px',
-          maskImage: 'linear-gradient(180deg, rgba(0,0,0,0.72), transparent)',
+          background:
+            isLightMode
+              ? 'linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(237,241,247,0.34) 100%)'
+              : 'linear-gradient(180deg, rgba(2,2,2,0.08) 0%, rgba(2,2,2,0.22) 100%)',
         }}
       />
-
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1480px] flex-col px-4 pb-6 pt-4 md:px-8 md:pb-8 md:pt-6">
-        <header
-          className={`rounded-[1.65rem] border px-4 py-4 md:px-6 ${
-            isLight
-              ? 'border-black/10 bg-white/78 shadow-[0_18px_60px_rgba(15,23,42,0.06)] backdrop-blur-xl'
-              : 'border-white/10 bg-white/[0.03] backdrop-blur-2xl'
-          }`}
-        >
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-4">
-              <div
-                className={`flex h-12 w-12 items-center justify-center rounded-[1rem] border ${
-                  isLight ? 'border-black/10 bg-black/[0.03]' : 'border-white/10 bg-white/[0.04]'
+      <div
+        className={`pointer-events-none absolute inset-0 ${
+          isLightMode ? 'opacity-55' : 'opacity-65 mix-blend-screen'
+        }`}
+        style={{
+          background:
+            isLightMode
+              ? 'radial-gradient(circle 108px at var(--spotlight-x) var(--spotlight-y), rgba(153,117,255,0.12) 0%, rgba(231,146,199,0.09) 16%, rgba(255,177,198,0.06) 30%, transparent 54%)'
+              : 'radial-gradient(circle 108px at var(--spotlight-x) var(--spotlight-y), rgba(255,255,255,0.09) 0%, rgba(220,142,255,0.065) 16%, rgba(255,129,173,0.038) 30%, transparent 54%)',
+        }}
+      />
+      <div
+        className={`pointer-events-none absolute inset-0 ${
+          isLightMode ? 'opacity-28' : 'opacity-40'
+        }`}
+        style={{
+          background:
+            isLightMode
+              ? 'radial-gradient(circle at 18% 18%, rgba(126,67,255,0.12), transparent 30%), radial-gradient(circle at 82% 22%, rgba(255,99,158,0.08), transparent 26%), radial-gradient(circle at 50% 100%, rgba(117,54,224,0.06), transparent 28%)'
+              : 'radial-gradient(circle at 18% 18%, rgba(126,67,255,0.12), transparent 30%), radial-gradient(circle at 82% 22%, rgba(255,99,158,0.1), transparent 26%), radial-gradient(circle at 50% 100%, rgba(117,54,224,0.08), transparent 28%)',
+        }}
+      />
+      <div
+        className={`pointer-events-none absolute inset-0 z-[1] transition-opacity duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          isThemeTransitioning ? 'opacity-100' : 'opacity-0'
+        }`}
+        style={{
+          background: isLightMode
+            ? 'rgba(255,255,255,0.22)'
+            : 'rgba(11,10,16,0.24)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}
+      />
+      <div
+        className={`absolute inset-x-0 top-0 z-30 border-b backdrop-blur-xl transform-gpu will-change-transform will-change-opacity transition-[transform,opacity,filter] duration-[1050ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          hasHeaderEntered
+            ? 'translate-y-0 scale-100 opacity-100 blur-0'
+            : '-translate-y-8 scale-[0.988] opacity-0 blur-md'
+        } ${
+          isLightMode
+            ? 'border-[#1a2030]/8 bg-[linear-gradient(90deg,rgba(255,255,255,0.78),rgba(246,241,252,0.72),rgba(244,236,243,0.76))]'
+            : 'border-white/10 bg-[linear-gradient(90deg,rgba(74,18,111,0.62),rgba(83,17,88,0.44),rgba(116,24,76,0.56))]'
+        }`}
+      >
+        <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2.5 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:gap-4 sm:px-8 lg:px-12">
+          <div
+            className={`order-1 min-w-0 justify-self-start transform-gpu will-change-transform will-change-opacity transition-[transform,opacity,filter] duration-[820ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+              hasHeaderEntered
+                ? 'translate-y-0 opacity-100 blur-0'
+                : 'translate-y-4 opacity-0 blur-[6px]'
+            }`}
+            style={{ transitionDelay: hasHeaderEntered ? '230ms' : '0ms' }}
+          >
+            <div className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-4">
+              <span
+                className={`whitespace-nowrap text-[0.96rem] leading-6 sm:text-base sm:leading-7 ${
+                  isLightMode ? 'text-[#2d3546]/72' : 'text-white/[0.67]'
                 }`}
               >
-                <Image src="/lambdalogo.png" alt="INJ Pass" width={30} height={30} className="h-[30px] w-[30px] object-contain" />
-              </div>
-              <div>
-                <div className={`text-base font-semibold tracking-[-0.03em] ${isLight ? 'text-slate-900' : 'text-white'}`}>INJ Pass</div>
-                <div className={`mt-1 text-[11px] uppercase tracking-[0.28em] ${isLight ? 'text-slate-500' : 'text-white/42'}`}>
-                  Injective Identity Relay
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <ThemeToggleButton compact />
-              <div
-                className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] ${
-                  isLight ? 'border-black/10 bg-black/[0.03] text-slate-700' : 'border-white/10 bg-white/[0.04] text-white/70'
+                INJ Pass
+              </span>
+              <p
+                className={`truncate text-[0.72rem] font-medium leading-5 sm:whitespace-nowrap sm:text-sm ${
+                  isLightMode ? 'text-[#1a2231]/82' : 'text-white/[0.78]'
                 }`}
               >
-                Passkey Native
-              </div>
-              <div
-                className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] ${
-                  isLight ? 'border-black/10 bg-black/[0.03] text-slate-700' : 'border-white/10 bg-white/[0.04] text-white/70'
-                }`}
-              >
-                Wallet + Cards + Apps
-              </div>
+                Agent Wallet for Injective
+              </p>
             </div>
           </div>
-        </header>
 
-        <main className="mt-6 grid flex-1 gap-5 xl:grid-cols-[minmax(0,1.08fr)_minmax(360px,430px)]">
-          <section
-            className={`relative overflow-hidden rounded-[2.1rem] border p-6 md:p-8 ${
-              isLight
-                ? 'border-black/10 bg-white/84 shadow-[0_28px_90px_rgba(15,23,42,0.08)]'
-                : 'border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))]'
+          <p
+            className={`order-3 col-span-2 min-w-0 text-center text-[0.64rem] font-medium leading-5 tracking-[0.14em] transform-gpu will-change-transform will-change-opacity transition-[transform,opacity,filter] duration-[820ms] ease-[cubic-bezier(0.22,1,0.36,1)] sm:order-2 sm:col-span-1 sm:justify-self-center sm:-ml-2 sm:text-[0.78rem] sm:leading-normal sm:tracking-[0.16em] ${
+              hasHeaderEntered
+                ? 'translate-y-0 opacity-100 blur-0'
+                : 'translate-y-4 opacity-0 blur-[6px]'
+            } ${
+              isLightMode ? 'text-[#3e4658]' : 'text-white/[0.82]'
+            }`}
+            style={{ transitionDelay: hasHeaderEntered ? '230ms' : '0ms' }}
+          >
+            Unstable Preview Release without Auditing under Risk
+          </p>
+
+          <div
+            className={`order-2 flex items-center justify-end gap-2 justify-self-end transform-gpu will-change-transform will-change-opacity transition-[transform,opacity,filter] duration-[820ms] ease-[cubic-bezier(0.22,1,0.36,1)] sm:order-3 ${
+              hasHeaderEntered
+                ? 'translate-y-0 opacity-100 blur-0'
+                : 'translate-y-4 opacity-0 blur-[6px]'
+            }`}
+            style={{ transitionDelay: hasHeaderEntered ? '230ms' : '0ms' }}
+          >
+            <a
+              href="https://x.com/INJ_Pass"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`inline-flex h-7 w-7 items-center justify-center rounded-full border transition-colors ${
+                isLightMode
+                  ? 'border-[#151a27]/10 bg-white/72 text-[#384055] hover:text-[#11161f]'
+                  : 'border-white/10 bg-white/[0.05] text-white/75 hover:text-white'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+            </a>
+            <a
+              href="https://t.me/injective"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`inline-flex h-7 w-7 items-center justify-center rounded-full border transition-colors ${
+                isLightMode
+                  ? 'border-[#151a27]/10 bg-white/72 text-[#384055] hover:text-[#11161f]'
+                  : 'border-white/10 bg-white/[0.05] text-white/75 hover:text-white'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5">
+                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161l-1.84 8.673c-.136.624-.5.778-.999.485l-2.761-2.036-1.332 1.281c-.147.147-.271.271-.556.271l.199-2.822 5.13-4.638c.223-.199-.049-.31-.346-.111l-6.341 3.993-2.733-.853c-.593-.187-.605-.593.126-.879l10.691-4.12c.496-.183.929.112.762.874z"/>
+              </svg>
+            </a>
+            <button
+              type="button"
+              onClick={handleThemeToggle}
+              aria-label={
+                isLightMode ? 'Switch to dark mode' : 'Switch to light mode'
+              }
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors ${
+                isLightMode
+                  ? 'border-[#151a27]/10 bg-white/78 text-[#384055] hover:text-[#11161f]'
+                  : 'border-white/10 bg-white/[0.05] text-white/75 hover:text-white'
+              }`}
+            >
+              {isLightMode ? (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`h-4 w-4 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${isThemeTransitioning ? 'rotate-180 scale-95' : 'rotate-0 scale-100'}`}>
+                  <path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0 4a1 1 0 0 1-1-1v-1a1 1 0 1 1 2 0v1a1 1 0 0 1-1 1Zm0-18a1 1 0 0 1-1-1V2a1 1 0 1 1 2 0v1a1 1 0 0 1-1 1Zm10 8a1 1 0 1 1 0 2h-1a1 1 0 1 1 0-2h1ZM4 12a1 1 0 1 1 0 2H3a1 1 0 1 1 0-2h1Zm14.95 6.364a1 1 0 0 1 1.414 1.414l-.707.707a1 1 0 1 1-1.414-1.414l.707-.707ZM5.757 5.172a1 1 0 0 1 1.414 0l.707.707A1 1 0 1 1 6.464 7.293l-.707-.707a1 1 0 0 1 0-1.414Zm12.193 0a1 1 0 0 1 0 1.414l-.707.707a1 1 0 0 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 0ZM7.171 16.707a1 1 0 1 1-1.414 1.414l-.707-.707a1 1 0 0 1 1.414-1.414l.707.707Z" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`h-4 w-4 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${isThemeTransitioning ? 'rotate-180 scale-95' : 'rotate-0 scale-100'}`}>
+                  <path d="M21.752 15.002A9 9 0 0 1 11 2.248a1 1 0 0 0-1.185-1.185A11 11 0 1 0 22.937 14.19a1 1 0 0 0-1.185-1.185Z" />
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="pointer-events-none fixed inset-x-0 top-20 z-40 flex justify-center px-4 sm:top-24">
+        {errorToast ? (
+          <ErrorToast
+            key={errorToast.id}
+            message={errorToast.message}
+            isExiting={errorToast.isExiting}
+            isLightMode={isLightMode}
+          />
+        ) : null}
+      </div>
+
+      {isCreateDialogOpen ? (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm"
+          onClick={handleCloseCreateDialog}
+        >
+          <form
+            onSubmit={handleCreateWallet}
+            onClick={(event) => event.stopPropagation()}
+            className={`w-full max-w-md rounded-[28px] border p-5 shadow-[0_30px_120px_rgba(15,10,26,0.22)] backdrop-blur-xl sm:p-6 ${
+              isLightMode
+                ? 'border-[#151a27]/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(244,238,250,0.88))]'
+                : 'border-white/10 bg-[linear-gradient(180deg,rgba(42,20,54,0.92),rgba(20,12,29,0.94))]'
             }`}
           >
-            <div
-              className={`absolute inset-0 ${
-                isLight
-                  ? 'bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.9),transparent_32%),radial-gradient(circle_at_18%_18%,rgba(15,23,42,0.05),transparent_26%)]'
-                  : 'bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.1),transparent_30%),radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.04),transparent_26%)]'
-              }`}
-            />
-            <div className="relative z-10 flex h-full flex-col">
-              <div className="max-w-4xl">
-                <div className={`text-[11px] font-semibold uppercase tracking-[0.28em] ${isLight ? 'text-slate-500' : 'text-white/38'}`}>
-                  One passkey. One product surface.
-                </div>
-                <h1 className={`mt-5 text-4xl font-semibold leading-[0.9] tracking-[-0.06em] md:text-6xl xl:text-[78px] ${isLight ? 'text-slate-950' : 'text-white'}`}>
-                  Wallet access should feel like entering software,
-                  <span className={`${isLight ? 'text-slate-500' : 'text-white/55'} block`}>not filling a setup form.</span>
-                </h1>
-                <p className={`mt-6 max-w-2xl text-base leading-7 md:text-lg md:leading-8 ${isLight ? 'text-slate-600' : 'text-white/64'}`}>
-                  INJ Pass is the entry layer for wallet, pay, cards, and discovery. Set up a fresh device with passkey, sign back into the same identity, or migrate an external key without leaving the same stage.
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p
+                  className={`text-[0.7rem] font-medium uppercase tracking-[0.22em] ${
+                    isLightMode ? 'text-[#6a7287]' : 'text-white/[0.42]'
+                  }`}
+                >
+                  Start a new INJ Pass wallet
+                </p>
+                <h2
+                  className={`mt-2 text-xl font-semibold ${
+                    isLightMode ? 'text-[#161b24]' : 'text-white'
+                  }`}
+                >
+                  Name your INJ Pass
+                </h2>
+                <p
+                  className={`mt-2 max-w-sm text-sm leading-6 ${
+                    isLightMode ? 'text-[#50586d]' : 'text-white/[0.58]'
+                  }`}
+                >
+                  Approve the passkey request, pair this wallet to the current
+                  device, and continue into your dashboard.
                 </p>
               </div>
 
-              <div className="mt-8 grid gap-4 md:grid-cols-3">
-                {heroMetrics.map((metric) => (
-                  <div
-                    key={metric.label}
-                    className={`rounded-[1.45rem] border px-4 py-4 ${
-                      isLight ? 'border-black/10 bg-black/[0.02]' : 'border-white/10 bg-white/[0.03]'
-                    }`}
-                  >
-                    <div className={`text-[10px] font-semibold uppercase tracking-[0.24em] ${isLight ? 'text-slate-500' : 'text-white/36'}`}>
-                      {metric.label}
-                    </div>
-                    <div className={`mt-3 text-xl font-semibold tracking-[-0.03em] ${isLight ? 'text-slate-950' : 'text-white'}`}>
-                      {metric.value}
-                    </div>
-                    <div className={`mt-2 text-sm leading-6 ${isLight ? 'text-slate-600' : 'text-white/58'}`}>{metric.detail}</div>
-                  </div>
+              <button
+                type="button"
+                onClick={handleCloseCreateDialog}
+                disabled={pendingAction === 'create'}
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
+                  isLightMode
+                    ? 'border-[#151a27]/10 bg-white/72 text-[#4d556a] hover:text-[#161b24]'
+                    : 'border-white/10 bg-white/[0.05] text-white/62 hover:text-white'
+                }`}
+                aria-label="Close create wallet dialog"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  className="h-4 w-4"
+                >
+                  <path
+                    d="M6 6 18 18M18 6 6 18"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <label
+              htmlFor="wallet-name"
+              className={`mt-6 block text-[0.72rem] font-medium uppercase tracking-[0.2em] ${
+                isLightMode ? 'text-[#5f6880]' : 'text-white/[0.42]'
+              }`}
+            >
+              Wallet name
+            </label>
+            <input
+              ref={createNameInputRef}
+              id="wallet-name"
+              type="text"
+              value={walletNameInput}
+              onChange={(event) => setWalletNameInput(event.target.value)}
+              placeholder="INJ Pass"
+              maxLength={20}
+              disabled={pendingAction === 'create'}
+              className={`mt-3 w-full rounded-2xl border px-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-[#d96eff]/18 disabled:cursor-not-allowed disabled:opacity-65 ${
+                isLightMode
+                  ? 'border-[#151a27]/10 bg-white/78 text-[#171b24] placeholder:text-[#71798d] focus:border-[#d96eff]/22'
+                  : 'border-white/[0.12] bg-[rgba(255,255,255,0.04)] text-white placeholder:text-white/26 focus:border-[#d96eff]/34'
+              }`}
+              style={{ fontFamily: 'var(--font-space-grotesk)' }}
+            />
+            <p
+              className={`mt-2 text-xs ${
+                isLightMode ? 'text-[#727b90]' : 'text-white/[0.34]'
+              }`}
+            >
+              Up to 20 characters. This will be used for passkey registration.
+            </p>
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={handleCloseCreateDialog}
+                disabled={pendingAction === 'create'}
+                className={`inline-flex min-h-12 w-full items-center justify-center rounded-2xl border px-4 text-sm font-semibold transition duration-300 disabled:cursor-not-allowed disabled:opacity-60 ${
+                  isLightMode
+                    ? 'border-[#151a27]/10 bg-white/78 text-[#202634] hover:bg-white'
+                    : 'border-white/[0.12] bg-white/[0.04] text-white/[0.86] hover:bg-white/[0.08]'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={pendingAction === 'create'}
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#7f2cff_0%,#d51f93_58%,#ff6f88_100%)] px-4 text-sm font-semibold text-white shadow-[0_16px_34px_rgba(199,45,144,0.24)] transition duration-300 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {pendingAction === 'create'
+                  ? 'Approving passkey...'
+                  : 'Create INJ Pass'}
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
+
+      <main className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl items-start px-4 pb-24 pt-40 sm:px-8 sm:pb-16 sm:pt-40 lg:px-12 lg:items-center">
+        <div className="grid w-full gap-10 sm:gap-12 lg:grid-cols-[minmax(0,1.02fr)_minmax(390px,0.88fr)] lg:items-center">
+          <section className="max-w-none lg:max-w-2xl">
+            <div>
+              <h1
+                aria-label={HEADLINE_TEXT}
+                className={`relative max-w-3xl text-[2.55rem] font-semibold leading-[0.96] tracking-[-0.055em] sm:text-5xl sm:leading-[1.01] lg:text-[4.55rem] ${
+                  isLightMode ? 'text-[#141821]' : 'text-white'
+                }`}
+                style={{ fontFamily: 'var(--font-space-grotesk)' }}
+              >
+                <span aria-hidden="true" className="invisible block">
+                  {HEADLINE_LINES.map((line) => (
+                    <span key={line} className="block">
+                      {line}
+                    </span>
+                  ))}
+                </span>
+                <span aria-hidden="true" className="absolute inset-0 block">
+                  <span className="block">{typedHeadlineLines[0]}</span>
+                  <span className="block">{typedHeadlineLines[1]}</span>
+                  <span className="block">
+                    {typedLastLineBody}
+                    {typedLastLineHasPeriod ? (
+                      <span
+                        className={
+                          headlineStep >= HEADLINE_LINES[2].length
+                            ? 'motion-safe:animate-[headlineDotBlink_1.05s_ease-in-out_infinite]'
+                            : ''
+                        }
+                      >
+                        .
+                      </span>
+                    ) : null}
+                  </span>
+                </span>
+              </h1>
+              <p
+                className={`mt-4 max-w-[34rem] text-[0.98rem] leading-6 sm:mt-5 sm:max-w-xl sm:text-lg sm:leading-7 ${
+                  isLightMode ? 'text-[#2d3546]/72' : 'text-white/[0.67]'
+                }`}
+              >
+                Simplify onchain execution with secure, intelligent automation
+                anytime, anywhere, across every stage of your Web3 journey.
+              </p>
+            </div>
+
+            <div className="mt-7 grid gap-3 sm:mt-8 sm:max-w-xl sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={handleOpenCreateDialog}
+                disabled={pendingAction !== null}
+                className={`inline-flex min-h-[3.25rem] w-full items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#7f2cff_0%,#d51f93_58%,#ff6f88_100%)] px-5 text-base font-semibold text-white shadow-[0_18px_40px_rgba(199,45,144,0.28)] transition duration-300 hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff8ab0]/70 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-14 ${
+                  isLightMode
+                    ? 'focus-visible:ring-offset-[#eef2f7]'
+                    : 'focus-visible:ring-offset-[#15091f]'
+                }`}
+              >
+                {pendingAction === 'create' ? 'Creating...' : 'Create INJ Pass'}
+              </button>
+              <button
+                type="button"
+                onClick={handleEnterWallet}
+                disabled={pendingAction !== null}
+                className={`inline-flex min-h-[3.25rem] w-full items-center justify-center rounded-2xl border px-5 text-base font-semibold transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d86dff]/70 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-14 ${
+                  isLightMode
+                    ? 'border-[#161c29]/10 bg-white/68 text-[#202634] hover:-translate-y-0.5 hover:border-[#d96eff]/24 hover:bg-white/88'
+                    : 'border-white/[0.12] bg-[linear-gradient(135deg,rgba(99,29,149,0.12),rgba(231,41,131,0.08))] text-white/[0.88] hover:-translate-y-0.5 hover:border-[#d96eff]/26 hover:bg-[linear-gradient(135deg,rgba(115,38,199,0.18),rgba(232,40,129,0.12))]'
+                }`}
+                style={{
+                  boxShadow: isLightMode ? '0 10px 28px rgba(170, 107, 186, 0.08)' : undefined,
+                  ...(isLightMode
+                    ? { ['--tw-ring-offset-color' as string]: '#eef2f7' }
+                    : { ['--tw-ring-offset-color' as string]: '#15091f' }),
+                }}
+              >
+                {pendingAction === 'enter' ? 'Entering...' : 'Enter INJ Pass'}
+              </button>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <TrustPill
+                label="Sovereign Custody"
+                isLightMode={isLightMode}
+                icon="custody"
+              />
+              <TrustPill
+                label="Passkey Security"
+                isLightMode={isLightMode}
+                icon="passkey"
+              />
+              <TrustPill
+                label="Agent Sandbox"
+                isLightMode={isLightMode}
+                icon="lock"
+              />
+            </div>
+
+            {walletExists ? (
+              <p className={`mt-4 text-sm ${isLightMode ? 'text-[#5d677d]' : 'text-white/[0.45]'}`}>
+                A passkey wallet is already paired on this device. Enter INJ
+                Pass will authenticate it in the current session.
+              </p>
+            ) : null}
+          </section>
+
+          <aside className="w-full max-w-none lg:w-[34rem] lg:max-w-[34rem] lg:justify-self-end">
+            <form onSubmit={handleAgentSubmit} className="w-full">
+              <div
+                ref={conversationViewportRef}
+                className="conversation-scrollbar h-[18.5rem] space-y-2.5 overflow-y-auto pr-0.5 sm:h-[22rem] sm:space-y-3 sm:pr-1 lg:h-[26rem]"
+              >
+                {conversationMessages.map((message, index) => (
+                  <ConversationBubble
+                    key={`${message.role}-${index}-${message.title ?? ''}-${message.body}`}
+                    role={message.role}
+                    title={message.title}
+                    body={message.body}
+                    tone={message.tone}
+                    isLightMode={isLightMode}
+                  />
                 ))}
               </div>
 
-              <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1.08fr)_280px] xl:items-center">
-                <div className={`welcome-hero-stage ${isLight ? 'welcome-hero-stage--light' : ''}`}>
-                  <div className="welcome-hero-stage__ring welcome-hero-stage__ring--outer" />
-                  <div className="welcome-hero-stage__ring welcome-hero-stage__ring--mid" />
-                  <div className="welcome-hero-stage__ring welcome-hero-stage__ring--inner" />
-                  <div className="welcome-hero-stage__shine" />
-                  <div className="welcome-hero-stage__core">
-                    <div className="welcome-hero-stage__core-logo">
-                      <Image src="/lambdalogo.png" alt="INJ Pass" width={62} height={62} className="h-[62px] w-[62px] object-contain" />
-                    </div>
-                    <div className="welcome-hero-stage__core-title">INJ PASS</div>
-                    <div className="welcome-hero-stage__core-copy">wallet / pay / cards / apps</div>
-                  </div>
-
-                  {surfaceNodes.map((node) => (
-                    <div key={node.key} className={`welcome-hero-stage__node welcome-hero-stage__node--${node.key}`}>
-                      <div className="welcome-hero-stage__node-label">{node.label}</div>
-                      <div className="welcome-hero-stage__node-title">{node.title}</div>
-                      <div className="welcome-hero-stage__node-copy">{node.copy}</div>
-                    </div>
-                  ))}
+              <div className={`mt-4 rounded-[20px] border-[1.5px] p-2.5 backdrop-blur-md sm:rounded-[22px] sm:p-3 ${
+                isLightMode
+                  ? 'border-[#151a27]/12 bg-[rgba(255,255,255,0.72)]'
+                  : 'border-white/[0.16] bg-[rgba(20,21,25,0.28)]'
+              }`}>
+                <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+                  <div
+                    className="h-full w-[42%] rounded-full bg-[linear-gradient(90deg,#8b34ff,#df2690,#ff7189)] motion-safe:animate-[runline_1.8s_ease-in-out_infinite]"
+                  />
                 </div>
 
-                <div className="grid gap-3">
-                  <div className={`rounded-[1.5rem] border px-5 py-5 ${isLight ? 'border-black/10 bg-black/[0.02]' : 'border-white/10 bg-white/[0.03]'}`}>
-                    <div className={`text-[10px] font-semibold uppercase tracking-[0.24em] ${isLight ? 'text-slate-500' : 'text-white/36'}`}>
-                      Device State
-                    </div>
-                    <div className={`mt-3 text-lg font-semibold tracking-[-0.03em] ${isLight ? 'text-slate-950' : 'text-white'}`}>
-                      {walletExists ? 'Local wallet found on this device' : 'Fresh device, ready for first entry'}
-                    </div>
-                    <div className={`mt-2 text-sm leading-6 ${isLight ? 'text-slate-600' : 'text-white/58'}`}>
-                      {walletExists
-                        ? 'Use Sign In with Passkey to re-open the same local identity, or import another private key if this device needs a separate route.'
-                        : 'Create a passkey wallet for first-time setup, or import an external private key into local encrypted storage.'}
-                    </div>
-                  </div>
-
-                  <div className={`rounded-[1.5rem] border px-5 py-5 ${isLight ? 'border-black/10 bg-black/[0.02]' : 'border-white/10 bg-white/[0.03]'}`}>
-                    <div className={`text-[10px] font-semibold uppercase tracking-[0.24em] ${isLight ? 'text-slate-500' : 'text-white/36'}`}>
-                      Environment
-                    </div>
-                    <div className={`mt-3 text-lg font-semibold tracking-[-0.03em] ${isLight ? 'text-slate-950' : 'text-white'}`}>
-                      Powered by Injective
-                    </div>
-                    <div className={`mt-2 text-sm leading-6 ${isLight ? 'text-slate-600' : 'text-white/58'}`}>
-                      Welcome stays minimal, but the same account carries into dashboard, cards, faucet, agents, and discovery.
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section
-            className={`relative overflow-hidden rounded-[2.1rem] border p-6 md:p-7 ${
-              isLight
-                ? 'border-black/10 bg-white/88 shadow-[0_28px_90px_rgba(15,23,42,0.08)]'
-                : 'border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))]'
-            }`}
-          >
-            <div className="relative z-10 flex h-full flex-col">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className={`text-[11px] font-semibold uppercase tracking-[0.24em] ${isLight ? 'text-slate-500' : 'text-white/36'}`}>
-                    Entry Console
-                  </div>
-                  <h2 className={`mt-3 text-3xl font-semibold tracking-[-0.05em] ${isLight ? 'text-slate-950' : 'text-white'}`}>
-                    Choose this device route.
-                  </h2>
-                  <p className={`mt-3 max-w-md text-sm leading-6 ${isLight ? 'text-slate-600' : 'text-white/58'}`}>
-                    Start fresh with passkey, re-open an existing wallet, or import an external key into local encrypted storage.
-                  </p>
-                </div>
-
-                <div
-                  className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] ${
-                    walletExists
-                      ? isLight
-                        ? 'border-emerald-600/15 bg-emerald-600/8 text-emerald-700'
-                        : 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
-                      : isLight
-                        ? 'border-black/10 bg-black/[0.03] text-slate-700'
-                        : 'border-white/10 bg-white/[0.04] text-white/70'
-                  }`}
-                >
-                  {walletExists ? 'Wallet Found' : 'New Device'}
-                </div>
-              </div>
-
-              {error && (
-                <div className={`mt-5 rounded-[1.3rem] border px-4 py-3 text-sm leading-6 ${isLight ? 'border-red-500/20 bg-red-500/8 text-red-700' : 'border-red-500/20 bg-red-500/10 text-red-300'}`}>
-                  {error}
-                </div>
-              )}
-
-              <div className="mt-6 grid gap-4">
-                <div className={`rounded-[1.65rem] border p-5 ${isLight ? 'border-black/10 bg-black/[0.02]' : 'border-white/10 bg-white/[0.03]'}`}>
-                  <div className="flex items-start gap-4">
-                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] border text-sm font-semibold ${isLight ? 'border-black/10 bg-black/[0.04] text-slate-900' : 'border-white/10 bg-white/[0.05] text-white'}`}>
-                      01
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${isLight ? 'text-slate-500' : 'text-white/36'}`}>
-                        Set Up
-                      </div>
-                      <div className={`mt-2 text-[28px] font-semibold tracking-[-0.05em] ${isLight ? 'text-slate-950' : 'text-white'}`}>
-                        Create with Passkey
-                      </div>
-                      <div className={`mt-2 text-sm leading-6 ${isLight ? 'text-slate-600' : 'text-white/58'}`}>
-                        Create a new local wallet identity and bind it directly to your device passkey.
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-5 grid">
-                    <div
-                      style={{ gridArea: '1 / 1' }}
-                      className={`transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${showCreatePanel ? 'pointer-events-none translate-y-3 opacity-0' : 'translate-y-0 opacity-100'}`}
-                    >
-                      <button
-                        onClick={() => {
-                          setShowCreatePanel(true);
-                          setError('');
-                        }}
-                        disabled={isBusy}
-                        className={`w-full rounded-[1.35rem] px-4 py-4 text-left transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
-                          isLight ? 'bg-slate-950 text-white hover:bg-slate-800' : 'bg-white text-black hover:bg-slate-100'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <div className="text-base font-semibold tracking-[-0.02em]">Start a new INJ Pass wallet</div>
-                            <div className={`mt-1 text-sm ${isLight ? 'text-white/70' : 'text-black/65'}`}>
-                              Name the wallet, approve the passkey request, and continue into dashboard.
-                            </div>
-                          </div>
-                          <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </div>
-                      </button>
-                    </div>
-
-                    <div
-                      style={{ gridArea: '1 / 1' }}
-                      className={`transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${showCreatePanel ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-3 opacity-0'}`}
-                    >
-                      <div className={`rounded-[1.4rem] border p-4 ${isLight ? 'border-black/10 bg-white' : 'border-white/10 bg-black/25'}`}>
-                        <div className="flex items-center justify-between gap-3">
-                          <div className={`text-[11px] font-semibold uppercase tracking-[0.24em] ${isLight ? 'text-slate-500' : 'text-white/36'}`}>
-                            Local wallet label
-                          </div>
-                          <button
-                            onClick={closeCreatePanel}
-                            className={`text-xs font-semibold uppercase tracking-[0.2em] ${isLight ? 'text-slate-500 hover:text-slate-900' : 'text-white/40 hover:text-white'} transition-colors`}
-                          >
-                            Close
-                          </button>
-                        </div>
-
-                        <div className={`mt-3 rounded-[1.2rem] border px-4 py-3.5 ${isLight ? 'border-black/10 bg-black/[0.03]' : 'border-white/10 bg-white/[0.03]'}`}>
-                          <input
-                            ref={inputRef}
-                            type="text"
-                            value={walletNameInput}
-                            onChange={(e) => setWalletNameInput(e.target.value)}
-                            placeholder="Name this account"
-                            className={`w-full bg-transparent text-sm font-semibold ${isLight ? 'text-slate-950 placeholder:text-slate-400' : 'text-white placeholder:text-white/30'} focus:outline-none`}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' && walletNameInput.trim()) {
-                                handleCreateWallet();
-                              }
-                              if (e.key === 'Escape') {
-                                closeCreatePanel();
-                              }
-                            }}
-                          />
-                        </div>
-
-                        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                          <button
-                            onClick={closeCreatePanel}
-                            disabled={isBusy}
-                            className={`rounded-[1.1rem] border px-4 py-3 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50 ${isLight ? 'border-black/10 text-slate-700 hover:bg-black/[0.03]' : 'border-white/10 text-white/72 hover:bg-white/[0.04]'}`}
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={handleCreateWallet}
-                            disabled={busyRoute === 'recover' || !walletNameInput.trim() || busyRoute === 'create'}
-                            className={`flex-1 rounded-[1.1rem] px-4 py-3 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-40 ${
-                              isLight ? 'bg-slate-950 text-white hover:bg-slate-800' : 'bg-white text-black hover:bg-slate-100'
-                            }`}
-                          >
-                            {busyRoute === 'create' ? 'Creating...' : 'Bind Passkey and Continue'}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className={`rounded-[1.65rem] border p-5 ${isLight ? 'border-black/10 bg-black/[0.02]' : 'border-white/10 bg-white/[0.03]'}`}>
-                  <div className="flex items-start gap-4">
-                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] border text-sm font-semibold ${isLight ? 'border-black/10 bg-black/[0.04] text-slate-900' : 'border-white/10 bg-white/[0.05] text-white'}`}>
-                      02
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${isLight ? 'text-slate-500' : 'text-white/36'}`}>
-                        Sign In
-                      </div>
-                      <div className={`mt-2 text-[28px] font-semibold tracking-[-0.05em] ${isLight ? 'text-slate-950' : 'text-white'}`}>
-                        Re-open with Passkey
-                      </div>
-                      <div className={`mt-2 text-sm leading-6 ${isLight ? 'text-slate-600' : 'text-white/58'}`}>
-                        Restore the wallet already associated with your passkey and continue from the same identity.
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={`mt-5 rounded-[1.35rem] border px-4 py-4 ${isLight ? 'border-black/10 bg-white' : 'border-white/10 bg-black/25'}`}>
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${isLight ? 'text-slate-500' : 'text-white/36'}`}>
-                          Local status
-                        </div>
-                        <div className={`mt-2 text-base font-semibold ${isLight ? 'text-slate-950' : 'text-white'}`}>
-                          {walletExists ? 'This device already knows a wallet' : 'No local wallet saved yet'}
-                        </div>
-                        <div className={`mt-1 text-sm leading-6 ${isLight ? 'text-slate-600' : 'text-white/58'}`}>
-                          {walletExists
-                            ? 'Use the same passkey to restore the paired wallet into the current session.'
-                            : 'Use passkey recovery if this wallet was created on another device.'}
-                        </div>
-                      </div>
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`h-5 w-5 shrink-0 ${isLight ? 'text-slate-400' : 'text-white/46'}`}>
-                        <path d="M21 2v6h-6" />
-                        <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
-                        <path d="M3 22v-6h6" />
-                        <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
-                      </svg>
-                    </div>
-
-                    <button
-                      onClick={handleRecoverWallet}
-                      disabled={isBusy}
-                      className={`mt-4 w-full rounded-[1.2rem] border px-4 py-3.5 text-left transition-all disabled:cursor-not-allowed disabled:opacity-50 ${isLight ? 'border-black/10 bg-black/[0.03] text-slate-950 hover:bg-black/[0.05]' : 'border-white/10 bg-white/[0.05] text-white hover:bg-white/[0.08]'}`}
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <div>
-                          <div className="text-base font-semibold tracking-[-0.02em]">Continue with existing passkey</div>
-                          <div className={`mt-1 text-sm ${isLight ? 'text-slate-600' : 'text-white/52'}`}>
-                            Authenticate and re-open the paired wallet in the current session.
-                          </div>
-                        </div>
-                        {busyRoute === 'recover' ? (
-                          <svg className="h-5 w-5 shrink-0 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                          </svg>
-                        ) : (
-                          <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M9 5l7 7-7 7" />
-                          </svg>
-                        )}
-                      </div>
-                    </button>
-                  </div>
-                </div>
-
-                <div className={`rounded-[1.65rem] border p-5 ${isLight ? 'border-black/10 bg-black/[0.02]' : 'border-white/10 bg-white/[0.03]'}`}>
-                  <div className="flex items-start gap-4">
-                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] border text-sm font-semibold ${isLight ? 'border-black/10 bg-black/[0.04] text-slate-900' : 'border-white/10 bg-white/[0.05] text-white'}`}>
-                      03
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${isLight ? 'text-slate-500' : 'text-white/36'}`}>
-                        Import
-                      </div>
-                      <div className={`mt-2 text-[28px] font-semibold tracking-[-0.05em] ${isLight ? 'text-slate-950' : 'text-white'}`}>
-                        Bring in a private key
-                      </div>
-                      <div className={`mt-2 text-sm leading-6 ${isLight ? 'text-slate-600' : 'text-white/58'}`}>
-                        Migrate an external wallet and encrypt it locally before dashboard entry.
-                      </div>
-                    </div>
-                  </div>
-
+                <div className="mt-3 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3">
+                  <input
+                    type="text"
+                    value={agentInput}
+                    onChange={(event) => setAgentInput(event.target.value)}
+                    spellCheck={false}
+                    disabled={isAgentRunning}
+                    className={`min-w-0 w-full flex-1 rounded-2xl border-[1.5px] px-4 py-3 text-[0.95rem] focus:outline-none focus:ring-2 focus:ring-[#d96eff]/18 disabled:cursor-not-allowed disabled:opacity-65 sm:text-[1rem] ${
+                      isLightMode
+                        ? 'border-[#151a27]/12 bg-white/74 text-[#171b24] placeholder:text-[#6b7387]'
+                        : 'border-white/[0.14] bg-[rgba(255,255,255,0.03)] text-white placeholder:text-white/24'
+                    }`}
+                    style={{ fontFamily: 'var(--font-space-grotesk)' }}
+                    placeholder="Swap 50 USDT to INJ"
+                  />
                   <button
-                    onClick={() => setShowImportModal(true)}
-                    disabled={isBusy}
-                    className={`mt-5 inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50 ${isLight ? 'border-black/10 bg-black/[0.03] text-slate-900 hover:bg-black/[0.05]' : 'border-white/10 bg-white/[0.05] text-white hover:bg-white/[0.08]'}`}
+                    type="submit"
+                    disabled={!agentInput.trim() || isAgentRunning}
+                    className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border px-4 text-sm font-semibold transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d96eff]/60 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto ${
+                      isAgentRunning
+                        ? isLightMode
+                          ? 'border-[#d96eff]/28 bg-[linear-gradient(135deg,rgba(128,44,255,0.18),rgba(237,38,137,0.14))] text-[#171b24] shadow-[0_0_0_1px_rgba(255,255,255,0.6),0_0_28px_rgba(214,49,149,0.12)]'
+                          : 'border-[#d96eff]/28 bg-[linear-gradient(135deg,rgba(128,44,255,0.24),rgba(237,38,137,0.18))] text-white shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_0_28px_rgba(214,49,149,0.18)]'
+                        : isLightMode
+                          ? 'border-[#151a27]/12 bg-white/80 text-[#171b24] hover:border-[#d96eff]/22 hover:bg-white'
+                          : 'border-white/[0.14] bg-[linear-gradient(135deg,rgba(128,44,255,0.14),rgba(237,38,137,0.08))] text-white hover:border-[#d96eff]/26 hover:bg-[linear-gradient(135deg,rgba(128,44,255,0.2),rgba(237,38,137,0.12))]'
+                    }`}
+                    style={{
+                      boxShadow: isLightMode ? '0 10px 26px rgba(108, 86, 148, 0.08)' : undefined,
+                    }}
                   >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.1} d="M15 7h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3m6 0V5a3 3 0 1 0-6 0v2m6 0H9" />
-                    </svg>
-                    Import Existing Key
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        isAgentRunning
+                          ? 'bg-white motion-safe:animate-pulse'
+                          : 'bg-white/[0.62]'
+                      }`}
+                    />
+                    {isAgentRunning ? 'Executing...' : 'Send to Agent'}
                   </button>
                 </div>
               </div>
-
-              <div className="mt-auto pt-5">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className={`rounded-[1.3rem] border px-4 py-4 ${isLight ? 'border-black/10 bg-black/[0.02]' : 'border-white/10 bg-white/[0.03]'}`}>
-                    <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${isLight ? 'text-slate-500' : 'text-white/36'}`}>
-                      Security
-                    </div>
-                    <div className={`mt-2 text-sm font-semibold leading-6 ${isLight ? 'text-slate-950' : 'text-white'}`}>
-                      WebAuthn for passkey entry. Local encryption for imported keys.
-                    </div>
-                  </div>
-                  <div className={`rounded-[1.3rem] border px-4 py-4 ${isLight ? 'border-black/10 bg-black/[0.02]' : 'border-white/10 bg-white/[0.03]'}`}>
-                    <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${isLight ? 'text-slate-500' : 'text-white/36'}`}>
-                      Release
-                    </div>
-                    <div className={`mt-2 text-sm font-semibold leading-6 ${isLight ? 'text-slate-950' : 'text-white'}`}>
-                      Preview surface. Use accounts and funds appropriate for staged rollout.
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        </main>
+            </form>
+          </aside>
+        </div>
+      </main>
+      <div className="fixed bottom-2 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap px-3 text-[0.68rem] sm:bottom-6 sm:text-sm">
+        <span className={isLightMode ? 'text-[#6a7387]' : 'text-gray-400'}>Powered by</span>
+        <span className={`font-semibold ${isLightMode ? 'text-[#171b24]' : 'text-white'}`}>Injective</span>
+        <Image
+          src={isLightMode ? '/injective-ocean.png' : '/injlogo.png'}
+          alt="Injective Logo"
+          width={20}
+          height={20}
+          className={
+            isLightMode
+              ? '-ml-1 h-[0.92rem] w-[0.92rem] sm:h-[1.08rem] sm:w-[1.08rem]'
+              : '-ml-1.5 h-4 w-4 md:h-5 md:w-5'
+          }
+        />
       </div>
 
-      {showImportModal && (
-        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-xl ${isLight ? 'bg-[rgba(241,244,247,0.76)]' : 'bg-[rgba(5,5,5,0.78)]'}`}>
-          <div className={`relative w-full max-w-4xl overflow-hidden rounded-[2rem] border ${isLight ? 'border-black/10 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.12)]' : 'border-white/10 bg-[#0a0a0a] shadow-[0_28px_90px_rgba(0,0,0,0.58)]'}`}>
-            <button
-              onClick={handleCloseImport}
-              className={`absolute right-5 top-5 z-20 flex h-11 w-11 items-center justify-center rounded-2xl border transition-all ${isLight ? 'border-black/10 bg-black/[0.03] text-slate-600 hover:bg-black/[0.05] hover:text-slate-900' : 'border-white/10 bg-white/[0.05] text-white/60 hover:bg-white/[0.1] hover:text-white'}`}
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            <div className="grid md:grid-cols-[320px_minmax(0,1fr)]">
-              <div className={`border-b p-6 md:border-b-0 md:border-r md:p-7 ${isLight ? 'border-black/10 bg-black/[0.02]' : 'border-white/10 bg-white/[0.02]'}`}>
-                <div className="flex items-center gap-3">
-                  <div className={`flex h-11 w-11 items-center justify-center rounded-[1rem] border ${isLight ? 'border-black/10 bg-black/[0.03]' : 'border-white/10 bg-white/[0.05]'}`}>
-                    <Image src="/lambdalogo.png" alt="INJ Pass" width={28} height={28} className="h-7 w-7 object-contain" />
-                  </div>
-                  <div>
-                    <div className={`text-sm font-semibold ${isLight ? 'text-slate-950' : 'text-white'}`}>Import Private Key</div>
-                    <div className={`mt-1 text-[11px] uppercase tracking-[0.24em] ${isLight ? 'text-slate-500' : 'text-white/36'}`}>
-                      Local Migration Flow
-                    </div>
-                  </div>
-                </div>
-
-                <h2 className={`mt-8 text-3xl font-semibold tracking-[-0.05em] ${isLight ? 'text-slate-950' : 'text-white'}`}>
-                  Bring an external wallet in cleanly.
-                </h2>
-                <p className={`mt-4 text-sm leading-7 ${isLight ? 'text-slate-600' : 'text-white/58'}`}>
-                  Validate the key locally, then protect it with a device password used only for encrypted storage on this machine.
-                </p>
-
-                <div className="mt-8 flex items-center gap-2">
-                  <div className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] ${importStep === 'key' ? (isLight ? 'bg-slate-950 text-white' : 'bg-white text-black') : isLight ? 'border border-black/10 bg-black/[0.03] text-slate-500' : 'border border-white/10 bg-white/[0.04] text-white/42'}`}>
-                    Step 1 Key
-                  </div>
-                  <div className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] ${importStep === 'password' ? (isLight ? 'bg-slate-950 text-white' : 'bg-white text-black') : isLight ? 'border border-black/10 bg-black/[0.03] text-slate-500' : 'border border-white/10 bg-white/[0.04] text-white/42'}`}>
-                    Step 2 Encrypt
-                  </div>
-                </div>
-
-                <div className="mt-8 space-y-3">
-                  <div className={`rounded-[1.2rem] border px-4 py-4 ${isLight ? 'border-black/10 bg-white' : 'border-white/10 bg-black/25'}`}>
-                    <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${isLight ? 'text-slate-500' : 'text-white/36'}`}>
-                      Private Handling
-                    </div>
-                    <div className={`mt-2 text-sm leading-6 ${isLight ? 'text-slate-600' : 'text-white/58'}`}>
-                      The raw key stays in-browser during validation and local keystore creation.
-                    </div>
-                  </div>
-                  <div className={`rounded-[1.2rem] border px-4 py-4 ${isLight ? 'border-black/10 bg-white' : 'border-white/10 bg-black/25'}`}>
-                    <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${isLight ? 'text-slate-500' : 'text-white/36'}`}>
-                      Password Scope
-                    </div>
-                    <div className={`mt-2 text-sm leading-6 ${isLight ? 'text-slate-600' : 'text-white/58'}`}>
-                      This password is local only. It does not replace or alter passkey-based entry.
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 md:p-7">
-                {importStep === 'key' ? (
-                  <>
-                    <div className={`rounded-[1.3rem] border px-4 py-4 ${isLight ? 'border-black/10 bg-black/[0.02]' : 'border-white/10 bg-white/[0.03]'}`}>
-                      <div className={`text-[11px] font-semibold uppercase tracking-[0.24em] ${isLight ? 'text-slate-500' : 'text-white/36'}`}>
-                        Private Key
-                      </div>
-                      <p className={`mt-2 text-sm leading-6 ${isLight ? 'text-slate-600' : 'text-white/58'}`}>
-                        Use this only when migrating an existing external wallet into the current device.
-                      </p>
-                    </div>
-
-                    <div className="relative mt-5">
-                      <input
-                        ref={privateKeyRef}
-                        type={showPrivateKey ? 'text' : 'password'}
-                        value={privateKeyInput}
-                        onChange={(e) => setPrivateKeyInput(e.target.value)}
-                        placeholder="Private key (hex)"
-                        className={`w-full rounded-[1.2rem] border px-4 py-4 pr-12 font-mono text-sm focus:outline-none ${isLight ? 'border-black/10 bg-black/[0.03] text-slate-950 placeholder:text-slate-400 focus:border-black/20' : 'border-white/10 bg-white/[0.03] text-white placeholder:text-white/28 focus:border-white/24'}`}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleImportNextStep();
-                          }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPrivateKey(!showPrivateKey)}
-                        className={`absolute right-3 top-1/2 -translate-y-1/2 rounded-xl p-1 transition-colors ${isLight ? 'text-slate-500 hover:text-slate-900' : 'text-white/42 hover:text-white/78'}`}
-                      >
-                        {showPrivateKey ? (
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-                            <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
-                            <line x1="1" y1="1" x2="23" y2="23" />
-                          </svg>
-                        ) : (
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                            <circle cx="12" cy="12" r="3" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-
-                    {importError && <p className={`mt-3 text-sm ${isLight ? 'text-red-700' : 'text-red-300'}`}>{importError}</p>}
-
-                    <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                      <button
-                        onClick={handleCloseImport}
-                        className={`rounded-[1.1rem] border px-4 py-3 text-sm font-semibold transition-colors ${isLight ? 'border-black/10 text-slate-700 hover:bg-black/[0.03]' : 'border-white/10 text-white/72 hover:bg-white/[0.04]'}`}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleImportNextStep}
-                        className={`flex-1 rounded-[1.1rem] px-4 py-3 text-sm font-semibold transition-colors ${isLight ? 'bg-slate-950 text-white hover:bg-slate-800' : 'bg-white text-black hover:bg-slate-100'}`}
-                      >
-                        Continue
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className={`rounded-[1.3rem] border px-4 py-4 ${isLight ? 'border-black/10 bg-black/[0.02]' : 'border-white/10 bg-white/[0.03]'}`}>
-                      <div className={`text-[11px] font-semibold uppercase tracking-[0.24em] ${isLight ? 'text-slate-500' : 'text-white/36'}`}>
-                        Local Encryption
-                      </div>
-                      <p className={`mt-2 text-sm leading-6 ${isLight ? 'text-slate-600' : 'text-white/58'}`}>
-                        Set a device-specific password to encrypt the imported key before it is saved locally.
-                      </p>
-                    </div>
-
-                    <input
-                      ref={importPasswordRef}
-                      type="password"
-                      value={importPassword}
-                      onChange={(e) => setImportPassword(e.target.value)}
-                      placeholder="Password (min 8 characters)"
-                      className={`mt-5 w-full rounded-[1.2rem] border px-4 py-4 text-sm focus:outline-none ${isLight ? 'border-black/10 bg-black/[0.03] text-slate-950 placeholder:text-slate-400 focus:border-black/20' : 'border-white/10 bg-white/[0.03] text-white placeholder:text-white/28 focus:border-white/24'}`}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleImportWallet();
-                        }
-                      }}
-                    />
-                    <input
-                      type="password"
-                      value={importPasswordConfirm}
-                      onChange={(e) => setImportPasswordConfirm(e.target.value)}
-                      placeholder="Confirm password"
-                      className={`mt-3 w-full rounded-[1.2rem] border px-4 py-4 text-sm focus:outline-none ${isLight ? 'border-black/10 bg-black/[0.03] text-slate-950 placeholder:text-slate-400 focus:border-black/20' : 'border-white/10 bg-white/[0.03] text-white placeholder:text-white/28 focus:border-white/24'}`}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleImportWallet();
-                        }
-                      }}
-                    />
-
-                    {importError && <p className={`mt-3 text-sm ${isLight ? 'text-red-700' : 'text-red-300'}`}>{importError}</p>}
-
-                    <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                      <button
-                        onClick={() => {
-                          setImportStep('key');
-                          setImportError('');
-                        }}
-                        className={`rounded-[1.1rem] border px-4 py-3 text-sm font-semibold transition-colors ${isLight ? 'border-black/10 text-slate-700 hover:bg-black/[0.03]' : 'border-white/10 text-white/72 hover:bg-white/[0.04]'}`}
-                      >
-                        Back
-                      </button>
-                      <button
-                        onClick={handleImportWallet}
-                        disabled={importLoading}
-                        className={`flex-1 rounded-[1.1rem] px-4 py-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${isLight ? 'bg-slate-950 text-white hover:bg-slate-800' : 'bg-white text-black hover:bg-slate-100'}`}
-                      >
-                        {importLoading ? 'Importing...' : 'Import Wallet'}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <style jsx>{`
-        .welcome-hero-stage {
-          position: relative;
-          min-height: 520px;
-          overflow: hidden;
-          border-radius: 34px;
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          background:
-            radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 34%),
-            linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012));
-          isolation: isolate;
-        }
-
-        .welcome-hero-stage--light {
-          border-color: rgba(15, 23, 42, 0.08);
-          background:
-            radial-gradient(circle at top, rgba(255, 255, 255, 0.92), transparent 34%),
-            linear-gradient(180deg, rgba(15, 23, 42, 0.03), rgba(15, 23, 42, 0.015));
-        }
-
-        .welcome-hero-stage__ring,
-        .welcome-hero-stage__shine,
-        .welcome-hero-stage__core,
-        .welcome-hero-stage__node {
-          position: absolute;
-        }
-
-        .welcome-hero-stage__ring {
-          left: 50%;
-          top: 50%;
-          border-radius: 999px;
-          transform: translate(-50%, -50%);
-        }
-
-        .welcome-hero-stage__ring--outer {
-          width: 390px;
-          height: 390px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          animation: welcomeRotate 26s linear infinite;
-        }
-
-        .welcome-hero-stage--light .welcome-hero-stage__ring--outer {
-          border-color: rgba(15, 23, 42, 0.1);
-        }
-
-        .welcome-hero-stage__ring--mid {
-          width: 286px;
-          height: 286px;
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          animation: welcomeRotateReverse 20s linear infinite;
-        }
-
-        .welcome-hero-stage--light .welcome-hero-stage__ring--mid {
-          border-color: rgba(15, 23, 42, 0.08);
-        }
-
-        .welcome-hero-stage__ring--inner {
-          width: 214px;
-          height: 214px;
-          border: 1px solid rgba(255, 255, 255, 0.06);
-        }
-
-        .welcome-hero-stage--light .welcome-hero-stage__ring--inner {
-          border-color: rgba(15, 23, 42, 0.08);
-        }
-
-        .welcome-hero-stage__shine {
-          left: 50%;
-          top: 50%;
-          width: 420px;
-          height: 420px;
-          border-radius: 999px;
-          background: radial-gradient(circle, rgba(255, 255, 255, 0.08), transparent 62%);
-          filter: blur(14px);
-          transform: translate(-50%, -50%);
-        }
-
-        .welcome-hero-stage--light .welcome-hero-stage__shine {
-          background: radial-gradient(circle, rgba(15, 23, 42, 0.06), transparent 62%);
-        }
-
-        .welcome-hero-stage__core {
-          left: 50%;
-          top: 50%;
-          z-index: 2;
-          display: flex;
-          width: 196px;
-          height: 196px;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 10px;
-          border-radius: 999px;
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          background: rgba(0, 0, 0, 0.7);
-          box-shadow:
-            0 28px 80px rgba(0, 0, 0, 0.42),
-            inset 0 1px 0 rgba(255, 255, 255, 0.08);
-          transform: translate(-50%, -50%);
-          backdrop-filter: blur(22px);
-        }
-
-        .welcome-hero-stage--light .welcome-hero-stage__core {
-          border-color: rgba(15, 23, 42, 0.08);
-          background: rgba(255, 255, 255, 0.82);
-          box-shadow:
-            0 28px 80px rgba(15, 23, 42, 0.08),
-            inset 0 1px 0 rgba(255, 255, 255, 0.8);
-        }
-
-        .welcome-hero-stage__core-logo {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 82px;
-          height: 82px;
-          border-radius: 999px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(255, 255, 255, 0.04);
-        }
-
-        .welcome-hero-stage--light .welcome-hero-stage__core-logo {
-          border-color: rgba(15, 23, 42, 0.08);
-          background: rgba(15, 23, 42, 0.04);
-        }
-
-        .welcome-hero-stage__core-title {
-          font-size: 14px;
-          font-weight: 700;
-          letter-spacing: 0.24em;
-          text-transform: uppercase;
-          color: rgba(255, 255, 255, 0.92);
-        }
-
-        .welcome-hero-stage--light .welcome-hero-stage__core-title {
-          color: rgba(15, 23, 42, 0.9);
-        }
-
-        .welcome-hero-stage__core-copy {
-          font-size: 11px;
-          font-weight: 600;
-          letter-spacing: 0.2em;
-          text-transform: uppercase;
-          color: rgba(255, 255, 255, 0.46);
-          text-align: center;
-        }
-
-        .welcome-hero-stage--light .welcome-hero-stage__core-copy {
-          color: rgba(71, 85, 105, 0.8);
-        }
-
-        .welcome-hero-stage__node {
-          z-index: 1;
-          width: 182px;
-          border-radius: 24px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(255, 255, 255, 0.03);
-          padding: 16px 16px 15px;
-          backdrop-filter: blur(18px);
-          box-shadow: 0 18px 44px rgba(0, 0, 0, 0.2);
-          animation: welcomeFloat 8s ease-in-out infinite;
-        }
-
-        .welcome-hero-stage--light .welcome-hero-stage__node {
-          border-color: rgba(15, 23, 42, 0.08);
-          background: rgba(255, 255, 255, 0.84);
-          box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
-        }
-
-        .welcome-hero-stage__node-label {
-          font-size: 10px;
-          font-weight: 700;
-          letter-spacing: 0.22em;
-          text-transform: uppercase;
-          color: rgba(255, 255, 255, 0.42);
-        }
-
-        .welcome-hero-stage--light .welcome-hero-stage__node-label {
-          color: rgba(71, 85, 105, 0.72);
-        }
-
-        .welcome-hero-stage__node-title {
-          margin-top: 10px;
-          font-size: 18px;
-          font-weight: 700;
-          line-height: 1.12;
-          color: rgba(255, 255, 255, 0.95);
-        }
-
-        .welcome-hero-stage--light .welcome-hero-stage__node-title {
-          color: rgba(15, 23, 42, 0.95);
-        }
-
-        .welcome-hero-stage__node-copy {
-          margin-top: 8px;
-          font-size: 13px;
-          line-height: 1.55;
-          color: rgba(255, 255, 255, 0.56);
-        }
-
-        .welcome-hero-stage--light .welcome-hero-stage__node-copy {
-          color: rgba(71, 85, 105, 0.82);
-        }
-
-        .welcome-hero-stage__node--wallet {
-          left: 22px;
-          top: 24px;
-        }
-
-        .welcome-hero-stage__node--cards {
-          right: 22px;
-          top: 66px;
-          animation-delay: -1.8s;
-        }
-
-        .welcome-hero-stage__node--pay {
-          left: 36px;
-          bottom: 48px;
-          animation-delay: -3.4s;
-        }
-
-        .welcome-hero-stage__node--discover {
-          right: 22px;
-          bottom: 20px;
-          animation-delay: -5.1s;
-        }
-
-        @keyframes welcomeRotate {
-          from {
-            transform: translate(-50%, -50%) rotate(0deg);
-          }
-          to {
-            transform: translate(-50%, -50%) rotate(360deg);
-          }
-        }
-
-        @keyframes welcomeRotateReverse {
-          from {
-            transform: translate(-50%, -50%) rotate(360deg);
-          }
-          to {
-            transform: translate(-50%, -50%) rotate(0deg);
-          }
-        }
-
-        @keyframes welcomeFloat {
+      <style jsx global>{`
+        @keyframes orbFloat {
           0%,
           100% {
-            transform: translateY(0px);
+            transform: translate3d(0, 0, 0) scale(1);
           }
           50% {
-            transform: translateY(-8px);
+            transform: translate3d(18px, -24px, 0) scale(1.06);
           }
         }
 
-        @media (max-width: 768px) {
-          .welcome-hero-stage {
-            min-height: 460px;
+        @keyframes orbFloatReverse {
+          0%,
+          100% {
+            transform: translate3d(0, 0, 0) scale(1);
           }
+          50% {
+            transform: translate3d(-24px, 16px, 0) scale(0.96);
+          }
+        }
 
-          .welcome-hero-stage__ring--outer {
-            width: 316px;
-            height: 316px;
+        @keyframes orbPulse {
+          0%,
+          100% {
+            transform: translate3d(0, 0, 0) scale(0.96);
+            opacity: 0.4;
           }
+          50% {
+            transform: translate3d(10px, 14px, 0) scale(1.08);
+            opacity: 0.72;
+          }
+        }
 
-          .welcome-hero-stage__ring--mid {
-            width: 236px;
-            height: 236px;
+        @keyframes ambientDrift {
+          0%,
+          100% {
+            transform: translate3d(0, 0, 0) scale(1.02);
+            opacity: 0.56;
           }
+          33% {
+            transform: translate3d(-18px, 10px, 0) scale(1.06);
+            opacity: 0.72;
+          }
+          66% {
+            transform: translate3d(14px, -16px, 0) scale(0.98);
+            opacity: 0.5;
+          }
+        }
 
-          .welcome-hero-stage__ring--inner {
-            width: 180px;
-            height: 180px;
+        @keyframes runline {
+          0% {
+            transform: translateX(-130%);
           }
+          50% {
+            transform: translateX(130%);
+          }
+          100% {
+            transform: translateX(260%);
+          }
+        }
 
-          .welcome-hero-stage__core {
-            width: 166px;
-            height: 166px;
+        @keyframes headlineDotBlink {
+          0%,
+          100% {
+            opacity: 1;
           }
+          50% {
+            opacity: 0.3;
+          }
+        }
 
-          .welcome-hero-stage__core-logo {
-            width: 72px;
-            height: 72px;
+        @keyframes headerBarDrop {
+          0% {
+            opacity: 0;
+            transform: translate3d(0, -40px, 0);
+            filter: blur(10px);
           }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0);
+            filter: blur(0);
+          }
+        }
 
-          .welcome-hero-stage__node {
-            width: 148px;
-            border-radius: 20px;
-            padding: 14px 14px 13px;
+        @keyframes headerContentReveal {
+          0% {
+            opacity: 0;
+            transform: translate3d(0, 18px, 0);
+            filter: blur(8px);
           }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0);
+            filter: blur(0);
+          }
+        }
 
-          .welcome-hero-stage__node-title {
-            font-size: 16px;
+        @keyframes toastIn {
+          0% {
+            opacity: 0;
+            transform: translate3d(0, 14px, 0) scale(0.985);
           }
+          100% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+        }
 
-          .welcome-hero-stage__node-copy {
-            font-size: 12px;
+        @keyframes toastOut {
+          0% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
           }
+          100% {
+            opacity: 0;
+            transform: translate3d(0, -20px, 0) scale(0.985);
+          }
+        }
 
-          .welcome-hero-stage__node--wallet {
-            left: 12px;
-            top: 18px;
+        @keyframes toastCountdown {
+          0% {
+            transform: scaleX(1);
           }
+          100% {
+            transform: scaleX(0);
+          }
+        }
 
-          .welcome-hero-stage__node--cards {
-            right: 12px;
-            top: 58px;
-          }
+        .welcome-page,
+        .welcome-page * {
+          transition-property: background-color, color, border-color, box-shadow, fill, stroke;
+          transition-duration: 460ms;
+          transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+        }
 
-          .welcome-hero-stage__node--pay {
-            left: 12px;
-            bottom: 62px;
-          }
+        .conversation-scrollbar {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
 
-          .welcome-hero-stage__node--discover {
-            right: 12px;
-            bottom: 14px;
-          }
+        .conversation-scrollbar::-webkit-scrollbar {
+          display: none;
         }
       `}</style>
     </div>
   );
+
+  function clearAgentSimulation() {
+    agentTimeoutsRef.current.forEach((timeoutId) => {
+      window.clearTimeout(timeoutId);
+    });
+    agentTimeoutsRef.current = [];
+  }
+
+  function clearErrorToastTimers() {
+    if (errorToastTimeoutRef.current) {
+      window.clearTimeout(errorToastTimeoutRef.current);
+      errorToastTimeoutRef.current = null;
+    }
+
+    if (errorToastExitTimeoutRef.current) {
+      window.clearTimeout(errorToastExitTimeoutRef.current);
+      errorToastExitTimeoutRef.current = null;
+    }
+  }
+
+  function dismissErrorToast(immediate = false) {
+    clearErrorToastTimers();
+
+    if (immediate) {
+      setErrorToast(null);
+      return;
+    }
+
+    setErrorToast((currentToast) =>
+      currentToast ? { ...currentToast, isExiting: true } : currentToast
+    );
+
+    errorToastExitTimeoutRef.current = window.setTimeout(() => {
+      setErrorToast(null);
+      errorToastExitTimeoutRef.current = null;
+    }, ERROR_TOAST_EXIT_MS);
+  }
+
+  function showErrorToast(message: string) {
+    clearErrorToastTimers();
+
+    const nextToastId = Date.now();
+    setErrorToast({
+      id: nextToastId,
+      message,
+      isExiting: false,
+    });
+
+    errorToastTimeoutRef.current = window.setTimeout(() => {
+      setErrorToast((currentToast) =>
+        currentToast && currentToast.id === nextToastId
+          ? { ...currentToast, isExiting: true }
+          : currentToast
+      );
+
+      errorToastExitTimeoutRef.current = window.setTimeout(() => {
+        setErrorToast((currentToast) =>
+          currentToast && currentToast.id === nextToastId ? null : currentToast
+        );
+        errorToastExitTimeoutRef.current = null;
+      }, ERROR_TOAST_EXIT_MS);
+
+      errorToastTimeoutRef.current = null;
+    }, ERROR_TOAST_DURATION_MS);
+  }
+
+  function appendConversationMessages(messages: ConversationMessage[]) {
+    setConversationMessages((previousMessages) => [
+      ...previousMessages.map((message): ConversationMessage => {
+        if (message.tone === 'active') {
+          return { ...message, tone: 'default' };
+        }
+
+        return message;
+      }),
+      ...messages,
+    ]);
+  }
+}
+
+function TrustPill({
+  label,
+  isLightMode,
+  icon,
+}: {
+  label: string;
+  isLightMode: boolean;
+  icon?: 'custody' | 'passkey' | 'lock';
+}) {
+  const iconColorClass = isLightMode ? 'text-[#8c56ef]' : 'text-[#ff97bc]';
+
+  return (
+    <span
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[0.82rem] sm:px-3.5 sm:py-2 sm:text-sm ${
+        isLightMode
+          ? 'border-[#161c29]/10 bg-white/72 text-[#273042]/78'
+          : 'border-[#d96eff]/16 bg-[linear-gradient(135deg,rgba(116,40,189,0.18),rgba(231,55,132,0.08))] text-white/[0.74]'
+      }`}
+    >
+      {icon ? (
+        <span
+          className={`inline-flex h-4 w-4 items-center justify-center ${iconColorClass}`}
+          aria-hidden="true"
+        >
+          {icon === 'custody' ? (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              className="h-3.5 w-3.5"
+            >
+              <path
+                d="M12 3.5 5.75 6.1v4.55c0 4.12 2.58 6.86 6.25 8.85 3.67-1.99 6.25-4.73 6.25-8.85V6.1L12 3.5Z"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M9.4 11.9 11.2 13.7l3.5-3.8"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          ) : icon === 'passkey' ? (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              className="h-3.5 w-3.5"
+            >
+              <circle
+                cx="8.25"
+                cy="11"
+                r="2.75"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              />
+              <path
+                d="M11 11h7.25m-2 0v2m-2-2v1.6"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          ) : (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              className="h-3.5 w-3.5"
+            >
+              <path
+                d="M8.25 10V8.75a3.75 3.75 0 1 1 7.5 0V10"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+              <rect
+                x="6.25"
+                y="10"
+                width="11.5"
+                height="9"
+                rx="2.5"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              />
+            </svg>
+          )}
+        </span>
+      ) : (
+        <span
+          className={`h-1.5 w-1.5 rounded-full ${
+            isLightMode ? 'bg-[#b476ff]' : 'bg-[#ff8fb0]'
+          }`}
+        />
+      )}
+      {label}
+    </span>
+  );
+}
+
+function ErrorToast({
+  message,
+  isExiting,
+  isLightMode,
+}: {
+  message: string;
+  isExiting: boolean;
+  isLightMode: boolean;
+}) {
+  return (
+    <div
+      className={`pointer-events-auto w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-[22px] border shadow-[0_16px_42px_rgba(16,8,18,0.18)] backdrop-blur-xl ${
+        isLightMode
+          ? 'border-red-500/14 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(255,245,247,0.88))] text-[#311318]'
+          : 'border-red-400/18 bg-[linear-gradient(180deg,rgba(40,18,24,0.9),rgba(24,12,16,0.88))] text-red-50'
+      } ${
+        isExiting
+          ? 'motion-safe:animate-[toastOut_320ms_cubic-bezier(0.22,1,0.36,1)_forwards]'
+          : 'motion-safe:animate-[toastIn_320ms_cubic-bezier(0.22,1,0.36,1)]'
+      }`}
+      role="alert"
+      aria-live="polite"
+    >
+      <div className="flex items-start gap-3 px-4 py-3.5">
+        <div
+          className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${
+            isLightMode
+              ? 'border-red-500/16 bg-red-500/10 text-red-600'
+              : 'border-red-400/18 bg-red-500/12 text-red-200'
+          }`}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            className="h-4 w-4"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 8v4m0 3.5h.01M10.29 3.86 1.82 18a1.25 1.25 0 0 0 1.07 1.88h18.22A1.25 1.25 0 0 0 22.18 18l-8.47-14.14a1.25 1.25 0 0 0-2.42 0Z"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p
+            className={`text-xs font-medium uppercase tracking-[0.18em] ${
+              isLightMode ? 'text-red-700/72' : 'text-red-100/58'
+            }`}
+          >
+            Wallet Error
+          </p>
+          <p
+            className={`mt-1 text-sm leading-6 ${
+              isLightMode ? 'text-[#3c1a20]' : 'text-red-50/92'
+            }`}
+          >
+            {message}
+          </p>
+        </div>
+      </div>
+      <div
+        className={`h-1 w-full origin-left bg-[linear-gradient(90deg,#ff6a88,#ff8c7a,#ffb07c)] ${
+          !isExiting
+            ? 'motion-safe:animate-[toastCountdown_4.2s_linear_forwards]'
+            : ''
+        }`}
+      />
+    </div>
+  );
+}
+
+function ConversationBubble({
+  role,
+  title,
+  body,
+  tone,
+  isLightMode,
+}: {
+  role: 'assistant' | 'user';
+  title?: string;
+  body: string;
+  tone: 'default' | 'active' | 'warning' | 'success';
+  isLightMode: boolean;
+}) {
+  const isUser = role === 'user';
+  const bubbleRef = useRef<HTMLDivElement>(null);
+  const [displayedBody, setDisplayedBody] = useState(() =>
+    isUser ? body : ''
+  );
+  const [isStreaming, setIsStreaming] = useState(!isUser && body.length > 0);
+  const bubbleTone = isUser
+    ? isLightMode
+      ? 'border-[#b48cff]/32 bg-[rgba(255,255,255,0.74)] backdrop-blur-md text-[#171b24]'
+      : 'border-[#9d6cff]/38 bg-[rgba(38,22,57,0.42)] backdrop-blur-md text-white'
+    : tone === 'warning'
+      ? isLightMode
+        ? 'border-amber-400/28 bg-[rgba(255,250,240,0.78)] backdrop-blur-md text-[#5f4307]'
+        : 'border-amber-400/34 bg-[rgba(45,35,18,0.38)] backdrop-blur-md text-amber-50'
+    : tone === 'success'
+      ? isLightMode
+        ? 'border-emerald-400/24 bg-[rgba(246,255,251,0.78)] backdrop-blur-md text-[#17573f]'
+        : 'border-emerald-400/30 bg-[rgba(19,35,29,0.38)] backdrop-blur-md text-emerald-50'
+      : tone === 'active'
+        ? isLightMode
+          ? 'border-[#d96eff]/28 bg-[rgba(252,247,255,0.78)] backdrop-blur-md text-[#2a1835]'
+          : 'border-[#d96eff]/32 bg-[rgba(33,20,47,0.38)] backdrop-blur-md text-white'
+        : isLightMode
+          ? 'border-[#151a27]/10 bg-[rgba(255,255,255,0.7)] backdrop-blur-md text-[#171b24]'
+          : 'border-white/[0.14] bg-[rgba(20,21,25,0.32)] backdrop-blur-md text-white/[0.9]';
+
+  useEffect(() => {
+    if (isUser) {
+      return;
+    }
+
+    if (typeof window !== 'undefined') {
+      const prefersReducedMotion = window.matchMedia(
+        '(prefers-reduced-motion: reduce)'
+      ).matches;
+
+      if (prefersReducedMotion) {
+        const frameId = window.requestAnimationFrame(() => {
+          setDisplayedBody(body);
+          setIsStreaming(false);
+        });
+
+        return () => {
+          window.cancelAnimationFrame(frameId);
+        };
+      }
+    }
+
+    if (!body.length) {
+      const frameId = window.requestAnimationFrame(() => {
+        setIsStreaming(false);
+      });
+
+      return () => {
+        window.cancelAnimationFrame(frameId);
+      };
+    }
+
+    let currentIndex = 0;
+    const intervalId = window.setInterval(() => {
+      currentIndex = Math.min(currentIndex + AI_STREAM_STEP, body.length);
+      setDisplayedBody(body.slice(0, currentIndex));
+
+      if (currentIndex >= body.length) {
+        window.clearInterval(intervalId);
+        setIsStreaming(false);
+        return;
+      }
+    }, AI_STREAM_INTERVAL);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [body, isUser]);
+
+  useEffect(() => {
+    const bubble = bubbleRef.current;
+    const viewport = bubble?.closest('.conversation-scrollbar');
+
+    if (!viewport) {
+      return;
+    }
+
+    viewport.scrollTop = viewport.scrollHeight;
+  }, [displayedBody]);
+
+  return (
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+      <div
+        ref={bubbleRef}
+        className={`max-w-[92%] rounded-[20px] border-[1.5px] px-3.5 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:max-w-[88%] sm:rounded-[22px] sm:px-4 sm:py-3 ${bubbleTone}`}
+      >
+        <div className="flex items-center gap-2 text-[0.62rem] font-medium uppercase tracking-[0.18em] sm:text-[0.68rem] sm:tracking-[0.2em]">
+          <span
+            className={`h-2 w-2 rounded-full ${
+              isUser
+                ? isLightMode
+                  ? 'bg-[#b874ff]'
+                  : 'bg-[#ff98b4]'
+                : tone === 'warning'
+                  ? 'bg-amber-300 motion-safe:animate-pulse'
+                : tone === 'success'
+                  ? 'bg-emerald-300'
+                  : tone === 'active'
+                    ? 'bg-[#db76ff] motion-safe:animate-pulse'
+                    : isLightMode
+                      ? 'bg-[#747e94]'
+                      : 'bg-[#d88cff]/55'
+            }`}
+          />
+          <span
+            className={
+              isUser
+                ? isLightMode
+                  ? 'text-[#5f6780]'
+                  : 'text-white/[0.54]'
+                : isLightMode
+                  ? 'text-[#6b7387]'
+                  : 'text-white/[0.42]'
+            }
+          >
+            {isUser ? 'User' : 'Agent'}
+          </span>
+        </div>
+        {title ? (
+          <p className="mt-2 text-[0.92rem] font-medium text-current sm:text-sm">
+            {title}
+          </p>
+        ) : null}
+        <p
+          className={`mt-2 whitespace-pre-line break-all text-[0.92rem] leading-5 [overflow-wrap:anywhere] sm:text-sm sm:leading-6 ${
+            isUser
+              ? isLightMode
+                ? 'text-[#171b24]'
+                : 'text-white'
+              : tone === 'warning'
+                ? isLightMode
+                  ? 'text-[#5f4307]'
+                  : 'text-amber-50'
+              : tone === 'success'
+                ? isLightMode
+                  ? 'text-[#17573f]'
+                  : 'text-emerald-50'
+                : isLightMode
+                  ? 'text-[#2f3747]'
+                  : 'text-white/[0.78]'
+          }`}
+          style={{
+            fontFamily:
+              tone === 'success'
+                ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+                : 'var(--font-space-grotesk)',
+          }}
+        >
+          {displayedBody}
+          {!isUser && isStreaming ? (
+            <span className="ml-0.5 inline-block h-[1.05em] w-px align-[-0.16em] bg-current opacity-70 motion-safe:animate-pulse" />
+          ) : null}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function inferIntent(prompt: string) {
+  const normalized = prompt.toLowerCase();
+
+  if (normalized.includes('rebalance')) {
+    return 'Rebalance';
+  }
+
+  if (normalized.includes('claim')) {
+    return 'Claim';
+  }
+
+  if (normalized.includes('swap')) {
+    return 'Swap';
+  }
+
+  if (normalized.includes('send')) {
+    return 'Send';
+  }
+
+  if (normalized.includes('stake')) {
+    return 'Stake';
+  }
+
+  if (normalized.includes('bridge')) {
+    return 'Bridge';
+  }
+
+  return 'Execute';
+}
+
+function createMockHash(prompt: string) {
+  const digest = sha256(
+    new TextEncoder().encode(`${prompt}:${Date.now().toString(16)}`)
+  );
+
+  return `0x${toHex(digest).slice(0, 64)}`;
+}
+
+function toHex(bytes: Uint8Array) {
+  return Array.from(bytes)
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function withArticle(word: string) {
+  return /^[aeiou]/i.test(word) ? `an ${word}` : `a ${word}`;
 }
