@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useWallet } from '@/contexts/WalletContext';
 import { getBalance } from '@/wallet/chain';
 import { Balance, INJECTIVE_MAINNET } from '@/types/chain';
-import { getInjPrice, getTokenPrice } from '@/services/price';
+import { getTokenPrice } from '@/services/price';
 import { getTokenBalances } from '@/services/dex-swap';
 import { startQRScanner, stopQRScanner, clearQRScanner, isCameraSupported, isValidAddress } from '@/services/qr-scanner';
 import { getN1NJ4NFTs, type NFT } from '@/services/nft';
@@ -15,10 +15,15 @@ import type { Address } from 'viem';
 import Image from 'next/image';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import NFTDetailModal from '@/components/NFTDetailModal';
+import {
+  applyThemeMode,
+  resolveThemeMode,
+  type ThemeMode,
+} from '@/utils/theme';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { isUnlocked, address, lock, isCheckingSession } = useWallet();
+  const { isUnlocked, address, isCheckingSession } = useWallet();
   const [balance, setBalance] = useState<Balance | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,6 +58,28 @@ export default function DashboardPage() {
   // Staking states
   const [stakingInfo, setStakingInfo] = useState<StakingInfo | null>(null);
   const [stakingLoading, setStakingLoading] = useState(false);
+  const [themeMode, setThemeMode] = useState<ThemeMode>('dark');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const syncTheme = () => {
+      const { mode } = resolveThemeMode(window.localStorage);
+      setThemeMode(mode);
+      applyThemeMode(mode);
+    };
+
+    syncTheme();
+    window.addEventListener('storage', syncTheme);
+    window.addEventListener('focus', syncTheme);
+
+    return () => {
+      window.removeEventListener('storage', syncTheme);
+      window.removeEventListener('focus', syncTheme);
+    };
+  }, []);
 
   useEffect(() => {
     // Wait for session check to complete
@@ -272,19 +299,45 @@ export default function DashboardPage() {
   const usdtValue = parseFloat(tokenBalances.USDT);
   const usdcValue = parseFloat(tokenBalances.USDC);
   const totalUsdValue = (injUsdValue + usdtValue + usdcValue).toFixed(2);
+  const isLightMode = themeMode === 'light';
+  const surfaceCardClass = isLightMode
+    ? 'bg-white/72 hover:bg-white/90 border border-[#151a27]/10 shadow-[0_18px_44px_rgba(18,24,35,0.06)]'
+    : 'bg-white/5 hover:bg-white/10 border border-white/10';
+  const iconButtonClass = isLightMode
+    ? 'bg-white/72 hover:bg-white border border-[#151a27]/10 text-[#242c39]'
+    : 'bg-white/5 hover:bg-white/10 border border-white/10 text-white';
+  const mutedTextClass = isLightMode ? 'text-[#6b7387]' : 'text-gray-400';
+  const tertiaryTextClass = isLightMode ? 'text-[#8b93a5]' : 'text-gray-500';
+  const headingTextClass = isLightMode ? 'text-[#151a23]' : 'text-white';
 
   return (
-    <div className="min-h-screen pb-24 md:pb-8 bg-black">
+    <div
+      className={`min-h-screen pb-24 md:pb-8 transition-colors duration-500 ${
+        isLightMode ? 'text-[#151a23]' : 'text-white'
+      }`}
+    >
       <div>
         {/* Modern Dashboard Header */}
-        <div className="bg-gradient-to-b from-white/5 to-transparent border-b border-white/5 backdrop-blur-sm">
+        <div
+          className={`border-b backdrop-blur-sm transition-colors duration-500 ${
+            isLightMode
+              ? 'border-[#151a27]/8 bg-gradient-to-b from-white/80 to-transparent'
+              : 'border-white/5 bg-gradient-to-b from-white/5 to-transparent'
+          }`}
+        >
         <div className="max-w-7xl mx-auto px-4 py-6">
           {/* Header Top */}
           <div className="flex items-center justify-between mb-6">
             {/* Account Info */}
             <div className="flex items-center gap-3">
               {/* Brand Logo */}
-              <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center p-1.5">
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center border p-1.5 transition-colors duration-500 ${
+                  isLightMode
+                    ? 'border-[#151a27]/10 bg-white/74'
+                    : 'border-white/10 bg-white/5'
+                }`}
+              >
                 <Image 
                   src="/lambdalogo.png" 
                   alt="Logo" 
@@ -295,14 +348,16 @@ export default function DashboardPage() {
               </div>
               
               <div>
-                <div className="text-sm font-bold text-white mb-1">Account 1</div>
+                <div className={`mb-1 text-sm font-bold ${headingTextClass}`}>Account 1</div>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs text-gray-400">
+                  <span className={`font-mono text-xs ${mutedTextClass}`}>
                     {address?.slice(0, 6)}...{address?.slice(-4)}
                   </span>
                   <button 
                     onClick={handleCopyAddress}
-                    className="p-1 rounded hover:bg-white/10 transition-all group"
+                    className={`group rounded p-1 transition-all ${
+                      isLightMode ? 'hover:bg-[#151a27]/6' : 'hover:bg-white/10'
+                    }`}
                     title="Copy address"
                   >
                     {copied ? (
@@ -310,7 +365,16 @@ export default function DashboardPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                     ) : (
-                      <svg className="w-3.5 h-3.5 text-gray-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 16 16">
+                      <svg
+                        className={`w-3.5 h-3.5 transition-colors ${
+                          isLightMode
+                            ? 'text-[#7d8598] group-hover:text-[#151a23]'
+                            : 'text-gray-400 group-hover:text-white'
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 16 16"
+                      >
                         <rect width="11" height="11" x="4" y="4" rx="1" ry="1" strokeWidth="1.5" />
                         <path d="M2 10c-0.8 0-1.5-0.7-1.5-1.5V2c0-0.8 0.7-1.5 1.5-1.5h8.5c0.8 0 1.5 0.7 1.5 1.5" strokeWidth="1.5" />
                       </svg>
@@ -323,7 +387,7 @@ export default function DashboardPage() {
             {/* Scan QR Code Button */}
             <button 
               onClick={openQRScanner}
-              className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all"
+              className={`rounded-xl border p-3 transition-all ${iconButtonClass}`}
               title="Scan QR Code"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
@@ -340,26 +404,36 @@ export default function DashboardPage() {
           </div>
 
           {/* Total Balance Card - OKX Style */}
-          <div className="bg-black rounded-2xl p-6 border border-white/10 relative overflow-hidden">
+          <div
+            className={`relative overflow-hidden rounded-2xl border p-6 transition-colors duration-500 ${
+              isLightMode
+                ? 'border-[#151a27]/10 bg-[rgba(255,255,255,0.78)] shadow-[0_24px_60px_rgba(18,24,35,0.07)]'
+                : 'border-white/10 bg-black'
+            }`}
+          >
             {/* Subtle gradient accent */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-500/5 to-transparent rounded-full blur-2xl"></div>
+            <div className={`absolute top-0 right-0 w-32 h-32 rounded-full bg-gradient-to-br blur-2xl ${
+              isLightMode ? 'from-[#8b34ff]/10 to-transparent' : 'from-green-500/5 to-transparent'
+            }`}></div>
             
             <div className="relative">
               {/* Header with Balance Label */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Total Balance</span>
+                  <span className={`text-xs font-semibold uppercase tracking-wider ${mutedTextClass}`}>Total Balance</span>
                   <button 
                     onClick={() => setBalanceVisible(!balanceVisible)}
-                    className="p-1 rounded hover:bg-white/5 transition-colors"
+                    className={`rounded p-1 transition-colors ${
+                      isLightMode ? 'hover:bg-[#151a27]/6' : 'hover:bg-white/5'
+                    }`}
                   >
                     {balanceVisible ? (
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className={`w-4 h-4 ${mutedTextClass}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                       </svg>
                     ) : (
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className={`w-4 h-4 ${mutedTextClass}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                       </svg>
                     )}
@@ -368,9 +442,11 @@ export default function DashboardPage() {
                 <button 
                   onClick={handleRefresh}
                   disabled={refreshing}
-                  className="p-1 rounded hover:bg-white/5 transition-colors disabled:opacity-50"
+                  className={`rounded p-1 transition-colors disabled:opacity-50 ${
+                    isLightMode ? 'hover:bg-[#151a27]/6' : 'hover:bg-white/5'
+                  }`}
                 >
-                  <svg className={`w-4 h-4 text-gray-400 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className={`w-4 h-4 ${mutedTextClass} ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                 </button>
@@ -379,13 +455,13 @@ export default function DashboardPage() {
               {/* Main Balance Display */}
               <div className="mb-5">
                 <div className="flex items-baseline gap-3">
-                  <span className="text-4xl md:text-5xl font-bold text-white font-mono tracking-tight">
+                  <span className={`text-4xl md:text-5xl font-bold font-mono tracking-tight ${headingTextClass}`}>
                     {balanceVisible ? formattedBalance : '••••••'}
                   </span>
-                  <span className="text-xl font-semibold text-gray-400">INJ</span>
+                  <span className={`text-xl font-semibold ${mutedTextClass}`}>INJ</span>
                 </div>
                 <div className="flex items-center gap-4 mt-2">
-                  <div className="text-base text-gray-400 font-mono">
+                  <div className={`text-base font-mono ${mutedTextClass}`}>
                     ≈ ${balanceVisible ? totalUsdValue : '••••••'} USD
                   </div>
                   {/* 24h Change */}
@@ -397,7 +473,7 @@ export default function DashboardPage() {
                       <span className={`text-sm ${injPriceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {injPriceChange24h >= 0 ? '+' : ''}{injPriceChange24h.toFixed(2)}%
                       </span>
-                      <span className="text-gray-500 text-xs">24h</span>
+                      <span className={`text-xs ${tertiaryTextClass}`}>24h</span>
                     </div>
                   )}
                 </div>
@@ -416,7 +492,7 @@ export default function DashboardPage() {
                       <polyline points="5 12 12 5 19 12" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
-                  <span className="text-xs font-semibold text-gray-300">Send</span>
+                  <span className={`text-xs font-semibold ${isLightMode ? 'text-[#4b5365]' : 'text-gray-300'}`}>Send</span>
                 </button>
 
                 {/* Receive Button */}
@@ -430,7 +506,7 @@ export default function DashboardPage() {
                       <polyline points="19 12 12 19 5 12" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
-                  <span className="text-xs font-semibold text-gray-300">Receive</span>
+                  <span className={`text-xs font-semibold ${isLightMode ? 'text-[#4b5365]' : 'text-gray-300'}`}>Receive</span>
                 </button>
 
                 {/* Swap Button */}
@@ -447,7 +523,7 @@ export default function DashboardPage() {
                       <line x1="4" y1="4" x2="9" y2="9" strokeWidth={2.5} strokeLinecap="round" />
                     </svg>
                   </div>
-                  <span className="text-xs font-semibold text-gray-300">Swap</span>
+                  <span className={`text-xs font-semibold ${isLightMode ? 'text-[#4b5365]' : 'text-gray-300'}`}>Swap</span>
                 </button>
 
                 {/* History Button */}
@@ -461,7 +537,7 @@ export default function DashboardPage() {
                       <polyline points="12 6 12 12 16 14" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
-                  <span className="text-xs font-semibold text-gray-300">History</span>
+                  <span className={`text-xs font-semibold ${isLightMode ? 'text-[#4b5365]' : 'text-gray-300'}`}>History</span>
                 </button>
               </div>
             </div>
@@ -472,10 +548,18 @@ export default function DashboardPage() {
       {/* Assets Section - No Container */}
       <div className="max-w-7xl mx-auto px-4 pt-3 pb-6">
         {/* Asset Tabs - Smooth Sliding Background */}
-        <div className="relative mb-6 p-1 bg-white/5 rounded-xl">
+        <div
+          className={`relative mb-6 rounded-xl p-1 transition-colors duration-500 ${
+            isLightMode
+              ? 'bg-[rgba(255,255,255,0.68)] shadow-[0_16px_42px_rgba(18,24,35,0.06)]'
+              : 'bg-white/5'
+          }`}
+        >
           {/* Sliding Background */}
           <div 
-            className={`absolute top-1 bottom-1 w-[calc(33.333%-0.333rem)] bg-white rounded-lg transition-all duration-300 ease-out shadow-lg ${
+            className={`absolute top-1 bottom-1 w-[calc(33.333%-0.333rem)] rounded-lg transition-all duration-300 ease-out shadow-lg ${
+              isLightMode ? 'bg-[#171c29]' : 'bg-white'
+            } ${
               assetTab === 'tokens' ? 'left-1' : 
               assetTab === 'nfts' ? 'left-[calc(33.333%+0.166rem)]' : 
               'left-[calc(66.666%+0.333rem)]'
@@ -488,8 +572,12 @@ export default function DashboardPage() {
               onClick={() => setAssetTab('tokens')}
               className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-bold text-sm transition-all duration-300 ${
                 assetTab === 'tokens' 
-                  ? 'text-black' 
-                  : 'text-gray-400 hover:text-white'
+                  ? isLightMode
+                    ? 'text-white'
+                    : 'text-black'
+                  : isLightMode
+                    ? 'text-[#6b7387] hover:text-[#171c29]'
+                    : 'text-gray-400 hover:text-white'
               }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -502,8 +590,12 @@ export default function DashboardPage() {
               onClick={() => setAssetTab('nfts')}
               className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-bold text-sm transition-all duration-300 ${
                 assetTab === 'nfts' 
-                  ? 'text-black' 
-                  : 'text-gray-400 hover:text-white'
+                  ? isLightMode
+                    ? 'text-white'
+                    : 'text-black'
+                  : isLightMode
+                    ? 'text-[#6b7387] hover:text-[#171c29]'
+                    : 'text-gray-400 hover:text-white'
               }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -516,8 +608,12 @@ export default function DashboardPage() {
               onClick={() => setAssetTab('defi')}
               className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-bold text-sm transition-all duration-300 ${
                 assetTab === 'defi' 
-                  ? 'text-black' 
-                  : 'text-gray-400 hover:text-white'
+                  ? isLightMode
+                    ? 'text-white'
+                    : 'text-black'
+                  : isLightMode
+                    ? 'text-[#6b7387] hover:text-[#171c29]'
+                    : 'text-gray-400 hover:text-white'
               }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -532,7 +628,7 @@ export default function DashboardPage() {
         <div className="space-y-3">
           {assetTab === 'tokens' && (
             <>
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
+              <div className={`flex cursor-pointer items-center gap-4 rounded-2xl p-4 transition-all ${surfaceCardClass}`}>
                 <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden">
                   <Image 
                     src="/injswap.png" 
@@ -544,7 +640,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex-1">
                   <div className="font-bold mb-1">INJ</div>
-                  <div className="text-sm text-gray-400">{tokenBalances.INJ} INJ</div>
+                  <div className={`text-sm ${mutedTextClass}`}>{tokenBalances.INJ} INJ</div>
                 </div>
                 <div className="text-right">
                   <div className="font-bold font-mono">${(parseFloat(tokenBalances.INJ) * injPrice).toFixed(2)}</div>
@@ -554,7 +650,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
+              <div className={`flex cursor-pointer items-center gap-4 rounded-2xl p-4 transition-all ${surfaceCardClass}`}>
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
                   <Image 
                     src="/USDT_Logo.png" 
@@ -566,7 +662,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex-1">
                   <div className="font-bold mb-1">USDT</div>
-                  <div className="text-sm text-gray-400">{tokenBalances.USDT} USDT</div>
+                  <div className={`text-sm ${mutedTextClass}`}>{tokenBalances.USDT} USDT</div>
                 </div>
                 <div className="text-right">
                   <div className="font-bold font-mono">${tokenBalances.USDT}</div>
@@ -576,7 +672,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
+              <div className={`flex cursor-pointer items-center gap-4 rounded-2xl p-4 transition-all ${surfaceCardClass}`}>
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
                   <Image 
                     src="/USDC_Logo.png" 
@@ -588,7 +684,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex-1">
                   <div className="font-bold mb-1">USDC</div>
-                  <div className="text-sm text-gray-400">{tokenBalances.USDC} USDC</div>
+                  <div className={`text-sm ${mutedTextClass}`}>{tokenBalances.USDC} USDC</div>
                 </div>
                 <div className="text-right">
                   <div className="font-bold font-mono">${tokenBalances.USDC}</div>
@@ -604,18 +700,22 @@ export default function DashboardPage() {
             <>
               {nftsLoading ? (
                 <div className="flex items-center justify-center py-16">
-                  <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+                  <div className={`h-12 w-12 animate-spin rounded-full border-4 ${
+                    isLightMode ? 'border-[#151a27]/12 border-t-[#151a23]' : 'border-white/20 border-t-white'
+                  }`}></div>
                 </div>
               ) : nfts.length === 0 ? (
-                <div className="text-center py-16 text-gray-500">
-                  <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
-                    <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className={`py-16 text-center ${tertiaryTextClass}`}>
+                  <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border ${
+                    isLightMode ? 'border-[#151a27]/10 bg-white/70' : 'border-white/10 bg-white/5'
+                  }`}>
+                    <svg className={`h-8 w-8 ${isLightMode ? 'text-[#8a91a3]' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <rect width="18" height="18" x="3" y="3" rx="2" ry="2" strokeWidth={2} />
                       <path d="M9 3v18M3 9h18" strokeWidth={2} strokeLinecap="round" />
                     </svg>
                   </div>
-                  <p className="text-lg font-bold mb-1">No NFTs found</p>
-                  <p className="text-xs text-gray-500">You don&apos;t own any N1NJ4 NFTs yet</p>
+                  <p className={`mb-1 text-lg font-bold ${headingTextClass}`}>No NFTs found</p>
+                  <p className={`text-xs ${tertiaryTextClass}`}>You don&apos;t own any N1NJ4 NFTs yet</p>
                 </div>
               ) : (
                 <>
@@ -623,9 +723,11 @@ export default function DashboardPage() {
                     <div 
                       key={`${nft.contractAddress}-${nft.tokenId}`}
                       onClick={() => setSelectedNFT(nft)}
-                      className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer"
+                      className={`flex cursor-pointer items-center gap-4 rounded-2xl p-4 transition-all ${surfaceCardClass}`}
                     >
-                      <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shadow-lg">
+                      <div className={`flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border shadow-lg ${
+                        isLightMode ? 'border-[#151a27]/10 bg-white/70' : 'border-white/10 bg-white/5'
+                      }`}>
                         {nft.image ? (
                           <Image 
                             src={nft.image} 
@@ -635,7 +737,7 @@ export default function DashboardPage() {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className={`h-6 w-6 ${isLightMode ? 'text-[#8a91a3]' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <rect width="18" height="18" x="3" y="3" rx="2" ry="2" strokeWidth={2} />
                             <path d="M9 3v18M3 9h18" strokeWidth={2} strokeLinecap="round" />
                           </svg>
@@ -643,10 +745,10 @@ export default function DashboardPage() {
                       </div>
                       <div className="flex-1">
                         <div className="font-bold mb-1">{nft.name}</div>
-                        <div className="text-sm text-gray-400">#{nft.tokenId}</div>
+                        <div className={`text-sm ${mutedTextClass}`}>#{nft.tokenId}</div>
                       </div>
                       <div className="text-right">
-                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className={`w-5 h-5 ${mutedTextClass}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </div>
@@ -661,12 +763,14 @@ export default function DashboardPage() {
             <>
               {stakingLoading ? (
                 <div className="flex items-center justify-center py-16">
-                  <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+                  <div className={`h-12 w-12 animate-spin rounded-full border-4 ${
+                    isLightMode ? 'border-[#151a27]/12 border-t-[#151a23]' : 'border-white/20 border-t-white'
+                  }`}></div>
                 </div>
               ) : stakingInfo && parseFloat(stakingInfo.totalStaked) > 0 ? (
                 <>
                   {/* Staking Position */}
-                  <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
+                  <div className={`flex cursor-pointer items-center gap-4 rounded-2xl p-4 transition-all ${surfaceCardClass}`}>
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
                       <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -674,8 +778,8 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex-1">
                       <div className="font-bold mb-1">Staking</div>
-                      <div className="text-sm text-gray-400">{stakingInfo.totalStaked} INJ</div>
-                      <div className="text-xs text-gray-500 mt-1">APR: {stakingInfo.stakingApr}%</div>
+                      <div className={`text-sm ${mutedTextClass}`}>{stakingInfo.totalStaked} INJ</div>
+                      <div className={`mt-1 text-xs ${tertiaryTextClass}`}>APR: {stakingInfo.stakingApr}%</div>
                     </div>
                     <div className="text-right">
                       <div className="font-bold font-mono">${stakingInfo.totalStakedUsd}</div>
@@ -687,13 +791,13 @@ export default function DashboardPage() {
 
                   {/* Staking Rewards */}
                   {parseFloat(stakingInfo.rewards) > 0 && (
-                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
+                    <div className={`flex cursor-pointer items-center gap-4 rounded-2xl p-4 transition-all ${surfaceCardClass}`}>
                       <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center text-2xl shadow-lg">
                         💰
                       </div>
                       <div className="flex-1">
                         <div className="font-bold mb-1">Staking Rewards</div>
-                        <div className="text-sm text-gray-400">{stakingInfo.rewards} INJ</div>
+                        <div className={`text-sm ${mutedTextClass}`}>{stakingInfo.rewards} INJ</div>
                       </div>
                       <div className="text-right">
                         <div className="font-bold font-mono">${stakingInfo.rewardsUsd}</div>
@@ -703,14 +807,16 @@ export default function DashboardPage() {
                   )}
                 </>
               ) : (
-                <div className="text-center py-16 text-gray-500">
-                  <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
-                    <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className={`py-16 text-center ${tertiaryTextClass}`}>
+                  <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border ${
+                    isLightMode ? 'border-[#151a27]/10 bg-white/70' : 'border-white/10 bg-white/5'
+                  }`}>
+                    <svg className={`h-8 w-8 ${isLightMode ? 'text-[#8a91a3]' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                     </svg>
                   </div>
-                  <p className="text-lg font-bold mb-1">No DeFi Positions</p>
-                  <p className="text-xs text-gray-500">Your DeFi positions and activities will appear here</p>
+                  <p className={`mb-1 text-lg font-bold ${headingTextClass}`}>No DeFi Positions</p>
+                  <p className={`text-xs ${tertiaryTextClass}`}>Your DeFi positions and activities will appear here</p>
                 </div>
               )}
             </>
@@ -729,28 +835,36 @@ export default function DashboardPage() {
       {/* QR Scanner Modal */}
       {showQRScanner && (
         <div 
-          className={`fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity duration-200 px-4 ${closingQRScanner ? 'opacity-0' : 'opacity-100'}`}
+          className={`fixed inset-0 z-50 flex items-center justify-center px-4 backdrop-blur-sm transition-opacity duration-200 ${
+            closingQRScanner ? 'opacity-0' : 'opacity-100'
+          } ${isLightMode ? 'bg-[rgba(234,239,247,0.72)]' : 'bg-black/80'}`}
           onClick={closeQRScanner}
         >
           <div 
-            className={`bg-black border border-white/10 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden ${
+            className={`w-full max-w-md overflow-hidden rounded-2xl border shadow-2xl ${
               closingQRScanner ? 'slide-down' : 'slide-up'
+            } ${
+              isLightMode
+                ? 'border-[#151a27]/10 bg-[rgba(255,255,255,0.92)] text-[#151a23]'
+                : 'border-white/10 bg-black text-white'
             }`}
             onClick={(e) => e.stopPropagation()}
             style={{ maxHeight: '85vh' }}
           >
             {/* Header - Compact */}
-            <div className="p-4 border-b border-white/5">
+            <div className={`p-4 border-b ${isLightMode ? 'border-[#151a27]/8' : 'border-white/5'}`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-base font-bold text-white">Scan QR Code</h3>
-                  <p className="text-gray-400 text-xs">Point camera at wallet address</p>
+                  <h3 className={`text-base font-bold ${headingTextClass}`}>Scan QR Code</h3>
+                  <p className={`text-xs ${mutedTextClass}`}>Point camera at wallet address</p>
                 </div>
                 <button
                   onClick={closeQRScanner}
-                  className="p-2 rounded-xl hover:bg-white/10 transition-all"
+                  className={`rounded-xl p-2 transition-all ${
+                    isLightMode ? 'hover:bg-[#151a27]/6' : 'hover:bg-white/10'
+                  }`}
                 >
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className={`w-5 h-5 ${mutedTextClass}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -763,8 +877,8 @@ export default function DashboardPage() {
                 <>
                   {/* Show My QR Code - Compact */}
                   <div className="text-center mb-3">
-                    <h4 className="text-sm font-bold text-white mb-1">My Wallet Address</h4>
-                    <p className="text-gray-400 text-xs">Let others scan this code</p>
+                    <h4 className={`mb-1 text-sm font-bold ${headingTextClass}`}>My Wallet Address</h4>
+                    <p className={`text-xs ${mutedTextClass}`}>Let others scan this code</p>
                   </div>
 
                   {/* QR Code - Smaller */}
@@ -779,8 +893,10 @@ export default function DashboardPage() {
 
                   {/* Address Display - Compact */}
                   <div className="w-full">
-                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
-                      <span className="text-xs font-mono text-white truncate mr-2">
+                    <div className={`flex items-center justify-between rounded-xl border p-3 ${
+                      isLightMode ? 'border-[#151a27]/10 bg-[#f4f6fb]' : 'border-white/10 bg-white/5'
+                    }`}>
+                      <span className={`mr-2 truncate text-xs font-mono ${headingTextClass}`}>
                         {address?.slice(0, 10)}...{address?.slice(-8)}
                       </span>
                       <button
@@ -789,14 +905,16 @@ export default function DashboardPage() {
                           setCopied(true);
                           setTimeout(() => setCopied(false), 2000);
                         }}
-                        className="p-1.5 rounded-lg hover:bg-white/10 transition-all flex-shrink-0"
+                        className={`flex-shrink-0 rounded-lg p-1.5 transition-all ${
+                          isLightMode ? 'hover:bg-[#151a27]/6' : 'hover:bg-white/10'
+                        }`}
                       >
                         {copied ? (
                           <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
                         ) : (
-                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 16 16">
+                          <svg className={`w-4 h-4 ${mutedTextClass}`} fill="none" stroke="currentColor" viewBox="0 0 16 16">
                             <rect width="11" height="11" x="4" y="4" rx="1" ry="1" strokeWidth="1.5" />
                             <path d="M2 10c-0.8 0-1.5-0.7-1.5-1.5V2c0-0.8 0.7-1.5 1.5-1.5h8.5c0.8 0 1.5 0.7 1.5 1.5" strokeWidth="1.5" />
                           </svg>
@@ -811,7 +929,9 @@ export default function DashboardPage() {
                   <div className="relative w-full mb-4">
                     <div 
                       id="qr-reader" 
-                      className="rounded-xl overflow-hidden border-2 border-white/20"
+                      className={`overflow-hidden rounded-xl border-2 ${
+                        isLightMode ? 'border-[#151a27]/10' : 'border-white/20'
+                      }`}
                       style={{ width: '100%' }}
                     />
                     
@@ -823,10 +943,10 @@ export default function DashboardPage() {
                     )}
                   </div>
                   
-                  <h4 className="text-sm font-bold text-white mb-1">
+                  <h4 className={`mb-1 text-sm font-bold ${headingTextClass}`}>
                     {qrScanning ? 'Scanning...' : 'Initializing Camera...'}
                   </h4>
-                  <p className="text-gray-400 text-xs text-center">
+                  <p className={`text-center text-xs ${mutedTextClass}`}>
                     {qrScanning ? 'Point camera at QR code' : 'Please allow camera access'}
                   </p>
                 </>
@@ -850,9 +970,9 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   
-                  <h4 className="text-sm font-bold text-white mb-1">QR Code Scanned!</h4>
-                  <p className="text-gray-400 text-xs text-center mb-3">Redirecting to send page...</p>
-                  <div className="text-xs font-mono text-gray-500 bg-white/5 px-3 py-2 rounded-lg">
+                  <h4 className={`mb-1 text-sm font-bold ${headingTextClass}`}>QR Code Scanned!</h4>
+                  <p className={`mb-3 text-center text-xs ${mutedTextClass}`}>Redirecting to send page...</p>
+                  <div className={`rounded-lg px-3 py-2 text-xs font-mono ${isLightMode ? 'bg-[#f4f6fb] text-[#6c7385]' : 'bg-white/5 text-gray-500'}`}>
                     {scannedAddress.slice(0, 8)}...{scannedAddress.slice(-6)}
                   </div>
                 </>
@@ -864,7 +984,7 @@ export default function DashboardPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                   </div>
-                  <h4 className="text-sm font-bold text-white mb-1">Scan Failed</h4>
+                  <h4 className={`mb-1 text-sm font-bold ${headingTextClass}`}>Scan Failed</h4>
                   <p className="text-red-400 text-xs text-center mb-4">{qrError}</p>
                   <button
                     onClick={() => {
@@ -880,7 +1000,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Bottom Action - Toggle to My QR - Compact */}
-            <div className="p-3 border-t border-white/5">
+            <div className={`p-3 border-t ${isLightMode ? 'border-[#151a27]/8' : 'border-white/5'}`}>
               <button
                 onClick={() => {
                   if (showMyQR) {
@@ -898,7 +1018,11 @@ export default function DashboardPage() {
                     setQrScanning(false);
                   }
                 }}
-                className="w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-2 text-sm"
+                className={`flex w-full items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-bold transition-all ${
+                  isLightMode
+                    ? 'border-[#151a27]/10 bg-white/72 text-[#151a23] hover:bg-white'
+                    : 'border-white/10 bg-white/5 text-white hover:bg-white/10'
+                }`}
               >
                 {showMyQR ? (
                   <>
@@ -926,7 +1050,11 @@ export default function DashboardPage() {
       )}
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-black/95 border-t border-white/10 backdrop-blur-lg">
+      <div className={`fixed bottom-0 left-0 right-0 border-t backdrop-blur-lg transition-colors duration-500 ${
+        isLightMode
+          ? 'border-[#151a27]/10 bg-[rgba(248,250,255,0.82)]'
+          : 'border-white/10 bg-black/95'
+      }`}>
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-3 gap-4 py-3">
             {/* Settings */}
@@ -937,13 +1065,13 @@ export default function DashboardPage() {
               }}
               className={`flex flex-col items-center gap-1 py-2 rounded-xl transition-all ${
                 activeTab === 'settings' 
-                  ? 'text-white' 
-                  : 'text-gray-500 hover:text-gray-300'
+                  ? isLightMode ? 'text-[#151a23]' : 'text-white'
+                  : isLightMode ? 'text-[#7e8698] hover:text-[#3a4355]' : 'text-gray-500 hover:text-gray-300'
               }`}
             >
               <div className={`p-2 rounded-xl transition-all ${
                 activeTab === 'settings' 
-                  ? 'bg-white/10' 
+                  ? isLightMode ? 'bg-[#151a27]/8' : 'bg-white/10' 
                   : 'bg-transparent'
               }`}>
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -959,13 +1087,13 @@ export default function DashboardPage() {
               onClick={() => setActiveTab('wallet')}
               className={`flex flex-col items-center gap-1 py-2 rounded-xl transition-all ${
                 activeTab === 'wallet' 
-                  ? 'text-white' 
-                  : 'text-gray-500 hover:text-gray-300'
+                  ? isLightMode ? 'text-[#151a23]' : 'text-white'
+                  : isLightMode ? 'text-[#7e8698] hover:text-[#3a4355]' : 'text-gray-500 hover:text-gray-300'
               }`}
             >
               <div className={`p-2 rounded-xl transition-all ${
                 activeTab === 'wallet' 
-                  ? 'bg-white/10' 
+                  ? isLightMode ? 'bg-[#151a27]/8' : 'bg-white/10' 
                   : 'bg-transparent'
               }`}>
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -985,13 +1113,13 @@ export default function DashboardPage() {
               }}
               className={`flex flex-col items-center gap-1 py-2 rounded-xl transition-all ${
                 activeTab === 'discover' 
-                  ? 'text-white' 
-                  : 'text-gray-500 hover:text-gray-300'
+                  ? isLightMode ? 'text-[#151a23]' : 'text-white'
+                  : isLightMode ? 'text-[#7e8698] hover:text-[#3a4355]' : 'text-gray-500 hover:text-gray-300'
               }`}
             >
               <div className={`p-2 rounded-xl transition-all ${
                 activeTab === 'discover' 
-                  ? 'bg-white/10' 
+                  ? isLightMode ? 'bg-[#151a27]/8' : 'bg-white/10' 
                   : 'bg-transparent'
               }`}>
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1009,5 +1137,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {};
