@@ -8,11 +8,21 @@ interface ThemeContextValue {
   theme: ThemeMode;
   toggleTheme: () => void;
   setTheme: (theme: ThemeMode) => void;
+  isThemeReady: boolean;
 }
 
 const THEME_STORAGE_KEY = 'injpass_theme_mode';
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
+
+function getTimeBasedFallbackTheme(): ThemeMode {
+  if (typeof window === 'undefined') {
+    return 'dark';
+  }
+
+  const hour = new Date().getHours();
+  return hour >= 7 && hour < 19 ? 'light' : 'dark';
+}
 
 function applyTheme(theme: ThemeMode) {
   if (typeof document === 'undefined') return;
@@ -30,14 +40,53 @@ function getInitialTheme(): ThemeMode {
   return 'dark';
 }
 
+function resolveThemePreference(): ThemeMode {
+  if (typeof window === 'undefined') {
+    return 'dark';
+  }
+
+  const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (storedTheme === 'light' || storedTheme === 'dark') {
+    return storedTheme;
+  }
+
+  const documentTheme = document.documentElement.dataset.theme;
+  if (documentTheme === 'light' || documentTheme === 'dark') {
+    return documentTheme;
+  }
+
+  return getTimeBasedFallbackTheme();
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemeMode>(getInitialTheme);
+  const [hasHydratedTheme, setHasHydratedTheme] = useState(false);
   const animationTimeoutRef = useRef<number | null>(null);
+  const effectiveTheme = hasHydratedTheme ? theme : getInitialTheme();
 
   useEffect(() => {
+    const resolvedTheme = resolveThemePreference();
+    applyTheme(resolvedTheme);
+    window.localStorage.setItem(THEME_STORAGE_KEY, resolvedTheme);
+
+    const syncId = window.requestAnimationFrame(() => {
+      setThemeState(resolvedTheme);
+      setHasHydratedTheme(true);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(syncId);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hasHydratedTheme) {
+      return;
+    }
+
     applyTheme(theme);
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-  }, [theme]);
+  }, [hasHydratedTheme, theme]);
 
   useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
@@ -45,6 +94,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       const nextTheme = event.newValue === 'light' ? 'light' : 'dark';
       applyTheme(nextTheme);
       setThemeState(nextTheme);
+      setHasHydratedTheme(true);
     };
 
     window.addEventListener('storage', handleStorage);
@@ -74,20 +124,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = useCallback((nextTheme: ThemeMode) => {
     markThemeAnimating();
+    setHasHydratedTheme(true);
     setThemeState(nextTheme);
   }, [markThemeAnimating]);
 
   const toggleTheme = useCallback(() => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
-  }, [setTheme, theme]);
+    setTheme(effectiveTheme === 'dark' ? 'light' : 'dark');
+  }, [effectiveTheme, setTheme]);
 
   const value = useMemo(
     () => ({
-      theme,
+      theme: effectiveTheme,
       toggleTheme,
       setTheme,
+      isThemeReady: hasHydratedTheme,
     }),
-    [setTheme, theme, toggleTheme]
+    [effectiveTheme, hasHydratedTheme, setTheme, toggleTheme]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

@@ -235,7 +235,7 @@ export default function TunnelBackground({
 
       // Gentle dark veil keeps the background cohesive without feeling flat.
       ctx.fillStyle = isLightMode
-        ? 'rgba(244, 247, 251, 0.82)'
+        ? 'rgb(244, 247, 251)'
         : 'rgba(3, 3, 4, 0.18)';
       ctx.fillRect(0, 0, width, height);
 

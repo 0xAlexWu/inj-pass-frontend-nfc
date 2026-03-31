@@ -152,6 +152,169 @@ body.sidebar-mode {
   overflow: hidden;
 }
 
+@keyframes trustPillReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes trustPillSurfaceGlow {
+  0% {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+
+  45% {
+    opacity: 0.85;
+  }
+
+  100% {
+    opacity: 0.55;
+    transform: translateX(0);
+  }
+}
+
+@keyframes trustPillStatusDot {
+  0% {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+
+  72% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes trustPillStatusBreath {
+  0%, 100% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes trustPillStatusHalo {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  30% {
+    opacity: 0.42;
+    transform: scale(1.95);
+  }
+
+  65% {
+    opacity: 0.08;
+    transform: scale(2.55);
+  }
+}
+
+@keyframes toastIn {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.985);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes toastOut {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -20px, 0) scale(0.985);
+  }
+}
+
+@keyframes toastCountdown {
+  0% {
+    transform: scaleX(1);
+  }
+
+  100% {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes passkeyCardBorderGlow {
+  0%,
+  100% {
+    opacity: 0.48;
+    box-shadow: 0 0 0 rgba(239, 68, 68, 0);
+  }
+
+  50% {
+    opacity: 1;
+    box-shadow:
+      0 0 0 1px rgba(248, 113, 113, 0.12),
+      0 0 24px rgba(244, 63, 94, 0.14);
+  }
+}
+
+@keyframes passkeyCardBorderSweep {
+  0% {
+    transform: translateX(-160%);
+    opacity: 0;
+  }
+
+  18% {
+    opacity: 1;
+  }
+
+  62% {
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: translateX(320%);
+    opacity: 0;
+  }
+}
+
+@keyframes passkeyCardBorderSweepReverse {
+  0% {
+    transform: translateX(160%);
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 0.92;
+  }
+
+  64% {
+    opacity: 0.85;
+  }
+
+  100% {
+    transform: translateX(-320%);
+    opacity: 0;
+  }
+}
+
 .sidebar-container {
   position: fixed;
   top: 0;
