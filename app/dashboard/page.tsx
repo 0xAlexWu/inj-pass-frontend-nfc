@@ -680,6 +680,7 @@ export default function DashboardPage() {
   const [sendAmountAlertActive, setSendAmountAlertActive] = useState(false);
   const tokenFlipTimerRef = useRef<number | null>(null);
   const aiCompactPromoteTimerRef = useRef<number | null>(null);
+  const balanceUnitMenuTimerRef = useRef<number | null>(null);
   const cardScanSessionRef = useRef(0);
   const isLight = theme === 'light';
   const sendAmountAlertTimerRef = useRef<number | null>(null);
@@ -778,6 +779,14 @@ export default function DashboardPage() {
       setFaucetClaimLocked(false);
     }
   }, [address]);
+
+  useEffect(() => {
+    return () => {
+      if (balanceUnitMenuTimerRef.current) {
+        window.clearTimeout(balanceUnitMenuTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     setTokenBalances((current) => ({
@@ -1881,7 +1890,7 @@ export default function DashboardPage() {
                 alt={token.symbol}
                 width={40}
                 height={40}
-                className="h-full w-full object-contain"
+                className={token.symbol === 'LAM' ? 'h-[84%] w-[84%] rounded-[24%] object-contain' : 'h-full w-full object-contain'}
               />
             </div>
             <div className="min-w-0 flex-1 text-[13px] font-mono text-gray-300">{token.balance}</div>
@@ -2082,12 +2091,32 @@ export default function DashboardPage() {
                               </span>
                               <div
                                 className="relative"
-                                onMouseEnter={() => setBalanceUnitMenuOpen(true)}
-                                onMouseLeave={() => setBalanceUnitMenuOpen(false)}
+                                onMouseEnter={() => {
+                                  if (balanceUnitMenuTimerRef.current) {
+                                    window.clearTimeout(balanceUnitMenuTimerRef.current);
+                                    balanceUnitMenuTimerRef.current = null;
+                                  }
+                                  setBalanceUnitMenuOpen(true);
+                                }}
+                                onMouseLeave={() => {
+                                  if (balanceUnitMenuTimerRef.current) {
+                                    window.clearTimeout(balanceUnitMenuTimerRef.current);
+                                  }
+                                  balanceUnitMenuTimerRef.current = window.setTimeout(() => {
+                                    setBalanceUnitMenuOpen(false);
+                                    balanceUnitMenuTimerRef.current = null;
+                                  }, 750);
+                                }}
                               >
                                 <button
                                   type="button"
-                                  onClick={() => setBalanceUnitMenuOpen((current) => !current)}
+                                  onClick={() => {
+                                    if (balanceUnitMenuTimerRef.current) {
+                                      window.clearTimeout(balanceUnitMenuTimerRef.current);
+                                      balanceUnitMenuTimerRef.current = null;
+                                    }
+                                    setBalanceUnitMenuOpen((current) => !current);
+                                  }}
                                   className="inline-flex items-center gap-1 rounded-full px-1 py-0.5 text-lg font-semibold text-gray-400 transition-colors hover:text-white sm:text-xl"
                                 >
                                   <span>{balanceDisplayUnit}</span>
@@ -2105,6 +2134,10 @@ export default function DashboardPage() {
                                       key={unit}
                                       type="button"
                                       onClick={() => {
+                                        if (balanceUnitMenuTimerRef.current) {
+                                          window.clearTimeout(balanceUnitMenuTimerRef.current);
+                                          balanceUnitMenuTimerRef.current = null;
+                                        }
                                         setBalanceDisplayUnit(unit);
                                         setBalanceUnitMenuOpen(false);
                                       }}
@@ -2139,7 +2172,7 @@ export default function DashboardPage() {
                           </div>
                         </div>
 
-                        <div className="w-[42%] min-w-[132px] max-w-[168px] flex-shrink-0 sm:w-[38%] sm:max-w-[196px] md:w-[320px] md:max-w-none xl:w-[320px] xl:flex-shrink-0">
+                        <div className="w-[42%] min-w-[132px] max-w-[168px] translate-y-[11px] flex-shrink-0 sm:w-[38%] sm:max-w-[196px] md:w-[320px] md:max-w-none xl:w-[320px] xl:flex-shrink-0">
                           <PixelTrendChart
                             values={assetTrendSeries}
                             hidden={!balanceVisible}
@@ -3241,7 +3274,7 @@ export default function DashboardPage() {
                             alt={token.symbol}
                             width={40}
                             height={40}
-                            className="h-full w-full object-contain"
+                            className={token.symbol === 'LAM' ? 'h-[84%] w-[84%] rounded-[24%] object-contain' : 'h-full w-full object-contain'}
                           />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -3279,7 +3312,7 @@ export default function DashboardPage() {
                             alt={token.symbol}
                             width={40}
                             height={40}
-                            className="h-full w-full object-contain"
+                            className={token.symbol === 'LAM' ? 'h-[84%] w-[84%] rounded-[24%] object-contain' : 'h-full w-full object-contain'}
                           />
                         </div>
                         <div className="min-w-0 flex-1">
