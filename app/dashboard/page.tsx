@@ -1769,7 +1769,7 @@ export default function DashboardPage() {
   const overviewStageClassName = 'h-[438px] sm:h-[470px] md:h-[482px]';
   const detailStageClassName = 'h-[500px] sm:h-[528px] md:h-[520px]';
   const aiStageClassName = overviewStageClassName;
-  const overviewSizedWalletPanels: WalletPanel[] = ['overview', 'send', 'receive', 'swap', 'history', 'settings'];
+  const overviewSizedWalletPanels: WalletPanel[] = ['overview', 'send', 'receive', 'swap', 'history', 'chance', 'settings'];
   const walletStageClassName = isAiStage
     ? aiStageClassName
     : overviewSizedWalletPanels.includes(walletPanel)
@@ -2080,7 +2080,7 @@ export default function DashboardPage() {
                   >
                     <div key={`wallet-overview-${walletNetworkMode}-${walletSurfaceMotionKey}`} className="dashboard-surface-enter flex h-full flex-col justify-center">
                       <div className="flex h-full flex-row items-center gap-3 sm:gap-4 md:gap-6 xl:flex-row xl:items-center">
-                          <div className="min-w-0 flex-1 translate-y-[17px] sm:translate-y-[13px] md:translate-y-[5px]">
+                          <div className="min-w-0 flex-1 translate-y-[28px] sm:translate-y-[24px] md:translate-y-[16px]">
                           <div className="pl-1 sm:pl-3 md:pl-4">
                             <div className="flex flex-wrap items-end gap-2.5 sm:gap-3 md:gap-4">
                               <span className="text-[2rem] font-bold leading-none text-white font-mono tracking-tight sm:text-4xl md:text-5xl">
