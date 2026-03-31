@@ -1157,7 +1157,7 @@ export default function AgentsPage() {
           </div>
         )}
 
-        <div className={`flex-1 overflow-y-auto ${isCompactStage ? 'px-2 py-2 space-y-1.5' : isEmbedded ? 'px-3 py-3 space-y-1.5' : 'py-2 space-y-0.5 px-2'}`}>
+        <div className={`min-h-0 flex-1 overflow-y-auto ${isCompactStage ? 'scrollbar-hide px-2 py-2 space-y-1.5' : isEmbedded ? 'px-3 py-3 space-y-1.5' : 'py-2 space-y-0.5 px-2'}`}>
           {conversations.length === 0 ? (
             isCompactStage ? (
               <div className={`rounded-2xl border px-4 py-6 text-center ${isLight ? 'border-slate-200/80 bg-slate-900/[0.03]' : 'border-white/10 bg-white/[0.03]'}`}>
@@ -1362,7 +1362,7 @@ export default function AgentsPage() {
         </header>
 
         {/* Messages */}
-          <div className={`flex-1 ${isCompactStage ? (messages.length === 0 ? 'overflow-hidden' : 'overflow-y-auto scrollbar-hide') : 'overflow-y-auto'} ${isCompactStage ? '' : isEmbedded ? (isLight ? 'bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.05),transparent_36%)]' : 'bg-transparent') : ''}`}>
+          <div className={`min-h-0 flex-1 ${isCompactStage ? (messages.length === 0 ? 'overflow-hidden' : 'overflow-y-auto scrollbar-hide') : 'overflow-y-auto'} ${isCompactStage ? '' : isEmbedded ? (isLight ? 'bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.05),transparent_36%)]' : 'bg-transparent') : ''}`}>
           {messages.length === 0 ? (
             isCompactStage ? (
               <div className="flex h-full min-h-0 flex-col px-3 py-3 sm:px-4">
@@ -2077,7 +2077,7 @@ export default function AgentsPage() {
         )}
 
         {/* Input area */}
-        <div className={`flex-shrink-0 border-t ${isLight ? 'border-slate-200/80' : 'border-white/10'} ${isCompactStage ? 'bg-transparent px-3 pt-5 pb-1.5' : isEmbedded ? (isLight ? 'bg-white/70 p-5' : 'bg-white/[0.02] p-5') : (isLight ? 'bg-white/72 backdrop-blur-xl p-4' : 'bg-black/80 backdrop-blur-sm p-4')}`}>
+        <div className={`relative z-10 flex-shrink-0 border-t ${isLight ? 'border-slate-200/80' : 'border-white/10'} ${isCompactStage ? 'bg-transparent px-3 pt-5 pb-1.5' : isEmbedded ? (isLight ? 'bg-white/70 p-5' : 'bg-white/[0.02] p-5') : (isLight ? 'bg-white/72 backdrop-blur-xl p-4' : 'bg-black/80 backdrop-blur-sm p-4')}`}>
           <div className={`${isCompactStage ? 'max-w-none' : isEmbedded ? 'max-w-4xl' : 'max-w-3xl'} mx-auto`}>
             {isCompactStage && (
               <div className="mb-3.5 flex flex-wrap items-center justify-start gap-1.5">

@@ -38,7 +38,7 @@ type DashboardTransactionStatus = 'completed' | 'pending' | 'failed';
 type DashboardHistoryFilter = 'all' | DashboardTransactionType;
 type DashboardChainType = 'EVM' | 'Cosmos';
 type SwapToken = 'INJ' | 'USDT' | 'USDC' | 'LAM';
-type BalanceDisplayUnit = 'INJ' | 'USD' | 'BTC';
+type BalanceDisplayUnit = 'INJ' | 'USD';
 type AssetSurfaceMode = 'assets' | 'ai' | 'faucet';
 type WalletNetworkMode = 'mainnet' | 'testnet';
 type FaucetCategory = 'popular' | 'others';
@@ -598,7 +598,6 @@ export default function DashboardPage() {
   const [walletSurfaceMotionKey, setWalletSurfaceMotionKey] = useState(0);
   const [assetSurfaceMotionKey, setAssetSurfaceMotionKey] = useState(0);
   const [injPrice, setInjPrice] = useState<number>(25);
-  const [btcPrice, setBtcPrice] = useState<number>(85000);
   const [injPriceChange24h, setInjPriceChange24h] = useState<number>(0);
   const [usdtPriceChange24h, setUsdtPriceChange24h] = useState<number>(0);
   const [usdcPriceChange24h, setUsdcPriceChange24h] = useState<number>(0);
@@ -949,10 +948,9 @@ export default function DashboardPage() {
       } else {
         setLoading(true);
       }
-      const [balanceData, injPriceData, btcPriceData, usdtPriceData, usdcPriceData, tokenBalData] = await Promise.all([
+      const [balanceData, injPriceData, usdtPriceData, usdcPriceData, tokenBalData] = await Promise.all([
         getBalance(address, currentNetworkMeta.chain),
         getTokenPrice('injective-protocol'),
-        getTokenPrice('bitcoin'),
         getTokenPrice('tether'),
         getTokenPrice('usd-coin'),
         getDashboardTokenBalances(address as Address, walletNetworkMode),
@@ -960,7 +958,6 @@ export default function DashboardPage() {
       
       setBalance(balanceData);
       setInjPrice(injPriceData.usd);
-      setBtcPrice(btcPriceData.usd > 1000 ? btcPriceData.usd : 85000);
       setInjPriceChange24h(injPriceData.usd24hChange || 0);
       setUsdtPriceChange24h(usdtPriceData.usd24hChange || 0);
       setUsdcPriceChange24h(usdcPriceData.usd24hChange || 0);
@@ -1711,7 +1708,6 @@ export default function DashboardPage() {
         ? 'Loading wallet surface'
         : 'Wallet surface ready';
   const safeInjPrice = injPrice > 0 ? injPrice : 25;
-  const safeBtcPrice = btcPrice > 1000 ? btcPrice : 85000;
   const injBalanceValue = balance ? parseFloat(balance.formatted) : parseFloat(tokenBalances.INJ);
   const injUsdValue = Number.isFinite(injBalanceValue) ? injBalanceValue * safeInjPrice : 0;
   const usdtValue = Number.isFinite(parseFloat(tokenBalances.USDT)) ? parseFloat(tokenBalances.USDT) : 0;
@@ -1740,12 +1736,10 @@ export default function DashboardPage() {
     const safeValue = Number.isFinite(value) ? value : 0;
 
     if (unit === 'USD') return safeValue.toFixed(2);
-    if (unit === 'BTC') return safeValue.toFixed(6);
     return safeValue.toFixed(4);
   };
   const formatUnitValue = (usdValue: number, unit: BalanceDisplayUnit) => {
     if (unit === 'USD') return `$${formatUnitNumber(usdValue, 'USD')}`;
-    if (unit === 'BTC') return `${formatUnitNumber(usdValue / safeBtcPrice, 'BTC')} BTC`;
     return `${formatUnitNumber(usdValue / safeInjPrice, 'INJ')} INJ`;
   };
   const formatSignedChangeValue = (usdValue: number, unit: BalanceDisplayUnit) => {
@@ -1756,18 +1750,12 @@ export default function DashboardPage() {
       return `${sign}$${formatUnitNumber(absoluteValue, 'USD')}`;
     }
 
-    if (unit === 'BTC') {
-      return `${sign}${formatUnitNumber(absoluteValue / safeBtcPrice, 'BTC')}`;
-    }
-
     return `${sign}${formatUnitNumber(absoluteValue / safeInjPrice, 'INJ')}`;
   };
   const totalBalanceValue =
     balanceDisplayUnit === 'USD'
       ? totalUsdNumeric
-      : balanceDisplayUnit === 'BTC'
-        ? totalUsdNumeric / safeBtcPrice
-        : totalUsdNumeric / safeInjPrice;
+      : totalUsdNumeric / safeInjPrice;
   const formattedDisplayBalance = formatUnitNumber(totalBalanceValue, balanceDisplayUnit);
   const displaySecondaryBalance =
     balanceDisplayUnit === 'USD'
@@ -1890,7 +1878,7 @@ export default function DashboardPage() {
                 alt={token.symbol}
                 width={40}
                 height={40}
-                className={token.symbol === 'LAM' ? 'h-[84%] w-[84%] rounded-[24%] object-contain' : 'h-full w-full object-contain'}
+                className={token.symbol === 'LAM' ? 'h-full w-full rounded-full object-cover object-center' : 'h-full w-full object-contain'}
               />
             </div>
             <div className="min-w-0 flex-1 text-[13px] font-mono text-gray-300">{token.balance}</div>
@@ -2083,7 +2071,7 @@ export default function DashboardPage() {
                   >
                     <div key={`wallet-overview-${walletNetworkMode}-${walletSurfaceMotionKey}`} className="dashboard-surface-enter flex h-full flex-col justify-center">
                       <div className="flex h-full flex-row items-center gap-3 sm:gap-4 md:gap-6 xl:flex-row xl:items-center">
-                        <div className="min-w-0 flex-1 -translate-y-4 sm:-translate-y-5 md:-translate-y-7">
+                          <div className="min-w-0 flex-1 -translate-y-[6px] sm:-translate-y-[10px] md:-translate-y-[18px]">
                           <div className="pl-1 sm:pl-3 md:pl-4">
                             <div className="flex flex-wrap items-end gap-2.5 sm:gap-3 md:gap-4">
                               <span className="text-[2rem] font-bold leading-none text-white font-mono tracking-tight sm:text-4xl md:text-5xl">
@@ -2129,7 +2117,7 @@ export default function DashboardPage() {
                                     balanceUnitMenuOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-1 opacity-0'
                                   }`}
                                 >
-                                  {(['INJ', 'USD', 'BTC'] as const).map((unit) => (
+                                  {(['INJ', 'USD'] as const).map((unit) => (
                                     <button
                                       key={unit}
                                       type="button"
@@ -2172,7 +2160,7 @@ export default function DashboardPage() {
                           </div>
                         </div>
 
-                        <div className="w-[42%] min-w-[132px] max-w-[168px] translate-y-[11px] flex-shrink-0 sm:w-[38%] sm:max-w-[196px] md:w-[320px] md:max-w-none xl:w-[320px] xl:flex-shrink-0">
+                        <div className="w-[42%] min-w-[132px] max-w-[168px] translate-y-[30px] flex-shrink-0 sm:w-[38%] sm:max-w-[196px] md:w-[320px] md:max-w-none xl:w-[320px] xl:flex-shrink-0">
                           <PixelTrendChart
                             values={assetTrendSeries}
                             hidden={!balanceVisible}
@@ -3274,7 +3262,7 @@ export default function DashboardPage() {
                             alt={token.symbol}
                             width={40}
                             height={40}
-                            className={token.symbol === 'LAM' ? 'h-[84%] w-[84%] rounded-[24%] object-contain' : 'h-full w-full object-contain'}
+                            className={token.symbol === 'LAM' ? 'h-full w-full rounded-full object-cover object-center' : 'h-full w-full object-contain'}
                           />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -3312,7 +3300,7 @@ export default function DashboardPage() {
                             alt={token.symbol}
                             width={40}
                             height={40}
-                            className={token.symbol === 'LAM' ? 'h-[84%] w-[84%] rounded-[24%] object-contain' : 'h-full w-full object-contain'}
+                            className={token.symbol === 'LAM' ? 'h-full w-full rounded-full object-cover object-center' : 'h-full w-full object-contain'}
                           />
                         </div>
                         <div className="min-w-0 flex-1">
