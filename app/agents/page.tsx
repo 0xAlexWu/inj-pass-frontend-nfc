@@ -2185,48 +2185,47 @@ export default function AgentsPage() {
                         </>
                       )}
                       <div className="min-w-0 flex-1">
-                        {(dappMentions.length > 0 || assetMentions.length > 0) && (
-                          <div className="mb-2 flex flex-wrap gap-1.5">
-                            {dappMentions.map((dapp) => (
-                              <button
-                                key={dapp}
-                                type="button"
-                                onClick={() => removeDAppMention(dapp)}
-                                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-all ${dappMentionTone[dapp]}`}
-                                title={`Remove ${DAPP_MENTION_META[dapp].label}`}
-                              >
-                                <span>{DAPP_MENTION_META[dapp].label}</span>
-                                <svg className="h-3 w-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                            ))}
-                            {assetMentions.map((symbol) => (
-                              <button
-                                key={symbol}
-                                type="button"
-                                onClick={() => removeAssetMention(symbol)}
-                                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-all ${assetMentionTone[symbol]}`}
-                                title={`Remove $${symbol}`}
-                              >
-                                <span>${symbol}</span>
-                                <svg className="h-3 w-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                        <textarea
-                          ref={textareaRef}
-                          value={input}
-                          onChange={(e) => setInput(e.target.value)}
-                          onKeyDown={handleKeyDown}
-                          placeholder={isAssetDropActive ? 'Drop asset or dApp here to mention it…' : 'Ask anything about your wallet…'}
-                          rows={1}
-                          disabled={isRunning || !!pendingConfirm}
-                          className={`w-full bg-transparent text-sm resize-none outline-none min-h-[24px] max-h-40 py-1 disabled:opacity-50 ${isLight ? 'text-slate-900 placeholder:text-slate-400' : 'text-white placeholder-gray-500'}`}
-                        />
+                        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide py-1">
+                          {dappMentions.map((dapp) => (
+                            <button
+                              key={dapp}
+                              type="button"
+                              onClick={() => removeDAppMention(dapp)}
+                              className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-all ${dappMentionTone[dapp]}`}
+                              title={`Remove ${DAPP_MENTION_META[dapp].label}`}
+                            >
+                              <span>{DAPP_MENTION_META[dapp].label}</span>
+                              <svg className="h-3 w-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          ))}
+                          {assetMentions.map((symbol) => (
+                            <button
+                              key={symbol}
+                              type="button"
+                              onClick={() => removeAssetMention(symbol)}
+                              className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-all ${assetMentionTone[symbol]}`}
+                              title={`Remove $${symbol}`}
+                            >
+                              <span>${symbol}</span>
+                              <svg className="h-3 w-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          ))}
+                          <textarea
+                            ref={textareaRef}
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder={isAssetDropActive ? 'Drop asset or dApp here to mention it…' : 'Ask anything about your wallet…'}
+                            rows={1}
+                            wrap="off"
+                            disabled={isRunning || !!pendingConfirm}
+                            className={`min-w-[180px] flex-1 bg-transparent text-sm resize-none overflow-x-auto overflow-y-hidden whitespace-nowrap outline-none min-h-[24px] max-h-[24px] py-0 disabled:opacity-50 scrollbar-hide ${isLight ? 'text-slate-900 placeholder:text-slate-400' : 'text-white placeholder-gray-500'}`}
+                          />
+                        </div>
                       </div>
                       <button
                         onClick={handleSend}
