@@ -2114,7 +2114,11 @@ export default function DashboardPage() {
                                     }
                                     setBalanceUnitMenuOpen((current) => !current);
                                   }}
-                                  className="inline-flex items-center gap-1 rounded-full px-1 py-0.5 text-lg font-semibold text-gray-400 transition-colors hover:text-white sm:text-xl"
+                                  className={`inline-flex items-center gap-1 rounded-full px-1 py-0.5 text-lg font-semibold transition-colors sm:text-xl ${
+                                    isLight
+                                      ? 'text-slate-500 hover:text-slate-900'
+                                      : 'text-gray-400 hover:text-white'
+                                  }`}
                                 >
                                   <span>{balanceDisplayUnit}</span>
                                   <svg className={`h-3.5 w-3.5 transition-transform ${balanceUnitMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2122,7 +2126,11 @@ export default function DashboardPage() {
                                   </svg>
                                 </button>
                                 <div
-                                  className={`absolute left-0 top-full z-20 mt-2 min-w-[92px] rounded-xl border border-white/10 bg-black/90 p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur transition-all duration-200 ${
+                                  className={`absolute left-0 top-full z-20 mt-2 min-w-[92px] rounded-xl border p-1.5 backdrop-blur transition-all duration-200 ${
+                                    isLight
+                                      ? 'border-slate-200/80 bg-white/92 shadow-[0_16px_40px_rgba(148,163,184,0.18)]'
+                                      : 'border-white/10 bg-black/90 shadow-[0_16px_40px_rgba(0,0,0,0.35)]'
+                                  } ${
                                     balanceUnitMenuOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-1 opacity-0'
                                   }`}
                                 >
@@ -2140,8 +2148,12 @@ export default function DashboardPage() {
                                       }}
                                       className={`flex w-full items-center rounded-lg px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.18em] transition-colors ${
                                         balanceDisplayUnit === unit
-                                          ? 'bg-white/10 text-white'
-                                          : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                          ? isLight
+                                            ? 'bg-slate-900/[0.06] text-slate-900'
+                                            : 'bg-white/10 text-white'
+                                          : isLight
+                                            ? 'text-slate-500 hover:bg-slate-900/[0.04] hover:text-slate-900'
+                                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
                                       }`}
                                     >
                                       {unit}
